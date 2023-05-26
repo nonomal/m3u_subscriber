@@ -16,7 +16,7 @@ import re
 # import subprocess
 # import uuid
 from functools import wraps
-from xml.etree.ElementTree import fromstring
+# from xml.etree.ElementTree import fromstring
 
 # import psutil
 # import subprocess
@@ -153,8 +153,6 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'simpleOpenclashFallBackFilterDomain': 'simpleOpenclashFallBackFilterDomain',
                   'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
                   'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
-                  'maxTimeoutIgnoreLastUUID': '300', 'maxTimeoutIgnoreAllUUID': '3600', 'maxTimeoutTsSeen': '300'
-    , 'maxTimeoutTsFree': '300', 'maxTimeoutM3u8Free': '300', 'audioType': 'copy', 'ffmpegThread': '2',
                   'usernameSys': 'admin', 'passwordSys': 'password'}
 
 # 单独导入导出使用一个配置,需特殊处理:{{url:{pass,name}}}
@@ -3844,10 +3842,7 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'simpleOpenclashFallBackFilterDomain': 'simpleOpenclashFallBackFilterDomain',
                           'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
                           'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
-                          'maxTimeoutIgnoreLastUUID': '300', 'maxTimeoutIgnoreAllUUID': '3600',
-                          'maxTimeoutTsSeen': '300', 'maxTimeoutTsFree': '300',
-                          'maxTimeoutM3u8Free': '300', 'audioType': 'copy', 'ffmpegThread': '2', 'usernameSys': 'admin',
-                          'passwordSys': 'password'}
+                          'usernameSys': 'admin', 'passwordSys': 'password'}
 
 
 def init_file_name():

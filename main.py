@@ -4549,26 +4549,26 @@ def checkAndUpdateM3uRank(group, rank):
     getRankWhiteList()
 
 
-# def getMaxRank():
-#     global m3u_whitlist_rank
-#     num = 0
-#     for value in m3u_whitlist_rank.values():
-#         num = max(num, int(value))
-#     return str(num + 1)
+def getMaxRank():
+    global m3u_whitlist_rank
+    num = 0
+    for value in m3u_whitlist_rank.values():
+        num = max(num, int(value))
+    return str(num + 1)
 
 
-# def checkAndUpdateM3uRank(group):
-#     if group == '':
-#         return
-#     global m3u_whitlist_rank
-#     global m3u_whitlist
-#     # 新分组，默认加到最后
-#     if group not in m3u_whitlist.values():
-#         if group not in m3u_whitlist_rank:
-#             rank = getMaxRank()
-#             m3u_whitlist_rank[group] = rank
-#             redis_add_map(REDIS_KEY_M3U_WHITELIST_RANK, {group, rank})
-#     getRankWhiteList()
+def checkAndUpdateM3uRank(group):
+    if group == '':
+        return
+    global m3u_whitlist_rank
+    global m3u_whitlist
+    # 新分组，默认加到最后
+    if group not in m3u_whitlist.values():
+        if group not in m3u_whitlist_rank:
+            rank = getMaxRank()
+            m3u_whitlist_rank[group] = rank
+            redis_add_map(REDIS_KEY_M3U_WHITELIST_RANK, {group, rank})
+    getRankWhiteList()
 
 
 # 添加M3U黑名单

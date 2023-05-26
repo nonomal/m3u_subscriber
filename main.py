@@ -34,7 +34,7 @@ import aiofiles
 import redis
 import requests
 import time
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlencode
 # import yaml
 from flask import Flask, jsonify, request, send_file, render_template, send_from_directory, \
     after_this_request, redirect
@@ -200,6 +200,15 @@ REDIS_KEY_YY_M3U = 'redisKeyYYM3u'
 # YY频道名字,真实m3u8地址
 redisKeyYYM3u = {}
 
+# TWITCH直播源
+REDIS_KEY_TWITCH = 'redisKeyTWITCH'
+# TWITCH直播源地址，频道名字
+redisKeyTWITCH = {}
+# TWITCH真实m3u8地址
+REDIS_KEY_TWITCH_M3U = 'redisKeyTWITCHM3u'
+# TWITCH频道名字,真实m3u8地址
+redisKeyTWITCHM3u = {}
+
 port_live = 22771
 
 NORMAL_REDIS_KEY = 'normalRedisKey'
@@ -214,7 +223,7 @@ allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_
 # 数据巨大的redis配置,一键导出时单独导出每个配置
 hugeDataList = [REDIS_KEY_BILIBILI, REDIS_KEY_DNS_SIMPLE_WHITELIST, REDIS_KEY_DNS_SIMPLE_BLACKLIST, REDIS_KEY_YOUTUBE,
                 REDIS_KEY_M3U_WHITELIST_RANK, REDIS_KEY_M3U_BLACKLIST, REDIS_KEY_M3U_WHITELIST, REDIS_KEY_HUYA,
-                REDIS_KEY_YY]
+                REDIS_KEY_YY, REDIS_KEY_TWITCH]
 
 SPECIAL_REDIS_KEY = 'specialRedisKey'
 specialRedisKey = [REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME,
@@ -412,6 +421,20 @@ def serve_files6(filename):
     return redirect(url)
 
 
+# 路由twitch
+@app.route('/TWITCH/<path:filename>')
+def serve_files7(filename):
+    id = filename.split('.')[0]
+    url = redisKeyTWITCHM3u[id]
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'public, max-age=3600'
+        return response
+
+    return redirect(url)
+
+
 ##############################################################bilibili############################################
 async def pingM3u(session, value, real_dict, key, sem, mintimeout, maxTimeout):
     try:
@@ -507,6 +530,7 @@ def executeProxylist(sleepSecond):
             chaoronghe25()
             chaoronghe26()
             chaoronghe27()
+            chaoronghe28()
             print("直播源定时器执行成功")
         time.sleep(sleepSecond)
 
@@ -636,6 +660,7 @@ def check_file(m3u_dict):
         path4 = f"{secret_path}bilibili.m3u"
         path5 = f"{secret_path}huya.m3u"
         path6 = f"{secret_path}YY.m3u"
+        path7 = f"{secret_path}TWITCH.m3u"
         source = ''
         if os.path.exists(path3):
             source += copyAndRename(path3).decode()
@@ -648,6 +673,9 @@ def check_file(m3u_dict):
         if os.path.exists(path6):
             source += '\n'
             source += copyAndRename(path6).decode()
+        if os.path.exists(path7):
+            source += '\n'
+            source += copyAndRename(path7).decode()
         with open(path, 'wb') as fdst:
             fdst.write(source.encode('utf-8'))
         path2 = f"{secret_path}{getFileNameByTagName('healthM3u')}.m3u"
@@ -663,6 +691,8 @@ def check_file(m3u_dict):
                 source2 += copyAndRename(path5).decode()
             if os.path.exists(path6):
                 source2 += copyAndRename(path6).decode()
+            if os.path.exists(path7):
+                source2 += copyAndRename(path7).decode()
             with open(path2, 'wb') as fdst:
                 fdst.write(source2.encode('utf-8'))
             # 异步缓慢检测出有效链接
@@ -2631,7 +2661,8 @@ CACHE_KEY_TO_GLOBAL_VAR = {
     REDIS_KEY_YOUTUBE: 'redisKeyYoutube',
     REDIS_KEY_BILIBILI: 'redisKeyBilili',
     REDIS_KEY_HUYA: 'redisKeyHuya',
-    REDIS_KEY_YY: 'redisKeyYY'
+    REDIS_KEY_YY: 'redisKeyYY',
+    REDIS_KEY_TWITCH: 'redisKeyTWITCH'
 }
 
 
@@ -3475,6 +3506,19 @@ def initReloadCacheForNormal():
                     redisKeyYYM3u.update(dict3)
             except Exception as e:
                 pass
+        elif redisKey in REDIS_KEY_TWITCH:
+            try:
+                global redisKeyTWITCH
+                global redisKeyTWITCHM3u
+                redisKeyTWITCH.clear()
+                dict = redis_get_map(REDIS_KEY_TWITCH)
+                if dict:
+                    redisKeyTWITCH.update(dict)
+                dict3 = redis_get_map(REDIS_KEY_TWITCH_M3U)
+                if dict3:
+                    redisKeyTWITCHM3u.update(dict3)
+            except Exception as e:
+                pass
 
 
 def initReloadCacheForSpecial():
@@ -4163,6 +4207,15 @@ def deletewm3u27():
     return dellist(request, REDIS_KEY_YY)
 
 
+# 删除TWITCH直播源
+@app.route('/api/deletewm3u28', methods=['POST'])
+@requires_auth
+def deletewm3u28():
+    deleteurl = request.json.get('deleteurl')
+    del redisKeyTWITCH[deleteurl]
+    return dellist(request, REDIS_KEY_TWITCH)
+
+
 # 添加DNS简易黑名单
 @app.route('/api/addnewm3u13', methods=['POST'])
 @requires_auth
@@ -4214,6 +4267,14 @@ def getall26():
 def getall27():
     global redisKeyYY
     return returnDictCache(REDIS_KEY_YY, redisKeyYY)
+
+
+# 拉取全部TWITCH
+@app.route('/api/getall28', methods=['GET'])
+@requires_auth
+def getall28():
+    global redisKeyTWITCH
+    return returnDictCache(REDIS_KEY_TWITCH, redisKeyTWITCH)
 
 
 def returnDictCache(redisKey, cacheDict):
@@ -4432,6 +4493,17 @@ def addnewm3u27():
     global redisKeyYY
     redisKeyYY[addurl] = name
     return addlist(request, REDIS_KEY_YY)
+
+
+# 添加TWITCH直播源
+@app.route('/api/addnewm3u28', methods=['POST'])
+@requires_auth
+def addnewm3u28():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    global redisKeyTWITCH
+    redisKeyTWITCH[addurl] = name
+    return addlist(request, REDIS_KEY_TWITCH)
 
 
 # 添加M3U白名单分组优先级
@@ -5145,12 +5217,36 @@ async def download_files7_single(ids, mintimeout, maxTimeout):
     return m3u_dict
 
 
+async def download_files8_single(ids, mintimeout, maxTimeout):
+    m3u_dict = {}
+    try:
+        sem = asyncio.Semaphore(1000)  # 限制TCP连接的数量为100个
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for id in ids:
+                task = asyncio.ensure_future(grab5(session, id, m3u_dict, sem, mintimeout, maxTimeout))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        print(f"twitch Failed to fetch files. Error: {e}")
+    return m3u_dict
+
+
 async def download_files7():
     global redisKeyYY
     ids = redisKeyYY.keys()
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
     m3u_dict = await download_files7_single(ids, mintimeout, maxTimeout)
+    return m3u_dict
+
+
+async def download_files8():
+    global redisKeyTWITCH
+    ids = redisKeyTWITCH.keys()
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
+    m3u_dict = await download_files8_single(ids, mintimeout, maxTimeout)
     return m3u_dict
 
 
@@ -5335,6 +5431,86 @@ async def fetch_real_url(session, url, headers, sem, mintimeout, maxTimeout):
             else:
                 return None
 
+
+async def get_client_id(rid, session, sem, mintimeout, maxTimeout):
+    try:
+        twitch_room_url = f'https://www.twitch.tv/{rid}'
+        try:
+            async with sem, session.get(twitch_room_url, timeout=mintimeout) as response:
+                res = await response.text()
+        except asyncio.TimeoutError:
+            async with sem, session.get(twitch_room_url, timeout=maxTimeout) as response:
+                res = await response.text()
+        client_id = re.search(r'clientId="(.*?)"', res).group(1)
+        return client_id
+    except requests.exceptions.ConnectionError:
+        raise Exception('ConnectionError')
+
+
+async def get_sig_token(rid, session, sem, mintimeout, maxTimeout):
+    data = {
+        "operationName": "PlaybackAccessToken_Template",
+        "query": "query PlaybackAccessToken_Template($login: String!, $isLive: Boolean!, $vodID: ID!, "
+                 "$isVod: Boolean!, $playerType: String!) {  streamPlaybackAccessToken(channelName: $login, "
+                 "params: {platform: \"web\", playerBackend: \"mediaplayer\", playerType: $playerType}) @include("
+                 "if: $isLive) {    value    signature    __typename  }  videoPlaybackAccessToken(id: $vodID, "
+                 "params: {platform: \"web\", playerBackend: \"mediaplayer\", playerType: $playerType}) @include("
+                 "if: $isVod) {    value    signature    __typename  }}",
+        "variables": {
+            "isLive": True,
+            "login": rid,
+            "isVod": False,
+            "vodID": "",
+            "playerType": "site"
+        }
+    }
+
+    headers = {
+        'Client-ID': await get_client_id(rid, session, sem, mintimeout, maxTimeout),
+        'Referer': 'https://www.twitch.tv/',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                      'Chrome/90.0.4430.93 Safari/537.36',
+    }
+    posturl = 'https://gql.twitch.tv/gql'
+    json_data = json.dumps(data)
+    try:
+        async with sem, session.post(posturl, headers=headers, data=json_data, timeout=mintimeout) as response:
+            res = await response.json()
+    except asyncio.TimeoutError:
+        async with sem, session.post(posturl, headers=headers, data=json_data, timeout=maxTimeout) as response:
+            res = await response.json()
+    try:
+        token, signature, _ = res['data']['streamPlaybackAccessToken'].values()
+    except AttributeError:
+        raise Exception("Channel does not exist")
+    return signature, token
+
+
+async def grab5(session, rid, m3u_dict, sem, mintimeout, maxTimeout):
+    try:
+        signature, token = await get_sig_token(rid, session, sem, mintimeout, maxTimeout)
+        params = {
+            'allow_source': 'true',
+            'dt': 2,
+            'fast_bread': 'true',
+            'player_backend': 'mediaplayer',
+            'playlist_include_framerate': 'true',
+            'reassignments_supported': 'true',
+            'sig': signature,
+            'supported_codecs': 'vp09,avc1',
+            'token': token,
+            'cdm': 'wv',
+            'player_version': '1.4.0',
+        }
+        url = f'https://usher.ttvnw.net/api/channel/hls/{rid}.m3u8?{urlencode(params)}'
+        final_url = await get_resolution(session, url, sem, mintimeout, maxTimeout)
+        if final_url:
+            m3u_dict[rid] = final_url
+        else:
+            m3u_dict[rid] = url
+
+    except Exception as e:
+        print(f"twitch An error occurred while processing {rid}. Error: {e}")
 
 cim_headers_YY = CIMultiDict(headers_YY)
 
@@ -5677,6 +5853,47 @@ def chaoronghe27():
         return "empty"
 
 
+# 生成全部TWITCH直播源
+@app.route('/api/chaoronghe28', methods=['GET'])
+@requires_auth
+def chaoronghe_TWITCH():
+    return chaoronghe28()
+
+
+def chaoronghe28():
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        # 有效直播源,名字/id
+        m3u_dict = loop.run_until_complete(download_files8())
+        length = len(m3u_dict)
+        if length == 0:
+            return "empty"
+        ip = init_IP()
+        global redisKeyTWITCHM3u
+        global redisKeyTWITCH
+        redisKeyTWITCHM3uFake = {}
+        redisKeyTWITCHM3u.clear()
+        redis_del_map(REDIS_KEY_TWITCH_M3U)
+        #fakeurl = f"http://127.0.0.1:5000/TWITCH/"
+        fakeurl = f"http://{ip}:{port_live}/TWITCH/"
+        for id, url in m3u_dict.items():
+            try:
+                redisKeyTWITCHM3u[id] = url
+                name = redisKeyTWITCH[id]
+                link = f'#EXTINF:-1 group-title="Twitch"  tvg-name="{name}",{name}\n'
+                redisKeyTWITCHM3uFake[f'{fakeurl}{id}.m3u8'] = link
+            except:
+                pass
+        # 同步方法写出全部配置
+        distribute_data(redisKeyTWITCHM3uFake, f"{secret_path}TWITCH.m3u", 10)
+        redis_add_map(REDIS_KEY_TWITCH_M3U, redisKeyTWITCHM3u)
+        fuck_m3u_to_txt(f"{secret_path}TWITCH.m3u", f"{secret_path}TWITCH.txt")
+        return "result"
+    except Exception as e:
+        return "empty"
+
+
 # 生成全部youtube直播源
 @app.route('/api/chaoronghe24', methods=['GET'])
 @requires_auth
@@ -6009,6 +6226,17 @@ def removem3ulinks27():
     redis_del_map(REDIS_KEY_YY)
     redisKeyYYM3u.clear()
     redis_del_map(REDIS_KEY_YY_M3U)
+    return "success"
+
+
+# 删除全部TWITCH直播源
+@app.route('/api/removem3ulinks28', methods=['GET'])
+@requires_auth
+def removem3ulinks28():
+    redisKeyTWITCH.clear()
+    redis_del_map(REDIS_KEY_TWITCH)
+    redisKeyTWITCHM3u.clear()
+    redis_del_map(REDIS_KEY_TWITCH_M3U)
     return "success"
 
 

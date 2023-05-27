@@ -10,23 +10,12 @@ import math
 import os
 import queue
 import re
-# import atexit
-# import shutil
-# import signal
-# import subprocess
-# import uuid
 from functools import wraps
-# from xml.etree.ElementTree import fromstring
-
-# import psutil
-# import subprocess
 import threading
 import hashlib
 import urllib
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
-
-# import execjs
 import m3u8 as m3u8
 from zhconv import convert
 import aiohttp
@@ -35,7 +24,6 @@ import redis
 import requests
 import time
 from urllib.parse import urlparse, urlencode
-# import yaml
 from flask import Flask, jsonify, request, send_file, render_template, send_from_directory, \
     after_this_request, redirect
 
@@ -49,6 +37,9 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True  # 实时更新模板文件
 app.config['MAX_CONTENT_LENGTH'] = 1000 * 1024 * 1024  # 上传文件最大限制1000 MB
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # 静态文件缓存时间，默认值为 12 小时。可以通过将其设为 0 来禁止浏览器缓存静态文件
 app.config['JSONIFY_TIMEOUT'] = 6000  # 设置响应超时时间为 6000 秒
+app.config['PROXY_CONNECT_TIMEOUT'] = 6000
+app.config['PROXY_SEND_TIMEOUT'] = 6000
+app.config['PROXY_READ_TIMEOUT'] = 6000
 
 r = redis.Redis(host='localhost', port=22772)
 
@@ -370,12 +361,6 @@ def serve_files2(filename):
 def serve_files3(filename):
     id = filename.split('.')[0]
     url = redisKeyYoutubeM3u[id]
-
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        return response
-
     return redirect(url)
 
 
@@ -384,12 +369,6 @@ def serve_files3(filename):
 def serve_files4(filename):
     id = filename.split('.')[0]
     url = redisKeyBililiM3u[id]
-
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        return response
-
     return redirect(url)
 
 
@@ -398,12 +377,6 @@ def serve_files4(filename):
 def serve_files5(filename):
     id = filename.split('.')[0]
     url = redisKeyHuyaM3u[id]
-
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        return response
-
     return redirect(url)
 
 
@@ -412,12 +385,6 @@ def serve_files5(filename):
 def serve_files6(filename):
     id = filename.split('.')[0]
     url = redisKeyYYM3u[id]
-
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        return response
-
     return redirect(url)
 
 
@@ -426,12 +393,6 @@ def serve_files6(filename):
 def serve_files7(filename):
     id = filename.split('.')[0]
     url = redisKeyTWITCHM3u[id]
-
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        return response
-
     return redirect(url)
 
 
@@ -6579,7 +6540,7 @@ def main():
     t2 = threading.Thread(target=worker_github, daemon=True)
     t2.start()
     try:
-        app.run(debug=True, host='0.0.0.0', port=5000)
+        app.run(debug=True, host='0.0.0.0', port=22771)
     finally:
         print("close")
 

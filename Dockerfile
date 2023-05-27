@@ -1,7 +1,7 @@
 FROM redis
 # 将当前目录下的 python 脚本复制到容器中的 /app 目录
 # 创建目录
-RUN mkdir -p /app/ini /app/img /app/secret /app/templates
+RUN mkdir -p /app/ini /app/img /app/secret /app/templates  /var/lib/redis
 COPY ./*.py /app/
 COPY ./ini/*.ini /app/ini/
 COPY ./list/*.list /app/secret/
@@ -21,6 +21,6 @@ RUN apt-get update && \
 EXPOSE 22771 22770 22772
 # 启动多个程序进程
 COPY run.sh /app/run.sh
-COPY redis.conf /etc/redis/redis.conf
+COPY redis.conf /var/lib/redis/redis.conf
 RUN chmod 777 /app/run.sh  /app/main.py  /app/dns.py
 CMD ["/bin/bash", "-c", "/app/run.sh"]

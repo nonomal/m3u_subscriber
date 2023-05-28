@@ -17,7 +17,7 @@
 
 #### 一、host模式:推荐使用，可以减少一层路由，利好dns分流器
 
-## 普通:一般用下面的就可以
+## 普通:一般用下面的就可以,/m3u是外部挂载切片文件的路径，必须要外部挂载，否则docker内存会爆炸
 
 docker run -v /m3u:/app/slices  -d --name m3usubscriber  --restart unless-stopped --net=host -e TZ=Asia/Shanghai jkld310/m3usubscriber:ffmpeg-latest
 

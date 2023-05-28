@@ -34,10 +34,10 @@ import aiofiles
 import redis
 import requests
 import time
-from urllib.parse import urlparse, quote
+from urllib.parse import urlparse, quote, urlencode
 # import yaml
 from flask import Flask, jsonify, request, send_file, render_template, send_from_directory, \
-    Response, make_response, after_this_request, redirect
+    Response, redirect
 
 import chardet
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -49,6 +49,9 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True  # 实时更新模板文件
 app.config['MAX_CONTENT_LENGTH'] = 1000 * 1024 * 1024  # 上传文件最大限制1000 MB
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # 静态文件缓存时间，默认值为 12 小时。可以通过将其设为 0 来禁止浏览器缓存静态文件
 app.config['JSONIFY_TIMEOUT'] = 6000  # 设置响应超时时间为 6000 秒
+app.config['PROXY_CONNECT_TIMEOUT'] = 6000
+app.config['PROXY_SEND_TIMEOUT'] = 6000
+app.config['PROXY_READ_TIMEOUT'] = 6000
 
 r = redis.Redis(host='localhost', port=22772)
 
@@ -154,8 +157,9 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
                   'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
                   'maxTimeoutIgnoreLastUUID': '300', 'maxTimeoutIgnoreAllUUID': '3600', 'maxTimeoutTsSeen': '300'
-    , 'maxTimeoutTsFree': '300', 'maxTimeoutM3u8Free': '300', 'audioType': 'copy', 'ffmpegThread': '2',
-                  'usernameSys': 'admin', 'passwordSys': 'password'}
+    , 'maxTimeoutTsFree': '300', 'maxTimeoutM3u8Free': '300', 'audioType': 'copy', 'ffmpegThread': '1',
+                  'usernameSys': 'admin', 'passwordSys': 'password', 'bilibilirtsp': 'xxxxxxxx', 'bilibilirfps': '30',
+                  'bilibiliServer': 'rtmp://live-push.bilivideo.com/live-bvc/'}
 
 # 单独导入导出使用一个配置,需特殊处理:{{url:{pass,name}}}
 # 下载网络配置并且加密后上传:url+加密密钥+加密文件名字
@@ -235,6 +239,19 @@ true_webdav_m3u_dict_raw = {}
 REDIS_KEY_webdav_M3U_TYPE = 'redisKeyWebdavM3uType'
 # webdav uuid,视频格式
 redisKeyWebdavM3uType = {}
+# uuid,文件名字
+REDIS_KEY_WEBDAV_M3U_DICT_RAW_FILENAME = 'redisKeyWebdavM3uDictRawFileName'
+# uuid,文件名字
+true_webdav_m3u_dict_raw_filename = {}
+
+# TWITCH直播源
+REDIS_KEY_TWITCH = 'redisKeyTWITCH'
+# TWITCH直播源地址，频道名字
+redisKeyTWITCH = {}
+# TWITCH真实m3u8地址
+REDIS_KEY_TWITCH_M3U = 'redisKeyTWITCHM3u'
+# TWITCH频道名字,真实m3u8地址
+redisKeyTWITCHM3u = {}
 
 # webdav路径备份
 REDIS_KEY_WEBDAV_PATH_LIST = 'redisKeyWebdavPathList'
@@ -266,7 +283,7 @@ allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_
 # 数据巨大的redis配置,一键导出时单独导出每个配置
 hugeDataList = [REDIS_KEY_BILIBILI, REDIS_KEY_DNS_SIMPLE_WHITELIST, REDIS_KEY_DNS_SIMPLE_BLACKLIST, REDIS_KEY_YOUTUBE,
                 REDIS_KEY_M3U_WHITELIST_RANK, REDIS_KEY_M3U_BLACKLIST, REDIS_KEY_M3U_WHITELIST, REDIS_KEY_HUYA,
-                REDIS_KEY_YY, REDIS_KEY_WEBDAV_PATH_LIST, REDIS_KEY_DOUYU, REDIS_KEY_ALIST]
+                REDIS_KEY_YY, REDIS_KEY_WEBDAV_PATH_LIST, REDIS_KEY_DOUYU, REDIS_KEY_ALIST, REDIS_KEY_TWITCH]
 
 SPECIAL_REDIS_KEY = 'specialRedisKey'
 specialRedisKey = [REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME,
@@ -413,12 +430,6 @@ def serve_files2(filename):
 def serve_files3(filename):
     id = filename.split('.')[0]
     url = redisKeyYoutubeM3u[id]
-
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        return response
-
     return redirect(url)
 
 
@@ -427,12 +438,6 @@ def serve_files3(filename):
 def serve_files4(filename):
     id = filename.split('.')[0]
     url = redisKeyBililiM3u[id]
-
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        return response
-
     return redirect(url)
 
 
@@ -441,12 +446,6 @@ def serve_files4(filename):
 def serve_files_douyu(filename):
     id = filename.split('.')[0]
     url = redisKeyDouyuM3u[id]
-
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        return response
-
     return redirect(url)
 
 
@@ -455,12 +454,6 @@ def serve_files_douyu(filename):
 def serve_files5(filename):
     id = filename.split('.')[0]
     url = redisKeyHuyaM3u[id]
-
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        return response
-
     return redirect(url)
 
 
@@ -469,12 +462,6 @@ def serve_files5(filename):
 def serve_files6(filename):
     id = filename.split('.')[0]
     url = redisKeyYYM3u[id]
-
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'public, max-age=3600'
-        return response
-
     return redirect(url)
 
 
@@ -1118,6 +1105,7 @@ def executeProxylist(sleepSecond):
             chaoronghe26()
             chaoronghe27()
             chaoronghe29()
+            chaoronghe31()
             if isOpenFunction('switch36'):
                 chaoronghe30()
             print("直播源定时器执行成功")
@@ -1181,6 +1169,9 @@ def toggle_m3u(functionId, value):
         function_dict[functionId] = str(value)
         redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
     elif functionId == 'switch37':
+        function_dict[functionId] = str(value)
+        redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
+    elif functionId == 'switch38':
         function_dict[functionId] = str(value)
         redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
 
@@ -1359,6 +1350,7 @@ def check_file(m3u_dict):
         path7 = f"{secret_path}webdav.m3u"
         path8 = f"{secret_path}douyu.m3u"
         path9 = f"{secret_path}alist.m3u"
+        path10 = f"{secret_path}TWITCH.m3u"
         source = ''
         if os.path.exists(path3):
             source += copyAndRename(path3).decode()
@@ -1380,6 +1372,9 @@ def check_file(m3u_dict):
         if os.path.exists(path9):
             source += '\n'
             source += copyAndRename(path9).decode()
+        if os.path.exists(path10):
+            source += '\n'
+            source += copyAndRename(path10).decode()
         with open(path, 'wb') as fdst:
             fdst.write(source.encode('utf-8'))
         path2 = f"{secret_path}{getFileNameByTagName('healthM3u')}.m3u"
@@ -1401,6 +1396,8 @@ def check_file(m3u_dict):
                 source2 += copyAndRename(path8).decode()
             if os.path.exists(path9):
                 source2 += copyAndRename(path9).decode()
+            if os.path.exists(path10):
+                source2 += copyAndRename(path10).decode()
             with open(path2, 'wb') as fdst:
                 fdst.write(source2.encode('utf-8'))
             # 异步缓慢检测出有效链接
@@ -2213,7 +2210,6 @@ def init_db():
     init_pass('m3u')
     initReloadCacheForSpecial()
     initReloadCacheForNormal()
-    init_webdav_m3u_True_Data()
     update_webdav_fake_url()
     safe_delete_ts('nope')
 
@@ -2331,6 +2327,9 @@ def init_function_dict():
         # YOUTUBE-定时器
         if 'switch37' not in keys:
             dict['switch37'] = '0'
+        # 哔哩哔哩循环推流
+        if 'switch38' not in keys:
+            dict['switch38'] = '0'
         redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
         function_dict = dict.copy()
     else:
@@ -2342,7 +2341,7 @@ def init_function_dict():
                 'switch21': '0',
                 'switch22': '1', 'switch23': '1', 'switch24': '1', 'switch25': '0', 'switch26': '0', 'switch27': '0'
             , 'switch28': '0', 'switch30': '0', 'switch31': '0', 'switch32': '0', 'switch33': '0',
-                'switch34': '0', 'switch35': '0', 'switch36': '0', 'switch37': '0'}
+                'switch34': '0', 'switch35': '0', 'switch36': '0', 'switch37': '0', 'switch38': '0'}
         redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
         function_dict = dict.copy()
 
@@ -2986,7 +2985,7 @@ def format_data(data, index, step, my_dict):
                 if searchurl in my_dict.keys():
                     continue
                 if name:
-                    name=name.lower()
+                    name = name.lower()
                     fullName = update_epg_by_name(name)
                     my_dict[searchurl] = fullName
                     addChinaChannel(name, searchurl, fullName)
@@ -3381,7 +3380,8 @@ CACHE_KEY_TO_GLOBAL_VAR = {
     REDIS_KEY_WEBDAV_M3U: 'redisKeyWebDavM3u',
     REDIS_KEY_WEBDAV_PATH_LIST: 'redisKeyWebDavPathList',
     REDIS_KEY_DOUYU: 'redisKeyDouyu',
-    REDIS_KEY_ALIST: 'redisKeyAlist'
+    REDIS_KEY_ALIST: 'redisKeyAlist',
+    REDIS_KEY_TWITCH: 'redisKeyTWITCH'
 }
 
 
@@ -4268,6 +4268,19 @@ def initReloadCacheForNormal():
                     redisKeyAlistM3uType.update(dict3)
             except Exception as e:
                 pass
+        elif redisKey in REDIS_KEY_TWITCH:
+            try:
+                global redisKeyTWITCH
+                global redisKeyTWITCHM3u
+                redisKeyTWITCH.clear()
+                dict = redis_get_map(REDIS_KEY_TWITCH)
+                if dict:
+                    redisKeyTWITCH.update(dict)
+                dict3 = redis_get_map(REDIS_KEY_TWITCH_M3U)
+                if dict3:
+                    redisKeyTWITCHM3u.update(dict3)
+            except Exception as e:
+                pass
 
 
 def initReloadCacheForSpecial():
@@ -4637,8 +4650,9 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
                           'maxTimeoutIgnoreLastUUID': '300', 'maxTimeoutIgnoreAllUUID': '3600',
                           'maxTimeoutTsSeen': '300', 'maxTimeoutTsFree': '300',
-                          'maxTimeoutM3u8Free': '300', 'audioType': 'copy', 'ffmpegThread': '2', 'usernameSys': 'admin',
-                          'passwordSys': 'password'}
+                          'maxTimeoutM3u8Free': '300', 'audioType': 'copy', 'ffmpegThread': '1', 'usernameSys': 'admin',
+                          'passwordSys': 'password', 'bilibilirtsp': 'xxxxxxxx', 'bilibilirfps': '30',
+                          'bilibiliServer': 'rtmp://live-push.bilivideo.com/live-bvc/'}
 
 
 def init_file_name():
@@ -4656,25 +4670,22 @@ def init_webdav_m3u():
     if dict:
         global redisKeyWebDavM3u
         redisKeyWebDavM3u.clear()
-        redisKeyWebDavM3u = dict.copy()
+        redisKeyWebDavM3u.update(dict)
     dict2 = redis_get_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW)
     if dict2:
         global true_webdav_m3u_dict_raw
         true_webdav_m3u_dict_raw.clear()
-        true_webdav_m3u_dict_raw = dict2.copy()
+        true_webdav_m3u_dict_raw.update(dict2)
     dict3 = redis_get_map(REDIS_KEY_webdav_M3U_TYPE)
     if dict3:
         global redisKeyWebdavM3uType
         redisKeyWebdavM3uType.clear()
-        redisKeyWebdavM3uType = dict3.copy()
-
-
-def init_webdav_m3u_True_Data():
-    dict2 = redis_get_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW)
-    if dict2:
-        global true_webdav_m3u_dict_raw
-        true_webdav_m3u_dict_raw.clear()
-        true_webdav_m3u_dict_raw = dict2.copy()
+        redisKeyWebdavM3uType.update(dict3)
+    dict4 = redis_get_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW_FILENAME)
+    if dict4:
+        global true_webdav_m3u_dict_raw_filename
+        true_webdav_m3u_dict_raw_filename.clear()
+        true_webdav_m3u_dict_raw_filename.update(dict4)
 
 
 def getFileNameByTagName(tagname):
@@ -4805,7 +4816,7 @@ def getSwitchstate():
 
 # 需要额外操作的
 clockArr = ['switch25', 'switch26', 'switch27', 'switch28', 'switch13', 'switch25', 'switch33', 'switch34',
-            'switch35', 'switch36', 'switch37']
+            'switch35', 'switch36', 'switch37', 'switch38']
 
 
 # 切换功能开关
@@ -4869,6 +4880,7 @@ def serverMode():
         switchSingleFunction('switch35', '0')
         switchSingleFunction('switch36', '0')
         switchSingleFunction('switch37', '0')
+        switchSingleFunction('switch38', '0')
     elif mode == 'client':
         switchSingleFunction('switch2', '0')
         switchSingleFunction('switch3', '0')
@@ -4906,6 +4918,7 @@ def serverMode():
         switchSingleFunction('switch35', '0')
         switchSingleFunction('switch36', '0')
         switchSingleFunction('switch37', '0')
+        switchSingleFunction('switch38', '0')
     return 'success'
 
 
@@ -4987,6 +5000,180 @@ def deletewm3u30():
     deleteurl = request.json.get('deleteurl')
     del redisKeyAlist[deleteurl]
     return dellist(request, REDIS_KEY_ALIST)
+
+
+# 删除TWITCH直播源
+@app.route('/api/deletewm3u31', methods=['POST'])
+@requires_auth
+def deletewm3u31():
+    deleteurl = request.json.get('deleteurl')
+    del redisKeyTWITCH[deleteurl]
+    return dellist(request, REDIS_KEY_TWITCH)
+
+
+# 拉取全部TWITCH
+@app.route('/api/getall31', methods=['GET'])
+@requires_auth
+def getall31():
+    global redisKeyTWITCH
+    return returnDictCache(REDIS_KEY_TWITCH, redisKeyTWITCH)
+
+
+# 添加TWITCH直播源
+@app.route('/api/addnewm3u31', methods=['POST'])
+@requires_auth
+def addnewm3u31():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    global redisKeyTWITCH
+    redisKeyTWITCH[addurl] = name
+    return addlist(request, REDIS_KEY_TWITCH)
+
+
+# 生成全部TWITCH直播源
+@app.route('/api/chaoronghe31', methods=['GET'])
+@requires_auth
+def chaoronghe_TWITCH():
+    return chaoronghe31()
+
+
+async def download_files31():
+    global redisKeyTWITCH
+    ids = redisKeyTWITCH.keys()
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
+    m3u_dict = await download_files31_single(ids, mintimeout, maxTimeout)
+    return m3u_dict
+
+
+async def download_files31_single(ids, mintimeout, maxTimeout):
+    m3u_dict = {}
+    try:
+        sem = asyncio.Semaphore(1000)  # 限制TCP连接的数量为100个
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for id in ids:
+                task = asyncio.ensure_future(grab31(session, id, m3u_dict, sem, mintimeout, maxTimeout))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        print(f"twitch Failed to fetch files. Error: {e}")
+    return m3u_dict
+
+
+async def get_client_id(rid, session, sem, mintimeout, maxTimeout):
+    try:
+        twitch_room_url = f'https://www.twitch.tv/{rid}'
+        try:
+            async with sem, session.get(twitch_room_url, timeout=mintimeout) as response:
+                res = await response.text()
+        except asyncio.TimeoutError:
+            async with sem, session.get(twitch_room_url, timeout=maxTimeout) as response:
+                res = await response.text()
+        client_id = re.search(r'clientId="(.*?)"', res).group(1)
+        return client_id
+    except requests.exceptions.ConnectionError:
+        raise Exception('ConnectionError')
+
+
+async def get_sig_token(rid, session, sem, mintimeout, maxTimeout):
+    data = {
+        "operationName": "PlaybackAccessToken_Template",
+        "query": "query PlaybackAccessToken_Template($login: String!, $isLive: Boolean!, $vodID: ID!, "
+                 "$isVod: Boolean!, $playerType: String!) {  streamPlaybackAccessToken(channelName: $login, "
+                 "params: {platform: \"web\", playerBackend: \"mediaplayer\", playerType: $playerType}) @include("
+                 "if: $isLive) {    value    signature    __typename  }  videoPlaybackAccessToken(id: $vodID, "
+                 "params: {platform: \"web\", playerBackend: \"mediaplayer\", playerType: $playerType}) @include("
+                 "if: $isVod) {    value    signature    __typename  }}",
+        "variables": {
+            "isLive": True,
+            "login": rid,
+            "isVod": False,
+            "vodID": "",
+            "playerType": "site"
+        }
+    }
+
+    headers = {
+        'Client-ID': await get_client_id(rid, session, sem, mintimeout, maxTimeout),
+        'Referer': 'https://www.twitch.tv/',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                      'Chrome/90.0.4430.93 Safari/537.36',
+    }
+    posturl = 'https://gql.twitch.tv/gql'
+    json_data = json.dumps(data)
+    try:
+        async with sem, session.post(posturl, headers=headers, data=json_data, timeout=mintimeout) as response:
+            res = await response.json()
+    except asyncio.TimeoutError:
+        async with sem, session.post(posturl, headers=headers, data=json_data, timeout=maxTimeout) as response:
+            res = await response.json()
+    try:
+        token, signature, _ = res['data']['streamPlaybackAccessToken'].values()
+    except AttributeError:
+        raise Exception("Channel does not exist")
+    return signature, token
+
+
+async def grab31(session, rid, m3u_dict, sem, mintimeout, maxTimeout):
+    try:
+        signature, token = await get_sig_token(rid, session, sem, mintimeout, maxTimeout)
+        params = {
+            'allow_source': 'true',
+            'dt': 2,
+            'fast_bread': 'true',
+            'player_backend': 'mediaplayer',
+            'playlist_include_framerate': 'true',
+            'reassignments_supported': 'true',
+            'sig': signature,
+            'supported_codecs': 'vp09,avc1',
+            'token': token,
+            'cdm': 'wv',
+            'player_version': '1.4.0',
+        }
+        url = f'https://usher.ttvnw.net/api/channel/hls/{rid}.m3u8?{urlencode(params)}'
+        final_url = await get_resolution(session, url, sem, mintimeout, maxTimeout)
+        if final_url:
+            m3u_dict[rid] = final_url
+        else:
+            m3u_dict[rid] = url
+
+    except Exception as e:
+        print(f"twitch An error occurred while processing {rid}. Error: {e}")
+
+
+def chaoronghe31():
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        # 有效直播源,名字/id
+        m3u_dict = loop.run_until_complete(download_files31())
+        length = len(m3u_dict)
+        if length == 0:
+            return "empty"
+        ip = init_IP()
+        global redisKeyTWITCHM3u
+        global redisKeyTWITCH
+        redisKeyTWITCHM3uFake = {}
+        redisKeyTWITCHM3u.clear()
+        redis_del_map(REDIS_KEY_TWITCH_M3U)
+        # fakeurl = f"http://127.0.0.1:5000/TWITCH/"
+        fakeurl = f"http://{ip}:{port_live}/TWITCH/"
+        for id, url in m3u_dict.items():
+            try:
+                redisKeyTWITCHM3u[id] = url
+                name = redisKeyTWITCH[id]
+                link = f'#EXTINF:-1 group-title="Twitch"  tvg-name="{name}",{name}\n'
+                redisKeyTWITCHM3uFake[f'{fakeurl}{id}.m3u8'] = link
+            except:
+                pass
+        # 同步方法写出全部配置
+        distribute_data(redisKeyTWITCHM3uFake, f"{secret_path}TWITCH.m3u", 10)
+        redis_add_map(REDIS_KEY_TWITCH_M3U, redisKeyTWITCHM3u)
+        fuck_m3u_to_txt(f"{secret_path}TWITCH.m3u", f"{secret_path}TWITCH.txt")
+        return "result"
+    except Exception as e:
+        return "empty"
 
 
 # 删除huya直播源
@@ -6939,8 +7126,10 @@ async def process_child(url, child_list_chunk, fakeurl,
             true_webdav_m3u_dict_raw[str_id] = finalTrueUrl
             type = file_path.split('.')[-1]
             redisKeyWebdavM3uType[str_id] = type
+            true_webdav_m3u_dict_raw_filename[str_id] = name
             redis_add_map(REDIS_KEY_webdav_M3U_TYPE, {str_id: type})
             redis_add_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW, {str_id: finalTrueUrl})
+            redis_add_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW_FILENAME, {str_id: name})
 
 
 async def deal_mutil_webdav_path_m3u(session, url, fakeurl,
@@ -6989,10 +7178,13 @@ def chaoronghe28():
         # webdav名字，真实地址
         global true_webdav_m3u_dict_raw
         global redisKeyWebdavM3uType
+        global true_webdav_m3u_dict_raw_filename
+        true_webdav_m3u_dict_raw_filename.clear()
         true_webdav_m3u_dict_raw.clear()
         redisKeyWebdavM3uType.clear()
         redis_del_map(REDIS_KEY_webdav_M3U_TYPE)
         redis_del_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW)
+        redis_del_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW_FILENAME)
         # fake_webdav_m3u_dict = {}
         # true_webdav_m3u_dict_raw_tmp = {}
 
@@ -7008,6 +7200,53 @@ def chaoronghe28():
         #     redis_add_map(REDIS_KEY_WEBDAV_M3U_DICT_RAW, true_webdav_m3u_dict_raw)
         # 同步方法写出全部配置
         # distribute_data(fake_webdav_m3u_dict, f"{secret_path}webdav.m3u", 10)
+        return "result"
+    except Exception as e:
+        return "empty"
+
+
+def get_length_url_video(input_video):
+    result = subprocess.run(
+        ['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1',
+         input_video], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    return float(result.stdout)
+
+
+# 获取webdav视频时间长度
+def get_length(input_video, encoded_credentials):
+    auth_header = f"Authorization: Basic {encoded_credentials}"
+    result = subprocess.run(
+        ['ffprobe', '-v', 'error', '-headers', auth_header, '-show_entries', 'format=duration', '-of',
+         'default=noprint_wrappers=1:nokey=1', input_video], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    return float(result.stdout)
+
+
+# 生成全部webdav直播源推流bilibili
+@app.route('/api/chaoronghexxx', methods=['GET'])
+@requires_auth
+def chaoronghexxx():
+    try:
+        # uuid,真实url
+        global true_webdav_m3u_dict_raw
+        # uuid,文件名字
+        global true_webdav_m3u_dict_raw_filename
+        if len(true_webdav_m3u_dict_raw.keys()) == 0:
+            return "empty"
+        bilibilirtsp = getFileNameByTagName('bilibilirtsp')
+        bilibilirfps = int(getFileNameByTagName('bilibilirfps'))
+        ffmpegThread = int(getFileNameByTagName('ffmpegThread'))
+        bilibiliServer = getFileNameByTagName('bilibiliServer')
+        while True:
+            for uuid, url in true_webdav_m3u_dict_raw.items():
+                filename = true_webdav_m3u_dict_raw_filename[uuid]
+                credentials = f"{redisKeyWebDavM3u['username']}:{redisKeyWebDavM3u['password']}"
+                encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
+                length = get_length(url, encoded_credentials)
+                cmd = f'ffmpeg -threads {ffmpegThread} {user_agent}    -headers \"Authorization: Basic {encoded_credentials}\" -re -i "{url}" -vcodec libx264 -acodec copy -b:a 192k -r {bilibilirfps} -vf "drawtext=fontsize=24:fontfile=FreeSerif.ttf:text=\'{filename}\':x=10:y=main_h-30:fontcolor=LightGrey:alpha=0.6" -f flv "{bilibiliServer}{bilibilirtsp}"'
+                subprocess.Popen(cmd, stdin=subprocess.PIPE, shell=True)
+                time.sleep(round(length))
+            if not isOpenFunction('switch38'):
+                break
         return "result"
     except Exception as e:
         return "empty"
@@ -7670,6 +7909,17 @@ def process_file2():
     with open(filename, 'w') as f:
         f.write(json_str)
     return send_file(filename, as_attachment=True)
+
+
+# 删除全部TWITCH直播源
+@app.route('/api/removem3ulinks31', methods=['GET'])
+@requires_auth
+def removem3ulinks31():
+    redisKeyTWITCH.clear()
+    redis_del_map(REDIS_KEY_TWITCH)
+    redisKeyTWITCHM3u.clear()
+    redis_del_map(REDIS_KEY_TWITCH_M3U)
+    return "success"
 
 
 # 手动上传m3u文件提取名字统一分组

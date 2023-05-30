@@ -159,7 +159,7 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'maxTimeoutIgnoreLastUUID': '300', 'maxTimeoutIgnoreAllUUID': '3600', 'maxTimeoutTsSeen': '300'
     , 'maxTimeoutTsFree': '300', 'maxTimeoutM3u8Free': '300', 'audioType': 'copy', 'ffmpegThread': '1',
                   'usernameSys': 'admin', 'passwordSys': 'password', 'bilibilirtsp': 'xxxxxxxx', 'bilibilirfps': '30',
-                  'bilibiliServer': 'rtmp://live-push.bilivideo.com/live-bvc/'}
+                  'bilibiliServer': 'rtmp://live-push.bilivideo.com/live-bvc/', 'pastBilibiliRecord': ''}
 
 # 单独导入导出使用一个配置,需特殊处理:{{url:{pass,name}}}
 # 下载网络配置并且加密后上传:url+加密密钥+加密文件名字
@@ -476,6 +476,9 @@ ffmpeg_processes = {}
 # 创建一个共享变量用于存储ffmpeg进程对象
 ffmpeg_process = subprocess.Popen(['ffmpeg', '-i', 'input.mp4', 'output.mp4'])
 
+# 创建一个共享变量用于存储ffmpeg进程对象
+ffmpeg_process2 = subprocess.Popen(['ffmpeg', '-i', 'input.mp4', 'output.mp4'])
+
 
 def start_ffmpeg(cmd):
     global ffmpeg_process
@@ -499,6 +502,24 @@ def stop_ffmpeg():
             try:
                 # 立即杀死进程
                 os.kill(ffmpeg_process.pid, signal.SIGKILL)
+            except Exception as e:
+                pass
+    except Exception as e:
+        print(e)
+        pass
+
+
+def stop_ffmpeg_bilibili():
+    global ffmpeg_process2
+    try:
+        if ffmpeg_process2:
+            # 强制结束任务
+            ffmpeg_process2.stdin.write(b'q')
+            # 杀掉进程，不一定成功
+            ffmpeg_process2.kill()
+            try:
+                # 立即杀死进程
+                os.kill(ffmpeg_process2.pid, signal.SIGKILL)
             except Exception as e:
                 pass
     except Exception as e:
@@ -4653,7 +4674,7 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'maxTimeoutTsSeen': '300', 'maxTimeoutTsFree': '300',
                           'maxTimeoutM3u8Free': '300', 'audioType': 'copy', 'ffmpegThread': '1', 'usernameSys': 'admin',
                           'passwordSys': 'password', 'bilibilirtsp': 'xxxxxxxx', 'bilibilirfps': '30',
-                          'bilibiliServer': 'rtmp://live-push.bilivideo.com/live-bvc/'}
+                          'bilibiliServer': 'rtmp://live-push.bilivideo.com/live-bvc/', 'pastBilibiliRecord': ''}
 
 
 def init_file_name():
@@ -7226,12 +7247,8 @@ def get_length(input_video, encoded_credentials):
     return float(result.stdout)
 
 
-# 上次的分组，片名
-pastName = {'name': ''}
-
-
 def repeat_check(true_webdav_m3u_dict_raw_filename):
-    name = pastName['name']
+    name = getFileNameByTagName('pastBilibiliRecord')
     if name == '':
         return False, ''
     for value in true_webdav_m3u_dict_raw_filename.values():
@@ -7273,8 +7290,8 @@ def chaoronghexxx():
         for uuid, url in true_webdav_m3u_dict_raw.items():
             filename = true_webdav_m3u_dict_raw_filename[uuid]
             name_url_dict[filename] = url
-        vcodec='libx264'
-        acodec='copy'
+        vcodec = 'libx264'
+        acodec = 'copy'
         while True:
             # 需要跳片，跳片的名字
             needJump, name = repeat_check(true_webdav_m3u_dict_raw_filename)
@@ -7299,10 +7316,11 @@ def chaoronghexxx():
                     faltalDeadLink = True
                     break
                 length = get_length(url, encoded_credentials)
+                stop_ffmpeg_bilibili()
                 cmd = f'ffmpeg -threads {ffmpegThread} {user_agent}    -headers \"Authorization: Basic {encoded_credentials}\" -re -i "{url}" -vcodec {vcodec} -acodec {acodec} -b:a 192k -r {bilibilirfps} -vf "drawtext=fontsize=24:fontfile=FreeSerif.ttf:text=\'{filename}\':x=10:y=main_h-30:fontcolor=LightGrey:alpha=0.6" -f flv "{bilibiliServer}{bilibilirtsp}"'
                 subprocess.Popen(cmd, stdin=subprocess.PIPE, shell=True)
                 # 记录当前记录
-                pastName['name'] = filename
+                changeFileName2('pastBilibiliRecord', filename)
                 time.sleep(round(length))
             if faltalDeadLink:
                 break

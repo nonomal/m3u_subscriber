@@ -7278,6 +7278,7 @@ def chaoronghexxx():
         global true_webdav_m3u_dict_raw
         # uuid,文件名字
         global true_webdav_m3u_dict_raw_filename
+        global ffmpeg_process2
         if len(true_webdav_m3u_dict_raw.keys()) == 0:
             return "empty"
         bilibilirtsp = getFileNameByTagName('bilibilirtsp')
@@ -7318,7 +7319,7 @@ def chaoronghexxx():
                 length = get_length(url, encoded_credentials)
                 stop_ffmpeg_bilibili()
                 cmd = f'ffmpeg -threads {ffmpegThread} {user_agent}    -headers \"Authorization: Basic {encoded_credentials}\" -re -i "{url}" -vcodec {vcodec} -acodec {acodec} -b:a 192k -r {bilibilirfps} -vf "drawtext=fontsize=24:fontfile=FreeSerif.ttf:text=\'{filename}\':x=10:y=main_h-30:fontcolor=LightGrey:alpha=0.6" -f flv "{bilibiliServer}{bilibilirtsp}"'
-                subprocess.Popen(cmd, stdin=subprocess.PIPE, shell=True)
+                ffmpeg_process2=subprocess.Popen(cmd, stdin=subprocess.PIPE, shell=True)
                 # 记录当前记录
                 changeFileName2('pastBilibiliRecord', filename)
                 time.sleep(round(length))

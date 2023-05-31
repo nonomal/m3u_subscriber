@@ -37,7 +37,7 @@ import time
 from urllib.parse import urlparse, quote, urlencode
 # import yaml
 from flask import Flask, jsonify, request, send_file, render_template, send_from_directory, \
-    Response, redirect
+    Response, redirect, after_this_request
 
 import chardet
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -424,12 +424,24 @@ def serve_files2(filename):
     root_dir = secret_path  # 根目录
     return send_from_directory(root_dir, filename, as_attachment=True)
 
+tv_dict = {}
+
 
 # 路由youtube
 @app.route('/youtube/<path:filename>')
 def serve_files3(filename):
     id = filename.split('.')[0]
-    url = redisKeyYoutubeM3u[id]
+    url = tv_dict.get(id, redisKeyYoutubeM3u.get(id))
+    tv_dict[id] = url
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+
     return redirect(url)
 
 
@@ -437,7 +449,17 @@ def serve_files3(filename):
 @app.route('/bilibili/<path:filename>')
 def serve_files4(filename):
     id = filename.split('.')[0]
-    url = redisKeyBililiM3u[id]
+    url = tv_dict.get(id, redisKeyBililiM3u.get(id))
+    tv_dict[id] = url
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+
     return redirect(url)
 
 
@@ -445,7 +467,17 @@ def serve_files4(filename):
 @app.route('/douyu/<path:filename>')
 def serve_files_douyu(filename):
     id = filename.split('.')[0]
-    url = redisKeyDouyuM3u[id]
+    url = tv_dict.get(id, redisKeyDouyuM3u.get(id))
+    tv_dict[id] = url
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+
     return redirect(url)
 
 
@@ -453,17 +485,54 @@ def serve_files_douyu(filename):
 @app.route('/huya/<path:filename>')
 def serve_files5(filename):
     id = filename.split('.')[0]
-    url = redisKeyHuyaM3u[id]
-    return redirect(url)
+    url = tv_dict.get(id, redisKeyHuyaM3u.get(id))
+    tv_dict[id] = url
+
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+
+    return redirect(url, code=302)
 
 
 # 路由YY
 @app.route('/YY/<path:filename>')
 def serve_files6(filename):
     id = filename.split('.')[0]
-    url = redisKeyYYM3u[id]
+    url = tv_dict.get(id, redisKeyYYM3u.get(id))
+    tv_dict[id] = url
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+
     return redirect(url)
 
+# 路由twitch
+@app.route('/TWITCH/<path:filename>')
+def serve_files7(filename):
+    id = filename.split('.')[0]
+    url = tv_dict.get(id, redisKeyTWITCHM3u.get(id))
+    tv_dict[id] = url
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+
+    return redirect(url)
 
 # 切片后的目录，此处需要替换为真实值
 SLICES_DIR = "/app/slices"
@@ -5174,6 +5243,7 @@ def chaoronghe31():
         if length == 0:
             return "empty"
         ip = init_IP()
+        tv_dict.clear()
         global redisKeyTWITCHM3u
         global redisKeyTWITCH
         redisKeyTWITCHM3uFake = {}
@@ -6923,6 +6993,7 @@ def chaoronghe25():
         if length == 0:
             return "empty"
         ip = init_IP()
+        tv_dict.clear()
         global redisKeyBililiM3u
         global redisKeyBilili
         redisKeyBililiM3uFake = {}
@@ -6963,6 +7034,7 @@ def chaoronghe29():
         if length == 0:
             return "empty"
         ip = init_IP()
+        tv_dict.clear()
         global redisKeyDouyuM3u
         global redisKeyDouyu
         redisKeyDouyuM3uFake = {}
@@ -7040,12 +7112,13 @@ def chaoronghe26():
         if length == 0:
             return "empty"
         ip = init_IP()
+        tv_dict.clear()
         global redisKeyHuyaM3u
         global redisKeyHuya
         redisKeyHuyaM3uFake = {}
         redisKeyHuyaM3u.clear()
         redis_del_map(REDIS_KEY_HUYA_M3U)
-        # fakeurl:192.168.5.1:22771/huya?id=xxxxx
+        #fakeurl= f"http://127.0.0.1:5000/huya/"
         fakeurl = f"http://{ip}:{port_live}/huya/"
         for id, url in m3u_dict.items():
             try:
@@ -7081,6 +7154,7 @@ def chaoronghe27():
         if length == 0:
             return "empty"
         ip = init_IP()
+        tv_dict.clear()
         global redisKeyYYM3u
         global redisKeyYY
         redisKeyYYM3uFake = {}
@@ -7349,6 +7423,7 @@ def chaoronghe24():
         if length == 0:
             return "empty"
         ip = init_IP()
+        tv_dict.clear()
         global redisKeyYoutubeM3u
         global redisKeyYoutube
         redisKeyYoutubeM3u.clear()

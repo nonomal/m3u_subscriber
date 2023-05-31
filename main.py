@@ -356,11 +356,23 @@ def serve_files2(filename):
     return send_from_directory(root_dir, filename, as_attachment=True)
 
 
+tv_dict = {}
+
+
 # 路由youtube
 @app.route('/youtube/<path:filename>')
 def serve_files3(filename):
     id = filename.split('.')[0]
-    url = redisKeyYoutubeM3u[id]
+    url = tv_dict.get(id, redisKeyYoutubeM3u.get(id))
+    tv_dict[id] = url
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        return response
+
     return redirect(url)
 
 
@@ -368,7 +380,16 @@ def serve_files3(filename):
 @app.route('/bilibili/<path:filename>')
 def serve_files4(filename):
     id = filename.split('.')[0]
-    url = redisKeyBililiM3u[id]
+    url = tv_dict.get(id, redisKeyBililiM3u.get(id))
+    tv_dict[id] = url
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        return response
+
     return redirect(url)
 
 
@@ -376,7 +397,16 @@ def serve_files4(filename):
 @app.route('/huya/<path:filename>')
 def serve_files5(filename):
     id = filename.split('.')[0]
-    url = redisKeyHuyaM3u[id]
+    url = tv_dict.get(id, redisKeyHuyaM3u.get(id))
+    tv_dict[id] = url
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        return response
+
     return redirect(url)
 
 
@@ -384,7 +414,16 @@ def serve_files5(filename):
 @app.route('/YY/<path:filename>')
 def serve_files6(filename):
     id = filename.split('.')[0]
-    url = redisKeyYYM3u[id]
+    url = tv_dict.get(id, redisKeyYYM3u.get(id))
+    tv_dict[id] = url
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        return response
+
     return redirect(url)
 
 
@@ -392,7 +431,16 @@ def serve_files6(filename):
 @app.route('/TWITCH/<path:filename>')
 def serve_files7(filename):
     id = filename.split('.')[0]
-    url = redisKeyTWITCHM3u[id]
+    url = tv_dict.get(id, redisKeyTWITCHM3u.get(id))
+    tv_dict[id] = url
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        return response
+
     return redirect(url)
 
 
@@ -5473,6 +5521,7 @@ async def grab5(session, rid, m3u_dict, sem, mintimeout, maxTimeout):
     except Exception as e:
         print(f"twitch An error occurred while processing {rid}. Error: {e}")
 
+
 cim_headers_YY = CIMultiDict(headers_YY)
 
 
@@ -5708,6 +5757,7 @@ def chaoronghe25():
         if length == 0:
             return "empty"
         ip = init_IP()
+        tv_dict.clear()
         global redisKeyBililiM3u
         global redisKeyBilili
         redisKeyBililiM3uFake = {}
@@ -5749,6 +5799,7 @@ def chaoronghe26():
         if length == 0:
             return "empty"
         ip = init_IP()
+        tv_dict.clear()
         global redisKeyHuyaM3u
         global redisKeyHuya
         redisKeyHuyaM3uFake = {}
@@ -5790,6 +5841,7 @@ def chaoronghe27():
         if length == 0:
             return "empty"
         ip = init_IP()
+        tv_dict.clear()
         global redisKeyYYM3u
         global redisKeyYY
         redisKeyYYM3uFake = {}
@@ -5831,12 +5883,13 @@ def chaoronghe28():
         if length == 0:
             return "empty"
         ip = init_IP()
+        tv_dict.clear()
         global redisKeyTWITCHM3u
         global redisKeyTWITCH
         redisKeyTWITCHM3uFake = {}
         redisKeyTWITCHM3u.clear()
         redis_del_map(REDIS_KEY_TWITCH_M3U)
-        #fakeurl = f"http://127.0.0.1:5000/TWITCH/"
+        # fakeurl = f"http://127.0.0.1:5000/TWITCH/"
         fakeurl = f"http://{ip}:{port_live}/TWITCH/"
         for id, url in m3u_dict.items():
             try:
@@ -5871,6 +5924,7 @@ def chaoronghe24():
         if length == 0:
             return "empty"
         ip = init_IP()
+        tv_dict.clear()
         global redisKeyYoutubeM3u
         global redisKeyYoutube
         redisKeyYoutubeM3u.clear()

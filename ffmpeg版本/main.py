@@ -424,6 +424,7 @@ def serve_files2(filename):
     root_dir = secret_path  # 根目录
     return send_from_directory(root_dir, filename, as_attachment=True)
 
+
 tv_dict = {}
 
 
@@ -488,7 +489,6 @@ def serve_files5(filename):
     url = tv_dict.get(id, redisKeyHuyaM3u.get(id))
     tv_dict[id] = url
 
-
     @after_this_request
     def add_header(response):
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
@@ -517,6 +517,7 @@ def serve_files6(filename):
 
     return redirect(url)
 
+
 # 路由twitch
 @app.route('/TWITCH/<path:filename>')
 def serve_files7(filename):
@@ -533,6 +534,7 @@ def serve_files7(filename):
         return response
 
     return redirect(url)
+
 
 # 切片后的目录，此处需要替换为真实值
 SLICES_DIR = "/app/slices"
@@ -7118,7 +7120,7 @@ def chaoronghe26():
         redisKeyHuyaM3uFake = {}
         redisKeyHuyaM3u.clear()
         redis_del_map(REDIS_KEY_HUYA_M3U)
-        #fakeurl= f"http://127.0.0.1:5000/huya/"
+        # fakeurl= f"http://127.0.0.1:5000/huya/"
         fakeurl = f"http://{ip}:{port_live}/huya/"
         for id, url in m3u_dict.items():
             try:
@@ -7325,8 +7327,7 @@ def repeat_check(true_webdav_m3u_dict_raw_filename):
     name = getFileNameByTagName('pastBilibiliRecord')
     if name == '':
         return False, ''
-    for value in true_webdav_m3u_dict_raw_filename.values():
-        if value == name:
+    if name in true_webdav_m3u_dict_raw_filename.keys():
             return True, name
     return False, ''
 
@@ -7362,14 +7363,17 @@ def chaoronghexxx():
         credentials = f"{redisKeyWebDavM3u['username']}:{redisKeyWebDavM3u['password']}"
         encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
         name_url_dict = {}
+        name_type_dict = {}
         for uuid, url in true_webdav_m3u_dict_raw.items():
             filename = true_webdav_m3u_dict_raw_filename[uuid]
             name_url_dict[filename] = url
+            name_type_dict[filename] = redisKeyWebdavM3uType[uuid]
         vcodec = 'libx264'
         acodec = 'copy'
+        audioType = getFileNameByTagName('audioType')
         while True:
             # 需要跳片，跳片的名字
-            needJump, name = repeat_check(true_webdav_m3u_dict_raw_filename)
+            needJump, name = repeat_check(name_url_dict)
             # 跳片结束
             hasJumped = False
             # 死链，强制中断轮播
@@ -7383,7 +7387,7 @@ def chaoronghexxx():
                 chaoronghewebdav()
                 start_time = time.time()  # 获取当前时间戳
                 # 半小时尝试重新获取直链
-                while time.time() - start_time < 1800:
+                while (time.time() - start_time) < 3600:
                     url = repo_webdav(filename)
                     if url != '':
                         break
@@ -7391,9 +7395,14 @@ def chaoronghexxx():
                     faltalDeadLink = True
                     break
                 length = get_length(url, encoded_credentials)
+                videoType=name_type_dict[filename]
                 stop_ffmpeg_bilibili()
-                cmd = f'ffmpeg -threads {ffmpegThread} {user_agent}    -headers \"Authorization: Basic {encoded_credentials}\" -re -i "{url}" -vcodec {vcodec} -acodec {acodec} -b:a 192k -r {bilibilirfps} -vf "drawtext=fontsize=24:fontfile=FreeSerif.ttf:text=\'{filename}\':x=10:y=main_h-30:fontcolor=LightGrey:alpha=0.6" -f flv "{bilibiliServer}{bilibilirtsp}"'
-                ffmpeg_process2=subprocess.Popen(cmd, stdin=subprocess.PIPE, shell=True)
+                if videoType != 'mkv' or videoType != 'avi':
+                    cmd = f'ffmpeg -threads {ffmpegThread} {user_agent} -headers \"Authorization: Basic {encoded_credentials}\" -re -i "{url}" -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -r {bilibilirfps}  -f flv "{bilibiliServer}{bilibilirtsp}"'
+                else:
+                    cmd = f'ffmpeg -threads {ffmpegThread} {user_agent} -headers \"Authorization: Basic {encoded_credentials}\" -re -i "{url}" -c:v {vcodec} -c:a {audioType}  -map 0:v:0 -map 0:a:0? -map_chapters -1  -r {bilibilirfps}  -f flv "{bilibiliServer}{bilibilirtsp}"'
+                # cmd = f'ffmpeg -threads {ffmpegThread} {user_agent}    -headers \"Authorization: Basic {encoded_credentials}\" -re -i "{url}" -vcodec {vcodec} -acodec {acodec} -b:a 192k -r {bilibilirfps} -vf "drawtext=fontsize=24:fontfile=FreeSerif.ttf:text=\'{filename}\':x=10:y=main_h-30:fontcolor=LightGrey:alpha=0.6" -f flv "{bilibiliServer}{bilibilirtsp}"'
+                ffmpeg_process2 = subprocess.Popen(cmd, stdin=subprocess.PIPE, shell=True)
                 # 记录当前记录
                 changeFileName2('pastBilibiliRecord', filename)
                 time.sleep(round(length))

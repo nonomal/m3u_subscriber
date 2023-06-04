@@ -144,7 +144,9 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'simpleOpenclashFallBackFilterDomain': 'simpleOpenclashFallBackFilterDomain',
                   'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
                   'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
-                  'usernameSys': 'admin', 'passwordSys': 'password'}
+                  'usernameSys': 'admin', 'passwordSys': 'password', 'normalM3uClock': '7200',
+                  'normalSubscriberClock': '10800',
+                  'proxySubscriberClock': '3600', 'spM3uClock': '3700', 'autoDnsSwitchClock': '600'}
 
 # 单独导入导出使用一个配置,需特殊处理:{{url:{pass,name}}}
 # 下载网络配置并且加密后上传:url+加密密钥+加密文件名字
@@ -529,42 +531,68 @@ def upload_json_base(rediskey, file_content):
         return jsonify({'success': False})
 
 
-def executeProxylist(sleepSecond):
+# 上次更新时间戳
+time_clock_update_dict = {'proxySubscriberClock': '0', 'spM3uClock': '0', 'normalM3uClock': '0',
+                          'autoDnsSwitchClock': '0', 'normalSubscriberClock': '0'}
+
+
+# true-需要更新 false-不需要更新
+def is_update_clock(cachekey):
+    lastUpdateTime = float(time_clock_update_dict[cachekey])
+    sysTime = int(getFileNameByTagName(cachekey))
+    if (time.time() - lastUpdateTime) >= sysTime:
+        return True
+    return False
+
+
+def update_clock(cachekey):
+    time_clock_update_dict[cachekey] = str(time.time())
+
+
+def clock_thread():
     while True:
-        # 执行方法
-        chaoronghe6()
-        if isOpenFunction('switch35'):
-            # 执行方法
+        # 节点订阅下载
+        if is_update_clock('proxySubscriberClock'):
+            chaoronghe6()
+            update_clock('proxySubscriberClock')
+        # 自动简易dns订阅文件生成
+        if isOpenFunction('switch24') and is_update_clock('autoDnsSwitchClock'):
+            chaoronghe7()
+            chaoronghe8()
+            update_clock('autoDnsSwitchClock')
+        # youtube/bilibili/huya/yy/twitch直播源刷新
+        if isOpenFunction('switch35') and is_update_clock('spM3uClock'):
             chaoronghe24()
             chaoronghe25()
             chaoronghe26()
             chaoronghe27()
             chaoronghe28()
-            print("直播源定时器执行成功")
-        time.sleep(sleepSecond)
-
-
-def executeWhitelist(sleepSecond):
-    while True:
-        if isOpenFunction('switch26'):
-            # 执行方法
-            chaoronghe2()
-        if isOpenFunction('switch13'):
-            # 执行方法
-            chaoronghe3()
-        if isOpenFunction('switch27'):
-            # 执行方法
-            chaoronghe4()
-        if isOpenFunction('switch28'):
-            # 执行方法
-            chaoronghe5()
-        if isOpenFunction('switch33'):
-            # 执行方法
-            chaoronghe9()
-        if isOpenFunction('switch34'):
-            # 执行方法
-            chaoronghe10()
-        time.sleep(sleepSecond)
+            update_clock('spM3uClock')
+        # 通常直播源下载定时器
+        if isOpenFunction('switch25') and is_update_clock('normalM3uClock'):
+            chaoronghe()
+            update_clock('normalM3uClock')
+        if is_update_clock('normalSubscriberClock'):
+            if isOpenFunction('switch26'):
+                # 执行方法-域名白名单
+                chaoronghe2()
+            if isOpenFunction('switch13'):
+                # 执行方法-域名黑名单
+                chaoronghe3()
+            if isOpenFunction('switch27'):
+                # 执行方法-ipv4
+                chaoronghe4()
+            if isOpenFunction('switch28'):
+                # 执行方法-ipv6
+                chaoronghe5()
+            if isOpenFunction('switch33'):
+                # 执行方法-下载加密上传
+                chaoronghe9()
+            if isOpenFunction('switch34'):
+                # 执行方法-下载解密
+                chaoronghe10()
+            update_clock('normalSubscriberClock')
+        time.sleep(10)
 
 
 def toggle_m3u(functionId, value):
@@ -597,14 +625,6 @@ def toggle_m3u(functionId, value):
     elif functionId == 'switch35':
         function_dict[functionId] = str(value)
         redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
-
-
-def executeM3u(sleepSecond):
-    while True:
-        if isOpenFunction('switch25'):
-            # 执行方法
-            chaoronghe()
-        time.sleep(sleepSecond)
 
 
 async def checkWriteHealthM3u(url):
@@ -3895,7 +3915,9 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'simpleOpenclashFallBackFilterDomain': 'simpleOpenclashFallBackFilterDomain',
                           'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
                           'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
-                          'usernameSys': 'admin', 'passwordSys': 'password'}
+                          'usernameSys': 'admin', 'passwordSys': 'password', 'normalM3uClock': '7200',
+                          'normalSubscriberClock': '10800',
+                          'proxySubscriberClock': '3600', 'spM3uClock': '3700', 'autoDnsSwitchClock': '600'}
 
 
 def init_file_name():
@@ -6571,25 +6593,10 @@ def process_file4():
     return send_file(filename, as_attachment=True)
 
 
-# 自动简易dns
-def thread_recall_chaoronghe7(second):
-    while True:
-        if isOpenFunction('switch24'):
-            chaoronghe7()
-            chaoronghe8()
-        time.sleep(second)
-
-
 def main():
     init_db()
-    timer_thread1 = threading.Thread(target=executeM3u, args=(7200,), daemon=True)
+    timer_thread1 = threading.Thread(target=clock_thread, daemon=True)
     timer_thread1.start()
-    timer_thread2 = threading.Thread(target=executeWhitelist, args=(10800,), daemon=True)
-    timer_thread2.start()
-    timer_thread6 = threading.Thread(target=executeProxylist, args=(3600,), daemon=True)
-    timer_thread6.start()
-    timer_thread7 = threading.Thread(target=thread_recall_chaoronghe7, args=(600,), daemon=True)
-    timer_thread7.start()
     # 启动工作线程消费上传数据至github
     t2 = threading.Thread(target=worker_github, daemon=True)
     t2.start()

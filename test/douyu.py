@@ -1,123 +1,374 @@
-# coding=utf-8
-import requests
-import execjs
-import time
+import asyncio
+import json
+import os
 import re
-import random
-from ._base_recorder import BaseRecorder, recorder
-from .resources import crypto_js
+import time
+import uuid
+from http.cookies import SimpleCookie
+from pathlib import Path
+from typing import Dict, Tuple, Union
+from urllib.parse import parse_qs
+
+import ffmpeg
+import httpx
+import jsengine
+import streamlink
+from jsonpath_ng.ext import parse
+from loguru import logger
+from streamlink.stream import StreamIO, HTTPStream
+from streamlink_cli.main import open_stream
+from streamlink_cli.output import FileOutput
+from streamlink_cli.streamrunner import StreamRunner
+
+recording: Dict[str, Tuple[StreamIO, FileOutput]] = {}
 
 
-@recorder(liver='douyu')
-class DouyuRecorder(BaseRecorder):
+class LiveRecoder:
+    def __init__(self, config: dict, user: dict):
+        self.proxy = config.get('proxy')
 
-    def __init__(self, short_id, **args):
-        BaseRecorder.__init__(self, short_id, **args)
-        if self.cookies == None:
-            self.dy_did = ''.join(random.sample('1234567890qwertyuiopasdfghjklzxcvbnm', 32))
-        else:
-            searchObj = re.search("dy_did=([^&; ]+)", self.cookies)
-            self.dy_did = searchObj.group(1)
+        self.id = user['id']
+        platform = user['platform']
+        name = user.get('name', self.id)
+        self.flag = f'[{platform}][{name}]'
 
-    def getRoomInfo(self):
-        roomInfo = {}
-        roomInfo['short_id'] = self.short_id
+        self.interval = user.get('interval', 10)
+        self.headers = user.get('headers', {'User-Agent': 'Chrome'})
+        self.cookies = user.get('cookies')
+        self.format = user.get('format')
 
-        url = "https://www.douyu.com/%s" % self.short_id
-        headers = {
-            'Origin': 'https://www.douyu.com',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0',
-            'Accept': 'application/json, text/plain, */*',
-            'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
-            'Accept-Encoding': 'gzip, deflate, br',
+        self.get_cookies()
+        self.client = self.get_client()
+
+    async def start(self):
+        logger.info(f'{self.flag}正在检测直播状态')
+        while True:
+            try:
+                await self.run()
+                await asyncio.sleep(self.interval)
+            except ConnectionError as error:
+                if '直播检测请求协议错误' not in str(error):
+                    logger.error(error)
+                await self.client.aclose()
+                self.client = self.get_client()
+            except Exception as error:
+                logger.exception(f'{self.flag}直播检测未知错误\n{repr(error)}')
+
+    async def run(self):
+        pass
+
+    async def request(self, method, url, **kwargs):
+        try:
+            response = await self.client.request(method, url, **kwargs)
+            response.raise_for_status()
+            return response
+        except httpx.ProtocolError as error:
+            raise ConnectionError(f'{self.flag}直播检测请求协议错误\n{error}')
+        except httpx.HTTPStatusError as error:
+            raise ConnectionError(f'{self.flag}直播检测请求状态码错误\n{error}\n{response.text}')
+        except httpx.HTTPError as error:
+            raise ConnectionError(f'{self.flag}直播检测请求错误\n{repr(error)}')
+
+    def get_client(self):
+        return httpx.AsyncClient(
+            http2=True,
+            timeout=self.interval,
+            proxies=self.proxy,
+            transport=httpx.AsyncHTTPTransport(retries=5),
+            limits=httpx.Limits(max_keepalive_connections=100, keepalive_expiry=self.interval * 2),
+            headers=self.headers,
+            cookies=self.cookies
+        )
+
+    def get_cookies(self):
+        if self.cookies:
+            cookies = SimpleCookie()
+            cookies.load(self.cookies)
+            self.cookies = {k: v.value for k, v in cookies.items()}
+
+    def get_filename(self, title, format):
+        live_time = time.strftime('%Y.%m.%d %H.%M.%S')
+        # 文件名特殊字符转换为全角字符
+        char_dict = {
+            '"': '＂',
+            '*': '＊',
+            ':': '：',
+            '<': '＜',
+            '>': '＞',
+            '?': '？',
+            '/': '／',
+            '\\': '＼',
+            '|': '｜',
         }
-        if not self.cookies is None:
-            headers['Cookie'] = self.cookies
+        for half, full in char_dict.items():
+            title = title.replace(half, full)
+        filename = f'[{live_time}]{self.flag}{title}.{format}'
+        return filename
 
-        http_result = requests.get(url, timeout=10, headers=headers)
-        #         print(http_result.text)
-        searchObj = re.search(r'\$ROOM.room_id ?= ?([0-9]+);', http_result.text)
+    def get_streamlink(self, plugin_option: dict = None):
+        session = streamlink.Streamlink(options={
+            'stream-timeout': 180,
+            'stream-segment-attempts': 20,
+            'hls-playlist-reload-attempts': 20
+        })
+        # 添加streamlink的http相关选项
+        for arg in ('proxy', 'headers', 'cookies'):
+            if attr := getattr(self, arg):
+                # 代理为socks5时，streamlink的代理参数需要改为socks5h，防止部分直播源获取失败
+                if 'socks' in attr:
+                    attr = attr.replace('://', 'h://')
+                session.set_option(f'http-{arg}', attr)
+        if plugin_option:
+            session.set_plugin_option(**plugin_option)
+        return session
 
-        roomInfo['room_id'] = searchObj.group(1)
-        searchObj = re.search(r'\$ROOM.show_status ?= ?([0-9]+);', http_result.text)
-        roomInfo['live_status'] = searchObj.group(1)
-        searchObj = re.search(r'<h[0-9] class=\"Title-headlineH2\">([^/]*)</h[0-9]>', http_result.text)
-        if searchObj:
-            roomInfo['room_title'] = searchObj.group(1)
+    def run_record(self, stream: Union[StreamIO, HTTPStream], url, title, format):
+        # 获取输出文件名
+        filename = self.get_filename(title, format)
+        if stream:
+            logger.info(f'{self.flag}开始录制：{filename}')
+            # 调用streamlink录制直播
+            self.stream_writer(stream, url, filename)
+            # format配置存在且不等于直播平台默认格式时运行ffmpeg封装
+            if self.format and self.format != format:
+                self.run_ffmpeg(filename, format)
+            recording.pop(url, None)
+            logger.info(f'{self.flag}停止录制：{filename}')
         else:
-            searchObj = re.search(r'<title>([^/]*)</title>', http_result.text)
-            roomInfo['room_title'] = searchObj.group(1)
-        searchObj = re.search(r'<div class=\"AnchorAnnounce\"><h3><span>([^/]*)</span></h3></div>', http_result.text)
-        if searchObj:
-            roomInfo['room_description'] = searchObj.group(1)
-        else:
-            roomInfo['room_description'] = '无'
-        searchObj = re.search(r'\$ROOM.owner_uid ?= ?([0-9]+);', http_result.text)
-        roomInfo['room_owner_id'] = searchObj.group(1)
-        searchObj = re.search(r'<a class="Title-anchorName" title="([^"]+)"', http_result.text)
-        if searchObj:
-            roomInfo['room_owner_name'] = searchObj.group(1)
-        else:
-            url = "https://www.douyu.com/betard/%s" % roomInfo['room_id']
-            room_info_json = requests.get(url, timeout=10, headers=headers).json()
-            roomInfo['room_owner_name'] = room_info_json['room']['owner_name']
-            roomInfo['room_title'] = room_info_json['room']['room_name']
+            logger.error(f'{self.flag}无可用直播源：{filename}')
 
-        if roomInfo['live_status'] == '1':
-            quality = {}
-            # self.api_url = "https://www.douyu.com/lapi/live/getH5Play/%s"%roomInfo['room_id']
-            self.api_url = "https://playweb.douyu.com/lapi/live/getH5Play/%s" % roomInfo['room_id']
+    def stream_writer(self, stream, url, filename):
+        logger.info(f'{self.flag}获取到直播流链接：{filename}\n{stream.url}')
+        output = FileOutput(Path(f'output/{filename}'))
+        try:
+            stream_fd, prebuffer = open_stream(stream)
+            output.open()
+            recording[url] = (stream_fd, output)
+            logger.info(f'{self.flag}正在录制：{filename}')
+            StreamRunner(stream_fd, output, show_progress=True).run(prebuffer)
+        except BrokenPipeError as error:
+            logger.error(f'{self.flag}管道损坏错误：{filename}\n{error}')
+        except OSError as error:
+            logger.error(f'{self.flag}文件写入错误：{filename}\n{error}')
+        except Exception as error:
+            logger.exception(f'{self.flag}直播录制未知错误\n{error}')
+        finally:
+            output.close()
 
-            begin = http_result.text.index("var vdwdae325w_64we")
-            end = http_result.text.index("</script>", begin)
-            js_code = crypto_js + '\r\n'
-            js_code += http_result.text[begin:end]
-            self.js_code = js_code
+    def run_ffmpeg(self, filename, format):
+        logger.info(f'{self.flag}开始ffmpeg封装：{filename}')
+        new_filename = filename.replace(f'.{format}', f'.{self.format}')
+        ffmpeg.input(f'output/{filename}').output(
+            f'output/{new_filename}',
+            codec='copy',
+            map_metadata='-1',
+            movflags='faststart'
+        ).global_args('-hide_banner').run()
+        os.remove(f'output/{filename}')
 
-            ctx = execjs.compile(js_code)
-            param = ctx.call("ub98484234", roomInfo['room_id'], self.dy_did, int(time.time()))
-            param += "&cdn=&rate=%d&ver=%s&iar=0&ive=1" % (0, "Douyu_219052705")
 
-            self.api_headers = {
-                'Accept': 'application/json, text/plain, */*',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Accept-Language': 'zh-CN,zh;q=0.8',
-                'content-type': 'application/x-www-form-urlencoded',
-                'x-requested-with': 'XMLHttpRequest',
-                'Origin': 'https://www.douyu.com',
-                'Referer': "https://www.douyu.com/topic/xyb01?rid=%s" % self.short_id,
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0',
+class Bilibili(LiveRecoder):
+    async def run(self):
+        url = f'https://live.bilibili.com/{self.id}'
+        if url not in recording:
+            response = (await self.request(
+                method='GET',
+                url='https://api.live.bilibili.com/room/v1/Room/get_info',
+                params={'room_id': self.id}
+            )).json()
+            if response['data']['live_status'] == 1:
+                title = response['data']['title']
+                stream = self.get_streamlink().streams(url).get('best')  # HTTPStream[flv]
+                await asyncio.to_thread(self.run_record, stream, url, title, 'flv')
+
+
+class Douyu(LiveRecoder):
+    async def run(self):
+        url = f'https://www.douyu.com/{self.id}'
+        if url not in recording:
+            response = (await self.request(
+                method='GET',
+                url=f'https://open.douyucdn.cn/api/RoomApi/room/{self.id}',
+            )).json()
+            if response['data']['room_status'] == '1':
+                title = response['data']['room_name']
+                stream = HTTPStream(
+                    self.get_streamlink(),
+                    await self.get_live()
+                )  # HTTPStream[flv]
+                await asyncio.to_thread(self.run_record, stream, url, title, 'flv')
+
+    async def get_js(self):
+        response = (await self.request(
+            method='POST',
+            url=f'https://www.douyu.com/swf_api/homeH5Enc?rids={self.id}'
+        )).json()
+        js_enc = response['data'][f'room{self.id}']
+        crypto_js = (await self.request(
+            method='GET',
+            url='https://cdn.staticfile.org/crypto-js/4.1.1/crypto-js.min.js'
+        )).text
+        return jsengine.JSEngine(js_enc + crypto_js)
+
+    async def get_live(self):
+        did = uuid.uuid4().hex
+        tt = str(int(time.time()))
+        params = {
+            'cdn': 'tct-h5',
+            'did': did,
+            'tt': tt,
+            'rate': 0
+        }
+        js = await self.get_js()
+        query = js.call('ub98484234', self.id, did, tt)
+        params.update({k: v[0] for k, v in parse_qs(query).items()})
+        response = (await self.request(
+            method='POST',
+            url=f'https://www.douyu.com/lapi/live/getH5Play/{self.id}',
+            params=params
+        )).json()
+        return f"{response['data']['rtmp_url']}/{response['data']['rtmp_live']}"
+
+
+class Huya(LiveRecoder):
+    async def run(self):
+        url = f'https://www.huya.com/{self.id}'
+        if url not in recording:
+            response = (await self.request(
+                method='GET',
+                url=url
+            )).text
+            if '"isOn":true' in response:
+                title = re.search('"introduction":"(.*?)"', response).group(1)
+                stream = self.get_streamlink().streams(url).get('best')  # HTTPStream[flv]
+                await asyncio.to_thread(self.run_record, stream, url, title, 'flv')
+
+
+class Youtube(LiveRecoder):
+    async def run(self):
+        response = (await self.request(
+            method='POST',
+            url=f'https://www.youtube.com/youtubei/v1/browse',
+            params={
+                'key': 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
+                'prettyPrint': False
+            },
+            json={
+                'context': {
+                    'client': {
+                        'hl': 'zh-CN',
+                        'clientName': 'WEB',
+                        'clientVersion': '2.20230101.00.00',
+                        'timeZone': 'Asia/Shanghai'
+                    }
+                },
+                'browseId': self.id,
+                'params': 'EghmZWF0dXJlZPIGBAoCMgA%3D'
             }
-            if not self.cookies is None:
-                self.api_headers['Cookie'] = self.cookies
+        )).json()
+        jsonpath = parse('$..channelFeaturedContentRenderer').find(response)
+        for match in jsonpath:
+            for item in match.value['items']:
+                video = item['videoRenderer']
+                if '"style": "LIVE"' in json.dumps(video):
+                    url = f"https://www.youtube.com/watch?v={video['videoId']}"
+                    title = video['title']['runs'][0]['text']
+                    if url not in recording:
+                        stream = self.get_streamlink().streams(url).get('best')  # HLSStream[mpegts]
+                        # FIXME:多开直播间中断
+                        asyncio.create_task(asyncio.to_thread(self.run_record, stream, url, title, 'ts'))
 
-            http_result = requests.post(self.api_url, timeout=10, headers=self.api_headers, data=param)
-            multirates = http_result.json()['data']['multirates']
-            for rate in multirates:
-                quality[str(rate['rate'])] = rate['name']
 
-            roomInfo['live_rates'] = quality
+class Twitch(LiveRecoder):
+    async def run(self):
+        url = f'https://www.twitch.tv/{self.id}'
+        if url not in recording:
+            response = (await self.request(
+                method='POST',
+                url='https://gql.twitch.tv/gql',
+                headers={'Client-Id': 'kimne78kx3ncx6brgo4mv6wki5h1ko'},
+                json=[{
+                    'operationName': 'StreamMetadata',
+                    'variables': {'channelLogin': self.id},
+                    'extensions': {
+                        'persistedQuery': {
+                            'version': 1,
+                            'sha256Hash': 'a647c2a13599e5991e175155f798ca7f1ecddde73f7f341f39009c14dbf59962'
+                        }
+                    }
+                }]
+            )).json()
+            if response[0]['data']['user']['stream']:
+                title = response[0]['data']['user']['lastBroadcast']['title']
+                stream = self.get_streamlink(plugin_option={
+                    'plugin': 'twitch',
+                    'key': 'disable-ads',
+                    'value': True,
+                }).streams(url).get('best')  # HLSStream[mpegts]
+                await asyncio.to_thread(self.run_record, stream, url, title, 'ts')
 
-        self.roomInfo = roomInfo
-        return roomInfo
 
-    def getLiveUrl(self, qn):
-        if not hasattr(self, 'roomInfo'):
-            self.getRoomInfo()
-        if self.roomInfo['live_status'] != '1':
-            print('当前没有在直播')
-            return None
+class Twitcasting(LiveRecoder):
+    async def run(self):
+        url = f'https://twitcasting.tv/{self.id}'
+        if url not in recording:
+            response = (await self.request(
+                method='GET',
+                url='https://twitcasting.tv/streamserver.php',
+                params={
+                    'target': self.id,
+                    'mode': 'client'
+                }
+            )).json()
+            if response['movie']['live']:
+                response = (await self.request(
+                    method='GET',
+                    url=url
+                )).text
+                title = re.search('<meta name="twitter:title" content="(.*?)">', response).group(1)
+                stream = self.get_streamlink().streams(url).get('best')  # Stream[mp4]
+                await asyncio.to_thread(self.run_record, stream, url, title, 'mp4')
 
-        ctx = execjs.compile(self.js_code)
-        param = ctx.call("ub98484234", self.roomInfo['room_id'], self.dy_did, int(time.time()))
-        param += "&cdn=&rate=%s&ver=%s&iar=0&ive=1" % (qn, "Douyu_219052705")
-        json_result = requests.post(self.api_url, timeout=10, headers=self.api_headers, data=param).json()
 
-        print("申请清晰度 %s的链接，得到清晰度 %d的链接" % (qn, json_result['data']['rate']))
-        header = json_result['data']['rtmp_url']
-        tail = json_result['data']['rtmp_live']
+class Afreeca(LiveRecoder):
+    async def run(self):
+        url = f'https://play.afreecatv.com/{self.id}'
+        if url not in recording:
+            response = (await self.request(
+                method='POST',
+                url='https://live.afreecatv.com/afreeca/player_live_api.php',
+                data={'bid': self.id}
+            )).json()
+            if response['CHANNEL']['RESULT'] != 0:
+                title = response['CHANNEL']['TITLE']
+                stream = self.get_streamlink().streams(url).get('best')  # HLSStream[mpegts]
+                await asyncio.to_thread(self.run_record, stream, url, title, 'ts')
 
-        self.live_url = header + "/" + tail
-        self.live_qn = json_result['data']['rate']
-        return self.live_url
 
+async def run():
+    with open('config.json', 'r', encoding='utf-8') as f:
+        config = json.load(f)
+    try:
+        tasks = []
+        for item in config['user']:
+            platform_class = globals()[item['platform']]
+            coro = platform_class(config, item).start()
+            tasks.append(asyncio.create_task(coro))
+        await asyncio.wait(tasks)
+    except (asyncio.CancelledError, KeyboardInterrupt, SystemExit):
+        logger.warning('用户中断录制，正在关闭直播流')
+        for stream_fd, output in recording.copy().values():
+            stream_fd.close()
+            output.close()
+
+
+if __name__ == '__main__':
+    logger.add(
+        sink='logs/log_{time:YYYY-MM-DD}.log',
+        rotation='00:00',
+        retention='3 days',
+        level='INFO',
+        encoding='utf-8',
+        format='[{time:YYYY-MM-DD HH:mm:ss}][{level}][{name}][{function}:{line}]{message}'
+    )
+    asyncio.run(run())

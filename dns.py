@@ -86,30 +86,6 @@ def put_element(q, element):
     #     print("队列已满，不能添加更多元素")
 
 
-# 每天定时清除一次简易dns
-def clearCache(second):
-    while True:
-        global black_list_simple_policy
-        clearAndStoreAtLeast50DataInRedis(REDIS_KEY_DNS_SIMPLE_BLACKLIST, black_list_simple_policy)
-        global white_list_simple_nameserver_policy
-        clearAndStoreAtLeast50DataInRedis(REDIS_KEY_DNS_SIMPLE_WHITELIST, white_list_simple_nameserver_policy)
-        time.sleep(second)
-
-
-# 快速清除临时缓存
-def clearCacheFast(second):
-    while True:
-        black_list_simple_tmp_cache.clear()
-        black_list_simple_tmp_policy.clear()
-        white_list_simple_tmp_cache.clear()
-        white_list_simple_tmp_policy.clear()
-        black_list_tmp_cache.clear()
-        black_list_tmp_policy.clear()
-        white_list_tmp_cache.clear()
-        white_list_tmp_policy.clear()
-        time.sleep(second)
-
-
 # redis删除map字典
 def redis_del_map(key):
     try:
@@ -142,36 +118,6 @@ def clearAndStoreAtLeast50DataInRedis(redisKey, cacheDict):
             pass
 
 
-# 快速动态更新缓存
-def deal_black_list_simple_tmp_cache_queue(second):
-    global black_list_simple_tmp_cache_queue
-    global black_list_simple_tmp_cache
-    global white_list_simple_tmp_cache_queue
-    global white_list_simple_tmp_cache
-    global white_list_simple_tmp_policy_queue
-    global white_list_simple_tmp_policy
-    global black_list_tmp_cache_queue
-    global black_list_tmp_cache
-    global black_list_tmp_policy_queue
-    global black_list_tmp_policy
-    global white_list_tmp_cache_queue
-    global white_list_tmp_cache
-    global white_list_tmp_policy_queue
-    global white_list_tmp_policy
-    global black_list_simple_tmp_policy_queue
-    global black_list_simple_tmp_policy
-    while True:
-        deal_tmp_cache_policy_queue(black_list_simple_tmp_cache_queue, black_list_simple_tmp_cache)
-        deal_tmp_cache_policy_queue(white_list_simple_tmp_cache_queue, white_list_simple_tmp_cache)
-        deal_tmp_cache_policy_queue(white_list_simple_tmp_policy_queue, white_list_simple_tmp_policy)
-        deal_tmp_cache_policy_queue(black_list_tmp_cache_queue, black_list_tmp_cache)
-        deal_tmp_cache_policy_queue(black_list_tmp_policy_queue, black_list_tmp_policy)
-        deal_tmp_cache_policy_queue(white_list_tmp_cache_queue, white_list_tmp_cache)
-        deal_tmp_cache_policy_queue(white_list_tmp_policy_queue, white_list_tmp_policy)
-        deal_tmp_cache_policy_queue(black_list_simple_tmp_policy_queue, black_list_simple_tmp_policy)
-        time.sleep(second)
-
-
 def deal_tmp_cache_policy_queue(queue, dict):
     try:
         add_dict = {}
@@ -184,35 +130,6 @@ def deal_tmp_cache_policy_queue(queue, dict):
     except Exception as e:
         print(e)
         pass
-
-
-# 自动更新黑白名单数据至redis,多线程插入会丢失数据，只能把插数据的操作集中到单个线程
-def deal_black_list_simple_policy_queue(second):
-    global black_list_simple_policy_queue
-    global white_list_simple_nameserver_policy_queue
-    global white_list_simple_nameserver_policy
-    global black_list_simple_policy
-    while True:
-        add_dict = {}
-        add_dict2 = {}
-        for i in range(10):
-            if not black_list_simple_policy_queue.empty():
-                domain = black_list_simple_policy_queue.get()
-                domain = stupidThink(domain)
-                add_dict[domain] = ''
-            if not white_list_simple_nameserver_policy_queue.empty():
-                domain2 = white_list_simple_nameserver_policy_queue.get()
-                domain2 = stupidThink(domain2)
-                add_dict2[domain2] = ''
-        if len(add_dict) > 0:
-            redis_add_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST, add_dict)
-            for key in add_dict.keys():
-                updateSpData(key, black_list_simple_policy)
-        if len(add_dict2) > 0:
-            redis_add_map(REDIS_KEY_DNS_SIMPLE_WHITELIST, add_dict2)
-            for key in add_dict2.keys():
-                updateSpData(key, white_list_simple_nameserver_policy)
-        time.sleep(second)
 
 
 # 规则：先查unkown_list_tmp_cache，有的话转发5335,
@@ -1085,34 +1002,149 @@ def needUpdate(redis_key):
     return False
 
 
-def init(sleepSecond):
+# 上次更新时间戳
+time_clock_update_dict = {'updateSubscribeList': '0', 'deal_black_list_simple_policy_queue': '0', 'clearCache': '0',
+                          'clearCacheFast': '0', 'deal_black_list_simple_tmp_cache_queue': '0'}
+
+time_clock_update_dict_sys = {'updateSubscribeList': '60', 'deal_black_list_simple_policy_queue': '10',
+                              'clearCache': '86400', 'clearCacheFast': '3613',
+                              'deal_black_list_simple_tmp_cache_queue': '10'}
+
+
+# true-需要更新 false-不需要更新
+def is_update_clock(cachekey):
+    lastUpdateTime = float(time_clock_update_dict[cachekey])
+    sysTime = int(time_clock_update_dict_sys[cachekey])
+    if (time.time() - lastUpdateTime) >= sysTime:
+        return True
+    return False
+
+
+def update_clock(cachekey):
+    time_clock_update_dict[cachekey] = str(time.time())
+
+
+def clock_thread():
     while True:
-        # if needUpdate(REDIS_KEY_UPDATE_WHITE_LIST_FLAG):
-        #     initWhiteList()
-        # if needUpdate(REDIS_KEY_UPDATE_BLACK_LIST_FLAG):
-        #     initBlackList()
-        if needUpdate(REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG):
-            initWhiteListSP(REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG)
-        if needUpdate(REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG):
-            initBlackListSP(REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG)
-        # if needUpdate(REDIS_KEY_UPDATE_THREAD_NUM_FLAG):
-        #     init_threads_num()
-        # if needUpdate(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG):
-        #     init_china_dns_server()
-        # if needUpdate(REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG):
-        #     init_china_dns_port()
-        # if needUpdate(REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG):
-        #     init_extra_dns_server()
-        # if needUpdate(REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG):
-        #     init_extra_dns_port()
-        if needUpdate(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG):
-            initSimpleWhiteList()
-        if needUpdate(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG):
-            initSimpleBlackList()
-        # if needUpdate(REDIS_KEY_UPDATE_IPV4_LIST_FLAG):
-        #     initIPV4List()
-        openAutoUpdateSimpleWhiteAndBlackList()
-        time.sleep(sleepSecond)
+        if is_update_clock('updateSubscribeList'):
+            init()
+            update_clock('updateSubscribeList')
+        if is_update_clock('deal_black_list_simple_tmp_cache_queue'):
+            deal_black_list_simple_tmp_cache_queue()
+            update_clock('deal_black_list_simple_tmp_cache_queue')
+        if is_update_clock('deal_black_list_simple_policy_queue'):
+            deal_black_list_simple_policy_queue()
+            update_clock('deal_black_list_simple_policy_queue')
+        if is_update_clock('clearCache'):
+            clearCache()
+            update_clock('clearCache')
+        if is_update_clock('clearCacheFast'):
+            clearCacheFast()
+            update_clock('clearCacheFast')
+        time.sleep(10)
+
+
+# 快速动态更新缓存
+def deal_black_list_simple_tmp_cache_queue():
+    global black_list_simple_tmp_cache_queue
+    global black_list_simple_tmp_cache
+    global white_list_simple_tmp_cache_queue
+    global white_list_simple_tmp_cache
+    global white_list_simple_tmp_policy_queue
+    global white_list_simple_tmp_policy
+    global black_list_tmp_cache_queue
+    global black_list_tmp_cache
+    global black_list_tmp_policy_queue
+    global black_list_tmp_policy
+    global white_list_tmp_cache_queue
+    global white_list_tmp_cache
+    global white_list_tmp_policy_queue
+    global white_list_tmp_policy
+    global black_list_simple_tmp_policy_queue
+    global black_list_simple_tmp_policy
+    deal_tmp_cache_policy_queue(black_list_simple_tmp_cache_queue, black_list_simple_tmp_cache)
+    deal_tmp_cache_policy_queue(white_list_simple_tmp_cache_queue, white_list_simple_tmp_cache)
+    deal_tmp_cache_policy_queue(white_list_simple_tmp_policy_queue, white_list_simple_tmp_policy)
+    deal_tmp_cache_policy_queue(black_list_tmp_cache_queue, black_list_tmp_cache)
+    deal_tmp_cache_policy_queue(black_list_tmp_policy_queue, black_list_tmp_policy)
+    deal_tmp_cache_policy_queue(white_list_tmp_cache_queue, white_list_tmp_cache)
+    deal_tmp_cache_policy_queue(white_list_tmp_policy_queue, white_list_tmp_policy)
+    deal_tmp_cache_policy_queue(black_list_simple_tmp_policy_queue, black_list_simple_tmp_policy)
+
+
+# 快速清除临时缓存
+def clearCacheFast():
+    black_list_simple_tmp_cache.clear()
+    black_list_simple_tmp_policy.clear()
+    white_list_simple_tmp_cache.clear()
+    white_list_simple_tmp_policy.clear()
+    black_list_tmp_cache.clear()
+    black_list_tmp_policy.clear()
+    white_list_tmp_cache.clear()
+    white_list_tmp_policy.clear()
+
+
+# 每天定时清除一次简易dns
+def clearCache():
+    global black_list_simple_policy
+    clearAndStoreAtLeast50DataInRedis(REDIS_KEY_DNS_SIMPLE_BLACKLIST, black_list_simple_policy)
+    global white_list_simple_nameserver_policy
+    clearAndStoreAtLeast50DataInRedis(REDIS_KEY_DNS_SIMPLE_WHITELIST, white_list_simple_nameserver_policy)
+
+
+# 自动更新黑白名单数据至redis,多线程插入会丢失数据，只能把插数据的操作集中到单个线程
+def deal_black_list_simple_policy_queue():
+    global black_list_simple_policy_queue
+    global white_list_simple_nameserver_policy_queue
+    global white_list_simple_nameserver_policy
+    global black_list_simple_policy
+    add_dict = {}
+    add_dict2 = {}
+    for i in range(10):
+        if not black_list_simple_policy_queue.empty():
+            domain = black_list_simple_policy_queue.get()
+            domain = stupidThink(domain)
+            add_dict[domain] = ''
+        if not white_list_simple_nameserver_policy_queue.empty():
+            domain2 = white_list_simple_nameserver_policy_queue.get()
+            domain2 = stupidThink(domain2)
+            add_dict2[domain2] = ''
+    if len(add_dict) > 0:
+        redis_add_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST, add_dict)
+        for key in add_dict.keys():
+            updateSpData(key, black_list_simple_policy)
+    if len(add_dict2) > 0:
+        redis_add_map(REDIS_KEY_DNS_SIMPLE_WHITELIST, add_dict2)
+        for key in add_dict2.keys():
+            updateSpData(key, white_list_simple_nameserver_policy)
+
+
+def init():
+    # if needUpdate(REDIS_KEY_UPDATE_WHITE_LIST_FLAG):
+    #     initWhiteList()
+    # if needUpdate(REDIS_KEY_UPDATE_BLACK_LIST_FLAG):
+    #     initBlackList()
+    if needUpdate(REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG):
+        initWhiteListSP(REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG)
+    if needUpdate(REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG):
+        initBlackListSP(REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG)
+    # if needUpdate(REDIS_KEY_UPDATE_THREAD_NUM_FLAG):
+    #     init_threads_num()
+    # if needUpdate(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG):
+    #     init_china_dns_server()
+    # if needUpdate(REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG):
+    #     init_china_dns_port()
+    # if needUpdate(REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG):
+    #     init_extra_dns_server()
+    # if needUpdate(REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG):
+    #     init_extra_dns_port()
+    if needUpdate(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG):
+        initSimpleWhiteList()
+    if needUpdate(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG):
+        initSimpleBlackList()
+    # if needUpdate(REDIS_KEY_UPDATE_IPV4_LIST_FLAG):
+    #     initIPV4List()
+    openAutoUpdateSimpleWhiteAndBlackList()
 
 
 REDIS_KEY_FUNCTION_DICT = "functiondict"
@@ -1308,20 +1340,8 @@ def main():
     # initIPV4List()
     initSimpleWhiteList()
     initSimpleBlackList()
-    timer_thread1 = threading.Thread(target=init, args=(60,), daemon=True)
-    timer_thread1.start()
-    timer_thread2 = threading.Thread(target=deal_black_list_simple_policy_queue,
-                                     args=(10,), daemon=True)
-    timer_thread2.start()
-    timer_thread3 = threading.Thread(target=clearCache,
-                                     args=(86400,), daemon=True)
-    timer_thread3.start()
-    timer_thread4 = threading.Thread(target=deal_black_list_simple_tmp_cache_queue,
-                                     args=(10,), daemon=True)
-    timer_thread4.start()
-    timer_thread12 = threading.Thread(target=clearCacheFast,
-                                      args=(3613,), daemon=True)
-    timer_thread12.start()
+    timer_thread = threading.Thread(target=clock_thread, daemon=True)
+    timer_thread.start()
     # 中国dns端口
     china_port = chinadnsport[REDIS_KEY_CHINA_DNS_PORT]
     # 中国dns服务器

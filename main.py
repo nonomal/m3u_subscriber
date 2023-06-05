@@ -146,7 +146,7 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
                   'usernameSys': 'admin', 'passwordSys': 'password', 'normalM3uClock': '7200',
                   'normalSubscriberClock': '10800',
-                  'proxySubscriberClock': '3600', 'spM3uClock': '3700', 'autoDnsSwitchClock': '600'}
+                  'proxySubscriberClock': '3600', 'spM3uClock': '3700', 'autoDnsSwitchClock': '600', 'syncClock': '10'}
 
 # 单独导入导出使用一个配置,需特殊处理:{{url:{pass,name}}}
 # 下载网络配置并且加密后上传:url+加密密钥+加密文件名字
@@ -533,7 +533,7 @@ def upload_json_base(rediskey, file_content):
 
 # 上次更新时间戳
 time_clock_update_dict = {'proxySubscriberClock': '0', 'spM3uClock': '0', 'normalM3uClock': '0',
-                          'autoDnsSwitchClock': '0', 'normalSubscriberClock': '0'}
+                          'autoDnsSwitchClock': '0', 'normalSubscriberClock': '0', 'syncClock': '0'}
 
 
 # true-需要更新 false-不需要更新
@@ -592,7 +592,34 @@ def clock_thread():
                 # 执行方法-下载解密
                 chaoronghe10()
             update_clock('normalSubscriberClock')
+        if is_update_clock('syncClock'):
+            worker_github()
+            update_clock('syncClock')
         time.sleep(10)
+
+
+def worker_github():
+    for i in range(10):
+        # 从任务队列中获取一个任务
+        if not task_queue_webdav.empty():
+            task = task_queue_webdav.get()
+            # 执行上传文件操作
+            file_name = task
+            updateFileToWebDAV(file_name)
+    for i in range(10):
+        # 从任务队列中获取一个任务
+        if not task_queue.empty():
+            task = task_queue.get()
+            # 执行上传文件操作
+            file_name = task
+            updateFileToGitee(file_name)
+    for i in range(10):
+        # 从任务队列中获取一个任务
+        if not task_queue_github.empty():
+            task = task_queue_github.get()
+            # 执行上传文件操作
+            file_name = task
+            updateFileToGithub(file_name)
 
 
 def toggle_m3u(functionId, value):
@@ -774,13 +801,13 @@ def checkToDecrydecrypt2(url, redis_dict, m3u_string, filenameDict, secretNameDi
             secretFileName = secretNameDict[url]
             thread_write_bytes_to_file(secretFileName, secretContent)
             # 加密文件上传至gitee,
-            if uploadGitee:
+            if uploadGitee and not task_queue.full():
                 task_queue.put(os.path.basename(secretFileName))
             # 加密文件上传至github,
-            if uploadGithub:
+            if uploadGithub and not task_queue_github.full():
                 task_queue_github.put(os.path.basename(secretFileName))
             # 加密文件上传至webdav,
-            if uploadWebdav:
+            if uploadWebdav and not task_queue_webdav.full():
                 task_queue_webdav.put(os.path.basename(secretFileName))
     if isinstance(m3u_string, bytes):
         thread_write_bytes_to_file(filenameDict[url], m3u_string)
@@ -1414,39 +1441,13 @@ def updateFileToWebDAV(file_name):
 
 
 # 定义线程数和任务队列,防止多线程提交数据到gitee产生竞争阻塞，最终导致数据丢失
-task_queue = queue.Queue()
+task_queue = queue.Queue(maxsize=100)
 
 # 定义线程数和任务队列,防止多线程提交数据到github产生竞争阻塞，最终导致数据丢失
-task_queue_github = queue.Queue()
+task_queue_github = queue.Queue(maxsize=100)
 
 # 定义线程数和任务队列,防止多线程提交数据到webdav产生竞争阻塞，最终导致数据丢失
-task_queue_webdav = queue.Queue()
-
-
-def worker_github():
-    while True:
-        for i in range(10):
-            # 从任务队列中获取一个任务
-            if not task_queue_webdav.empty():
-                task = task_queue_webdav.get()
-                # 执行上传文件操作
-                file_name = task
-                updateFileToWebDAV(file_name)
-        for i in range(10):
-            # 从任务队列中获取一个任务
-            if not task_queue.empty():
-                task = task_queue.get()
-                # 执行上传文件操作
-                file_name = task
-                updateFileToGitee(file_name)
-        for i in range(10):
-            # 从任务队列中获取一个任务
-            if not task_queue_github.empty():
-                task = task_queue_github.get()
-                # 执行上传文件操作
-                file_name = task
-                updateFileToGithub(file_name)
-        time.sleep(10)
+task_queue_webdav = queue.Queue(maxsize=100)
 
 
 def isOpenFunction(functionId):
@@ -1471,13 +1472,13 @@ def download_secert_file(fileName, secretFileName, cachekey, openJiaMi, openUplo
         # 开启上传
         if openUpload:
             # 加密文件上传至gitee,
-            if uploadGitee:
+            if uploadGitee and not task_queue.full():
                 task_queue.put(os.path.basename(secretFileName))
             # 加密文件上传至github,
-            if uploadGithub:
+            if uploadGithub and not task_queue_github.full():
                 task_queue_github.put(os.path.basename(secretFileName))
             # 加密文件上传至webdav,
-            if uploadWebdav:
+            if uploadWebdav and not task_queue_webdav.full():
                 task_queue_webdav.put(os.path.basename(secretFileName))
         # updateFileToGitee(os.path.basename(secretFileName))
         # plaintext = decrypt(password, secretContent)
@@ -3917,7 +3918,8 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
                           'usernameSys': 'admin', 'passwordSys': 'password', 'normalM3uClock': '7200',
                           'normalSubscriberClock': '10800',
-                          'proxySubscriberClock': '3600', 'spM3uClock': '3700', 'autoDnsSwitchClock': '600'}
+                          'proxySubscriberClock': '3600', 'spM3uClock': '3700', 'autoDnsSwitchClock': '600',
+                          'syncClock': '10'}
 
 
 def init_file_name():
@@ -6597,9 +6599,6 @@ def main():
     init_db()
     timer_thread1 = threading.Thread(target=clock_thread, daemon=True)
     timer_thread1.start()
-    # 启动工作线程消费上传数据至github
-    t2 = threading.Thread(target=worker_github, daemon=True)
-    t2.start()
     try:
         app.run(debug=True, host='0.0.0.0', port=5000)
     finally:

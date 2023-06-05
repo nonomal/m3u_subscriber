@@ -1350,6 +1350,15 @@
                     class="stubbonsave">修改
             </button>
         </div>
+        <div style="display: flex;width: 100%;">
+            同步账号检查上传数据线程周期(秒)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="syncClock" class="stubboninput" placeholder="10"/>
+            <button onclick="changeFileName('syncClock', 'syncClock', syncClock)"
+                    class="stubbonsave">修改
+            </button>
+        </div>
     </div>
     <div id="page18" style="display: none;">
         <h1>功能开关</h1>
@@ -2314,6 +2323,7 @@
     const proxySubscriberClock = document.getElementById('proxySubscriberClock');
     const spM3uClock = document.getElementById('spM3uClock');
     const autoDnsSwitchClock = document.getElementById('autoDnsSwitchClock');
+    const syncClock = document.getElementById('syncClock');
 
     const allM3u = document.getElementById('allM3u');
     const allM3uSecret = document.getElementById('allM3uSecret');
@@ -4065,6 +4075,7 @@
             getFileName('proxySubscriberClock', 'proxySubscriberClock', proxySubscriberClock)
             getFileName('spM3uClock', 'spM3uClock', spM3uClock)
             getFileName('autoDnsSwitchClock', 'autoDnsSwitchClock', autoDnsSwitchClock)
+            getFileName('syncClock', 'syncClock', syncClock)
         } else if (selectedPage === pages[17].id) {
             //生成有效M3U
             reloadFunctionOpenButton('switch')

@@ -193,6 +193,15 @@ REDIS_KEY_YY_M3U = 'redisKeyYYM3u'
 # YY频道名字,真实m3u8地址
 redisKeyYYM3u = {}
 
+# DOUYIN直播源
+REDIS_KEY_DOUYIN = 'redisKeyDOUYIN'
+# DOUYIN直播源地址，频道名字
+redisKeyDOUYIN = {}
+# DOUYIN真实m3u8地址
+REDIS_KEY_DOUYIN_M3U = 'redisKeyDOUYINM3u'
+# DOUYIN频道名字,真实m3u8地址
+redisKeyDOUYINM3u = {}
+
 # TWITCH直播源
 REDIS_KEY_TWITCH = 'redisKeyTWITCH'
 # TWITCH直播源地址，频道名字
@@ -216,7 +225,7 @@ allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_
 # 数据巨大的redis配置,一键导出时单独导出每个配置
 hugeDataList = [REDIS_KEY_BILIBILI, REDIS_KEY_DNS_SIMPLE_WHITELIST, REDIS_KEY_DNS_SIMPLE_BLACKLIST, REDIS_KEY_YOUTUBE,
                 REDIS_KEY_M3U_WHITELIST_RANK, REDIS_KEY_M3U_BLACKLIST, REDIS_KEY_M3U_WHITELIST, REDIS_KEY_HUYA,
-                REDIS_KEY_YY, REDIS_KEY_TWITCH]
+                REDIS_KEY_YY, REDIS_KEY_TWITCH, REDIS_KEY_DOUYIN]
 
 SPECIAL_REDIS_KEY = 'specialRedisKey'
 specialRedisKey = [REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME,
@@ -358,15 +367,18 @@ def serve_files2(filename):
     return send_from_directory(root_dir, filename, as_attachment=True)
 
 
-tv_dict = {}
+tv_dict_youtube = {}
 
 
 # 路由youtube
 @app.route('/youtube/<path:filename>')
 def serve_files3(filename):
     id = filename.split('.')[0]
-    url = tv_dict.get(id, redisKeyYoutubeM3u.get(id))
-    tv_dict[id] = url
+    url = tv_dict_youtube.get(id)
+    if not url:
+        url = redisKeyYoutubeM3u.get(id)
+        tv_dict_youtube.clear()
+        tv_dict_youtube[id] = url
 
     @after_this_request
     def add_header(response):
@@ -376,14 +388,20 @@ def serve_files3(filename):
         return response
 
     return redirect(url)
+
+
+tv_dict_bilibili = {}
 
 
 # 路由bilibili
 @app.route('/bilibili/<path:filename>')
 def serve_files4(filename):
     id = filename.split('.')[0]
-    url = tv_dict.get(id, redisKeyBililiM3u.get(id))
-    tv_dict[id] = url
+    url = tv_dict_bilibili.get(id)
+    if not url:
+        url = redisKeyBililiM3u.get(id)
+        tv_dict_bilibili.clear()
+        tv_dict_bilibili[id] = url
 
     @after_this_request
     def add_header(response):
@@ -393,14 +411,20 @@ def serve_files4(filename):
         return response
 
     return redirect(url)
+
+
+tv_dict_huya = {}
 
 
 # 路由huya
 @app.route('/huya/<path:filename>')
 def serve_files5(filename):
     id = filename.split('.')[0]
-    url = tv_dict.get(id, redisKeyHuyaM3u.get(id))
-    tv_dict[id] = url
+    url = tv_dict_huya.get(id)
+    if not url:
+        url = redisKeyHuyaM3u.get(id)
+        tv_dict_huya.clear()
+        tv_dict_huya[id] = url
 
     @after_this_request
     def add_header(response):
@@ -410,14 +434,20 @@ def serve_files5(filename):
         return response
 
     return redirect(url)
+
+
+tv_dict_yy = {}
 
 
 # 路由YY
 @app.route('/YY/<path:filename>')
 def serve_files6(filename):
     id = filename.split('.')[0]
-    url = tv_dict.get(id, redisKeyYYM3u.get(id))
-    tv_dict[id] = url
+    url = tv_dict_yy.get(id)
+    if not url:
+        url = redisKeyYYM3u.get(id)
+        tv_dict_yy.clear()
+        tv_dict_yy[id] = url
 
     @after_this_request
     def add_header(response):
@@ -429,12 +459,38 @@ def serve_files6(filename):
     return redirect(url)
 
 
+tv_dict_douyin = {}
+
+
+# 路由DOUYIN
+@app.route('/DOUYIN/<path:filename>')
+def serve_files_DOUYIN(filename):
+    id = filename.split('.')[0]
+    url = tv_dict_douyin.get(id)
+    if not url:
+        url = redisKeyDOUYINM3u.get(id)
+        tv_dict_douyin.clear()
+        tv_dict_douyin[id] = url
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        return response
+
+    return redirect(url)
+
+tv_dict_twitch = {}
 # 路由twitch
 @app.route('/TWITCH/<path:filename>')
 def serve_files7(filename):
     id = filename.split('.')[0]
-    url = tv_dict.get(id, redisKeyTWITCHM3u.get(id))
-    tv_dict[id] = url
+    url = tv_dict_twitch.get(id)
+    if not url:
+        url = redisKeyTWITCHM3u.get(id)
+        tv_dict_twitch.clear()
+        tv_dict_twitch[id] = url
 
     @after_this_request
     def add_header(response):
@@ -560,13 +616,14 @@ def clock_thread():
             chaoronghe7()
             chaoronghe8()
             update_clock('autoDnsSwitchClock')
-        # youtube/bilibili/huya/yy/twitch直播源刷新
+        # youtube/bilibili/huya/yy/twitch/douyin直播源刷新
         if isOpenFunction('switch35') and is_update_clock('spM3uClock'):
             chaoronghe24()
             chaoronghe25()
             chaoronghe26()
             chaoronghe27()
             chaoronghe28()
+            chaoronghe29()
             update_clock('spM3uClock')
         # 通常直播源下载定时器
         if isOpenFunction('switch25') and is_update_clock('normalM3uClock'):
@@ -717,6 +774,7 @@ def check_file(m3u_dict):
         path5 = f"{secret_path}huya.m3u"
         path6 = f"{secret_path}YY.m3u"
         path7 = f"{secret_path}TWITCH.m3u"
+        path8 = f"{secret_path}Douyin.m3u"
         source = ''
         if os.path.exists(path3):
             source += copyAndRename(path3).decode()
@@ -732,6 +790,9 @@ def check_file(m3u_dict):
         if os.path.exists(path7):
             source += '\n'
             source += copyAndRename(path7).decode()
+        if os.path.exists(path8):
+            source += '\n'
+            source += copyAndRename(path8).decode()
         with open(path, 'wb') as fdst:
             fdst.write(source.encode('utf-8'))
         path2 = f"{secret_path}{getFileNameByTagName('healthM3u')}.m3u"
@@ -749,6 +810,8 @@ def check_file(m3u_dict):
                 source2 += copyAndRename(path6).decode()
             if os.path.exists(path7):
                 source2 += copyAndRename(path7).decode()
+            if os.path.exists(path8):
+                source2 += copyAndRename(path8).decode()
             with open(path2, 'wb') as fdst:
                 fdst.write(source2.encode('utf-8'))
             # 异步缓慢检测出有效链接
@@ -2692,7 +2755,8 @@ CACHE_KEY_TO_GLOBAL_VAR = {
     REDIS_KEY_BILIBILI: 'redisKeyBilili',
     REDIS_KEY_HUYA: 'redisKeyHuya',
     REDIS_KEY_YY: 'redisKeyYY',
-    REDIS_KEY_TWITCH: 'redisKeyTWITCH'
+    REDIS_KEY_TWITCH: 'redisKeyTWITCH',
+    REDIS_KEY_DOUYIN: 'redisKeyDOUYIN'
 }
 
 
@@ -3536,6 +3600,19 @@ def initReloadCacheForNormal():
                     redisKeyYYM3u.update(dict3)
             except Exception as e:
                 pass
+        elif redisKey in REDIS_KEY_DOUYIN:
+            try:
+                global redisKeyDOUYIN
+                global redisKeyDOUYINM3u
+                redisKeyDOUYIN.clear()
+                dict = redis_get_map(REDIS_KEY_DOUYIN)
+                if dict:
+                    redisKeyDOUYIN.update(dict)
+                dict3 = redis_get_map(REDIS_KEY_DOUYIN_M3U)
+                if dict3:
+                    redisKeyDOUYINM3u.update(dict3)
+            except Exception as e:
+                pass
         elif redisKey in REDIS_KEY_TWITCH:
             try:
                 global redisKeyTWITCH
@@ -4240,6 +4317,15 @@ def deletewm3u27():
     return dellist(request, REDIS_KEY_YY)
 
 
+# 删除DOUYIN直播源
+@app.route('/api/deletewm3u29', methods=['POST'])
+@requires_auth
+def deletewm3u29():
+    deleteurl = request.json.get('deleteurl')
+    del redisKeyDOUYIN[deleteurl]
+    return dellist(request, REDIS_KEY_DOUYIN)
+
+
 # 删除TWITCH直播源
 @app.route('/api/deletewm3u28', methods=['POST'])
 @requires_auth
@@ -4300,6 +4386,14 @@ def getall26():
 def getall27():
     global redisKeyYY
     return returnDictCache(REDIS_KEY_YY, redisKeyYY)
+
+
+# 拉取全部DOUYIN
+@app.route('/api/getall29', methods=['GET'])
+@requires_auth
+def getall29():
+    global redisKeyDOUYIN
+    return returnDictCache(REDIS_KEY_DOUYIN, redisKeyDOUYIN)
 
 
 # 拉取全部TWITCH
@@ -4526,6 +4620,17 @@ def addnewm3u27():
     global redisKeyYY
     redisKeyYY[addurl] = name
     return addlist(request, REDIS_KEY_YY)
+
+
+# 添加DOUYIN直播源
+@app.route('/api/addnewm3u29', methods=['POST'])
+@requires_auth
+def addnewm3u29():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    global redisKeyDOUYIN
+    redisKeyDOUYIN[addurl] = name
+    return addlist(request, REDIS_KEY_DOUYIN)
 
 
 # 添加TWITCH直播源
@@ -5250,6 +5355,21 @@ async def download_files7_single(ids, mintimeout, maxTimeout):
     return m3u_dict
 
 
+async def download_files_douyin_single(ids, mintimeout, maxTimeout):
+    m3u_dict = {}
+    try:
+        sem = asyncio.Semaphore(1000)  # 限制TCP连接的数量为100个
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for id in ids:
+                task = asyncio.ensure_future(grab_douyin(session, id, m3u_dict, sem, mintimeout, maxTimeout))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        print(f"Failed to fetch files. Error: {e}")
+    return m3u_dict
+
+
 async def download_files8_single(ids, mintimeout, maxTimeout):
     m3u_dict = {}
     try:
@@ -5271,6 +5391,15 @@ async def download_files7():
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
     m3u_dict = await download_files7_single(ids, mintimeout, maxTimeout)
+    return m3u_dict
+
+
+async def download_files_douyin():
+    global redisKeyDOUYIN
+    ids = redisKeyDOUYIN.keys()
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
+    m3u_dict = await download_files_douyin_single(ids, mintimeout, maxTimeout)
     return m3u_dict
 
 
@@ -5608,6 +5737,143 @@ async def grab4(session, id, m3u_dict, sem, mintimeout, maxTimeout):
         print(f"YY An error occurred while processing {id}. Error: {e}")
 
 
+async def get_room_id_douyin(url, session, sem, mintimeout, maxTimeout):
+    headers = {
+        'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
+    }
+    url = re.search(r'(https.*)', url).group(1)
+
+    try:
+        async with sem, session.get(url, headers=headers, timeout=mintimeout) as response:
+            if response.status == 200:
+                url = response.headers['location']
+                room_id = re.search(r'\d{19}', url).group(0)
+    except asyncio.TimeoutError:
+        async with sem, session.get(url, headers=headers, timeout=maxTimeout) as response:
+            if response.status == 200:
+                url = response.headers['location']
+                room_id = re.search(r'\d{19}', url).group(0)
+            else:
+                return None
+
+    headers.update({
+        'cookie': '_tea_utm_cache_1128={%22utm_source%22:%22copy%22%2C%22utm_medium%22:%22android%22%2C%22utm_campaign%22:%22client_share%22}',
+        'host': 'webcast.amemv.com',
+    })
+    params = (
+        ('type_id', '0'),
+        ('live_id', '1'),
+        ('room_id', room_id),
+        ('app_id', '1128'),
+        ('X-Bogus', '1'),
+    )
+
+    try:
+        async with sem, session.get('https://webcast.amemv.com/webcast/room/reflow/info/?', headers=headers,
+                                    params=params, timeout=mintimeout) as response:
+            if response.status == 200:
+                json_data = await response.json()
+                return json_data['data']['room']['owner']['web_rid']
+    except asyncio.TimeoutError:
+        async with sem, session.get('https://webcast.amemv.com/webcast/room/reflow/info/?', headers=headers,
+                                    params=params, timeout=maxTimeout) as response:
+            if response.status == 200:
+                json_data = await response.json()
+                return json_data['data']['room']['owner']['web_rid']
+            else:
+                return None
+
+
+async def grab_douyin(session, id, m3u_dict, sem, mintimeout, maxTimeout):
+    try:
+        if 'v.douyin.com' in id:
+            rid = await get_room_id_douyin(id, session, sem, mintimeout, maxTimeout)
+            if not rid:
+                return
+        else:
+            rid = id
+        url = 'https://live.douyin.com/{}'.format(rid)
+        headers = {
+            "cookie": "__ac_nonce=0;",
+            "referer": "https://live.douyin.com/",
+            "upgrade-insecure-requests": "1",
+            "user-agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
+        }
+        try:
+            async with sem, session.get(url, headers=headers, timeout=mintimeout) as response:
+                if response.status == 200:
+                    result = await response.text()
+        except asyncio.TimeoutError:
+            async with sem, session.get(url, headers=headers, timeout=maxTimeout) as response:
+                if response.status == 200:
+                    result = await response.text()
+                else:
+                    return None
+        text = urllib.parse.unquote(
+            re.findall('<script id="RENDER_DATA" type="application/json">(.*?)</script>', result)[0])
+        if not text:
+            return
+        json_ = json.loads(text)
+
+        douyin_list = []
+        try:
+            flv_pull_url = json_['app']['initialState']['roomStore']['roomInfo']['room']['stream_url']['flv_pull_url']
+            douyin_list.append(flv_pull_url)
+        except:
+            pass
+
+        try:
+            hls_pull_url_map = json_['app']['initialState']['roomStore']['roomInfo']['room']['stream_url'][
+                'hls_pull_url_map']
+            douyin_list.append(hls_pull_url_map)
+        except:
+            pass
+        if len(douyin_list) == 0:
+            return
+        real_lists = []
+        real_dict = {}
+        arr = []
+
+        for real_ in douyin_list:
+            for name_ in real_:
+                if '.flv' in real_[name_]:
+                    real_lists.append({f'flv_{name_}': real_[name_]})
+                    arr.append(f'flv_{name_}')
+                elif '.m3u8' in real_[name_]:
+                    real_lists.append({f'm3u8_{name_}': real_[name_]})
+                    arr.append(f'm3u8_{name_}')
+        if real_lists:
+            tasks = []
+            for real_ in real_lists:
+                for key, value in real_.items():
+                    task = asyncio.ensure_future(
+                        pingM3u(session, value, real_dict, key, sem, mintimeout, maxTimeout))
+                    tasks.append(task)
+            await asyncio.gather(*tasks)
+            if real_dict:
+                for key, value in real_dict.items():
+                    if 'FULL_HD' in key:
+                        m3u_dict[id] = value
+                        return
+                isOne = len(arr) == 1
+                if isOne:
+                    for key, value in real_dict.items():
+                        if arr[0] == key:
+                            # 有效直播源,名字/id
+                            m3u_dict[id] = value
+                            return
+                else:
+                    for i in range(len(arr) - 1):
+                        for key, value in real_dict.items():
+                            if arr[i] == key:
+                                m3u_dict[id] = value
+                                return
+                return
+        return
+    except Exception as e:
+        print(f"douyin An error occurred while processing {id}. Error: {e}")
+
+
 async def grab3(session, id, m3u_dict, sem, mintimeout, maxTimeout):
     try:
         param = {
@@ -5781,7 +6047,6 @@ def chaoronghe25():
         if length == 0:
             return "empty"
         ip = init_IP()
-        tv_dict.clear()
         global redisKeyBililiM3u
         global redisKeyBilili
         redisKeyBililiM3uFake = {}
@@ -5823,7 +6088,6 @@ def chaoronghe26():
         if length == 0:
             return "empty"
         ip = init_IP()
-        tv_dict.clear()
         global redisKeyHuyaM3u
         global redisKeyHuya
         redisKeyHuyaM3uFake = {}
@@ -5865,7 +6129,6 @@ def chaoronghe27():
         if length == 0:
             return "empty"
         ip = init_IP()
-        tv_dict.clear()
         global redisKeyYYM3u
         global redisKeyYY
         redisKeyYYM3uFake = {}
@@ -5890,6 +6153,47 @@ def chaoronghe27():
         return "empty"
 
 
+# 生成全部douyin直播源
+@app.route('/api/chaoronghe29', methods=['GET'])
+@requires_auth
+def chaoronghe_douyin():
+    return chaoronghe29()
+
+
+def chaoronghe29():
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        # 有效直播源,名字/id
+        m3u_dict = loop.run_until_complete(download_files_douyin())
+        length = len(m3u_dict)
+        if length == 0:
+            return "empty"
+        ip = init_IP()
+        global redisKeyDOUYINM3u
+        global redisKeyDOUYIN
+        redisKeyDOUYINM3uFake = {}
+        redisKeyDOUYINM3u.clear()
+        redis_del_map(REDIS_KEY_DOUYIN_M3U)
+        fakeurl = f"http://{ip}:{port_live}/DOUYIN/"
+        #fakeurl = f"http://127.0.0.1:5000/DOUYIN/"
+        for id, url in m3u_dict.items():
+            try:
+                redisKeyDOUYINM3u[id] = url
+                name = redisKeyDOUYIN[id]
+                link = f'#EXTINF:-1 group-title="Douyin"  tvg-name="{name}",{name}\n'
+                redisKeyDOUYINM3uFake[f'{fakeurl}{id}.m3u8'] = link
+            except:
+                pass
+        # 同步方法写出全部配置
+        distribute_data(redisKeyDOUYINM3uFake, f"{secret_path}Douyin.m3u", 10)
+        redis_add_map(REDIS_KEY_DOUYIN_M3U, redisKeyDOUYINM3u)
+        fuck_m3u_to_txt(f"{secret_path}Douyin.m3u", f"{secret_path}Douyin.txt")
+        return "result"
+    except Exception as e:
+        return "empty"
+
+
 # 生成全部TWITCH直播源
 @app.route('/api/chaoronghe28', methods=['GET'])
 @requires_auth
@@ -5907,7 +6211,6 @@ def chaoronghe28():
         if length == 0:
             return "empty"
         ip = init_IP()
-        tv_dict.clear()
         global redisKeyTWITCHM3u
         global redisKeyTWITCH
         redisKeyTWITCHM3uFake = {}
@@ -5948,7 +6251,6 @@ def chaoronghe24():
         if length == 0:
             return "empty"
         ip = init_IP()
-        tv_dict.clear()
         global redisKeyYoutubeM3u
         global redisKeyYoutube
         redisKeyYoutubeM3u.clear()
@@ -6265,6 +6567,17 @@ def removem3ulinks27():
     redis_del_map(REDIS_KEY_YY)
     redisKeyYYM3u.clear()
     redis_del_map(REDIS_KEY_YY_M3U)
+    return "success"
+
+
+# 删除全部DOUYIN直播源
+@app.route('/api/removem3ulinks29', methods=['GET'])
+@requires_auth
+def removem3ulinks29():
+    redisKeyDOUYIN.clear()
+    redis_del_map(REDIS_KEY_DOUYIN)
+    redisKeyDOUYINM3u.clear()
+    redis_del_map(REDIS_KEY_DOUYIN_M3U)
     return "success"
 
 

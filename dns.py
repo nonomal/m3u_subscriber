@@ -669,8 +669,8 @@ def isChinaDomain(data):
     # if domain_name_str in ipCheckDomian:
     #     return False
     ##########################################中国特色顶级域名，申请必须要经过大陆审批通过，默认全部当成大陆域名#############
-    if domain_name_str.endswith(".cn") or domain_name_str.endswith(".中国"):
-        return True
+    # if domain_name_str.endswith(".cn") or domain_name_str.endswith(".中国"):
+    #     return True
     ##########################################不允许在中国备案使用的顶级域名######################
     # if isInForeign_domain(domain_name_str):
     #     checkAndUpdateSimpleList(True, domain_name_str)

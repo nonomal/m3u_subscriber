@@ -398,6 +398,10 @@
         <input type="radio" name="page" id="page31">
         <span>Twitch直播源</span>
     </label>
+    <label>
+        <input type="radio" name="page" id="page32">
+        <span>Douyin直播源</span>
+    </label>
 </div>
 <div id="choice">
     <div id="page1" style="display: block;">
@@ -2192,6 +2196,49 @@
             </table>
         </div>
     </div>
+    <div id="page32" style="display: none;">
+        <h1>Douyin直播源</h1>
+        <div style="float: left;width: 70%">
+            <h3>后台默认1小时自动执行生成操作,需要在功能开关开启</h3>
+            <h3>超融合Douyin订阅地址:参考m3u格式</h3>
+            <h3 class="urllink">Douyin-无加密:http://192.168.5.1:22771/secret/Douyin.m3u</h3>
+            <h3 class="urllink">Douyin-无加密-txt:http://192.168.5.1:22771/secret/Douyin.txt</h3>
+            <h3>上传文件导入合并YY频道</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn29" class="uploadjsonbtn" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row29" class="addNewSubscriber" style="width:100%">新增Douyin直播频道</button>
+            </div>
+            <div>
+                <button class="button stepflag" onclick="execute29()" style="width: 100%">生成Douyin超融合订阅
+                </button>
+            </div>
+            <div>
+                <button id="download-json-btn29" class="button download-json-btn" style="width: 100%">
+                    导出Douyin直播频道备份
+                </button>
+            </div>
+            <div style="width: 97%;">
+                <input type="text" id="searchInput29" placeholder="搜索框" class="searchbox"
+                       style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks29" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks29')">删除全部订阅
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:Douyin直播ID+频道名字
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table29" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -2397,6 +2444,10 @@
     const inputTable28 = document.getElementById('input-table28');
     const downloadBtn28 = document.getElementById('download-json-btn28');
 
+    const addRowButton29 = document.getElementById('add-row29');
+    const inputTable29 = document.getElementById('input-table29');
+    const downloadBtn29 = document.getElementById('download-json-btn29');
+
     // 输入框显示中国DNS端口
     const chinaDnsPort = document.getElementById('chinaDnsPort');
 
@@ -2492,6 +2543,8 @@
     searchAddListener(searchInput27, inputTable27)
     // 给TWITCH直播源搜索框绑定'oninput'事件
     searchAddListener(searchInput28, inputTable28)
+    // 给DOUYIN直播源搜索框绑定'oninput'事件
+    searchAddListener(searchInput29, inputTable29)
     // 给简易dns白名单搜索框绑定'oninput'事件
     searchAddListener(searchInput4, inputTable12)
     // 给m3u白名单搜索框绑定'oninput'事件
@@ -2658,7 +2711,7 @@
             var tagnamefile = parts2[2]
             var parts3 = tagnamefile.split(".")
             var tagname = parts3[0]
-            if (tagname === 'youtube' || tagname === 'bilibili' || tagname === 'huya' || tagname === 'YY' || tagname==='TWITCH' ) {
+            if (tagname === 'youtube' || tagname === 'bilibili' || tagname === 'huya' || tagname === 'YY' || tagname==='TWITCH'||tagname==='Douyin' ) {
                 elements[i].innerHTML = prefix + "//" + newIp + suffix2 + "/" + tagname + "." + parts3[1];
                 continue
             }
@@ -3183,6 +3236,11 @@
         reloadBase('/api/getall28', inputTable28)
     }
 
+    //DOUYIN直播源-从数据库拉取关键字列表数据
+    function reloadDOUYINM3U() {
+        reloadBase('/api/getall29', inputTable29)
+    }
+
     //加密订阅密码历史记录-从数据库拉取关键字列表数据
     function reloadHistorySubscribePassList() {
         reloadBase('/api/getall14', inputTable14)
@@ -3428,6 +3486,11 @@
         saveInputValuebase(inputValue, name, '/api/addnewm3u28')
     }
 
+    //DOUYIN配置
+    function saveInputValue29(inputValue, name) {
+        saveInputValuebase(inputValue, name, '/api/addnewm3u29')
+    }
+
     //永久列表-保留输入行数据
     function savem3uInputValue(url, info) {
         saveInputValuebase(url, info, '/api/addm3udata')
@@ -3571,6 +3634,11 @@
         deleteInputRowBase(row, inputValue, '/api/deletewm3u28')
     }
 
+    //删除DOUYIN直播源
+    function deleteInputRow29(row, inputValue) {
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u29')
+    }
+
     //删除加密订阅密码历史记录
     function deleteInputRow14(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u14')
@@ -3653,6 +3721,8 @@
     inputableAddEventListener(inputTable27, 'saveInputValue27', 'deleteInputRow27')
     //TWITCH直播源
     inputableAddEventListener(inputTable28, 'saveInputValue28', 'deleteInputRow28')
+    //DOUYIN直播源
+    inputableAddEventListener(inputTable29, 'saveInputValue29', 'deleteInputRow29')
     //简易DNS黑名单
     inputableAddEventListener(inputTable13, 'saveInputValue13', 'deleteInputRow13')
     //简易DNS白名单
@@ -3753,6 +3823,8 @@
     fileInputAddEventListenerBase('upload-json-btn27', 'redisKeyYY', '/api/upload_json')
     //TWITCH直播源-导入json配置
     fileInputAddEventListenerBase('upload-json-btn28', 'redisKeyTWITCH', '/api/upload_json')
+    //DOUYIN直播源-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn29', 'redisKeyDOUYIN', '/api/upload_json')
     //网络下载配置加密上传-导入json配置
     fileInputAddEventListenerBase('upload-json-btn17', 'downloadAndSecretUploadUrlPasswordAndName', '/api/upload_json')
     //m3u白名单分组优先级-导入json配置
@@ -4170,6 +4242,8 @@
             reloadYYM3U()
         } else if (selectedPage === pages[30].id) {
             reloadTWITCHM3U()
+        }else if (selectedPage === pages[31].id) {
+            reloadDOUYINM3U()
         }
         if (selectedPage !== pages[1].id) {
             window.removeEventListener('scroll', handleScroll);
@@ -4280,6 +4354,8 @@
     downloadBtnAddEventListenerBase('download-json-btn27', 'redisKeyYY')
     // twitch直播源-导出订阅json配置
     downloadBtnAddEventListenerBase('download-json-btn28', 'redisKeyTWITCH')
+    // DOUYIN直播源-导出订阅json配置
+    downloadBtnAddEventListenerBase('download-json-btn29', 'redisKeyDOUYIN')
     // 下载加密上传-导出订阅json配置
     downloadBtnAddEventListenerBase('download-json-btn17', 'downloadAndSecretUploadUrlPasswordAndName')
     // M3U白名单分组优先级-导出订阅json配置
@@ -4390,6 +4466,8 @@
     addRowButtonAddEventListener(addRowButton27, inputTable27)
     //TWITCH直播源-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton28, inputTable28)
+    //DOUYIN直播源-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton29, inputTable29)
     //DNS简易白名单-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton12, inputTable12)
     //M3U白名单-关键字-只添加一行列表，不存储数据
@@ -4559,6 +4637,11 @@
     //超融合-YY直播源生成
     function execute28() {
         executeBase('/api/chaoronghe28')
+    }
+
+    //超融合-DOUYIN直播源生成
+    function execute29() {
+        executeBase('/api/chaoronghe29')
     }
 
     function executeBase(requestPath) {

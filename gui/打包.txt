@@ -1,0 +1,63 @@
+进入包含Python GUI程序的目录，并使用以下命令创建.spec文件：
+pyinstaller --name=webdav-ffmpeg-ts --windowed webdav-ffmpeg-ts.py
+pyinstaller -w -F webdav-ffmpeg-ts.py
+修改.spec文件，将ffmpeg程序添加到打包文件中。在.spec文件中添加以下代码段：
+
+
+# -*- mode: python ; coding: utf-8 -*-
+
+
+block_cipher = None
+
+
+a = Analysis(
+    ['webdav-ffmpeg-ts.py'],
+    pathex=['D:\\pythonWorkspace\\m3u_subscriber\\gui'],
+    binaries=[('D:\\ffmpeg\\bin', 'ffmpeg.exe')],
+    datas=[],
+    hiddenimports=[],
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=[],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=block_cipher,
+    noarchive=False,
+)
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries + [('D:\\ffmpeg\\bin', 'ffmpeg.exe')],
+    [],
+    exclude_binaries=True,
+    name='webdav-ffmpeg-ts',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    console=False,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+)
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name='webdav-ffmpeg-ts',
+)
+请务必将path/to/program/folder替换为你的程序所在的文件夹路径。将path/to/ffmpeg替换为ffmpeg可执行文件的路径。注意，如果你使用的是Windows操作系统，则应该使用ffmpeg.exe文件。
+
+
+运行以下命令来生成可执行文件：
+pyinstaller webdav-ffmpeg-ts.spec
+

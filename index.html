@@ -402,6 +402,10 @@
         <input type="radio" name="page" id="page32">
         <span>Douyin直播源</span>
     </label>
+    <label>
+        <input type="radio" name="page" id="page33">
+        <span>alist直播源-改</span>
+    </label>
 </div>
 <div id="choice">
     <div id="page1" style="display: block;">
@@ -1363,6 +1367,15 @@
                     class="stubbonsave">修改
             </button>
         </div>
+        <div style="display: flex;width: 100%;">
+            最大失败尝试恢复推流alist直播源时长(秒)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="reliveAlistTsTime" class="stubboninput" placeholder="600"/>
+            <button onclick="changeFileName('reliveAlistTsTime', 'reliveAlistTsTime', reliveAlistTsTime)"
+                    class="stubbonsave">修改
+            </button>
+        </div>
     </div>
     <div id="page18" style="display: none;">
         <h1>功能开关</h1>
@@ -1509,7 +1522,11 @@
             </div>
             <div class="grid-item">
                 <button id="switch35" class="switchfunctionbutton" onclick="toggleSwitch('switch35')">已关闭</button>
-                <input class="toggletext" type="text" value="项目直播源-定时器">
+                <input class="toggletext" type="text" value="项目直播源刷新模式-定时器刷新">
+            </div>
+            <div class="grid-item">
+                <button id="switch36" class="switchfunctionbutton" onclick="toggleSwitch('switch36')">已关闭</button>
+                <input class="toggletext" type="text" value="项目直播源刷新模式-懒人刷新">
             </div>
         </div>
     </div>
@@ -1615,7 +1632,9 @@
     <div id="page21" style="display: none;">
         <h1>打赏专栏</h1>
         <h3>作者:paperbluster</h3>
-        <a href="https://t.me/+stAaKNYl3mtmN2Zl">https://t.me/+stAaKNYl3mtmN2Zl</a>
+        <a href="https://t.me/+stAaKNYl3mtmN2Zl" target="_blank">https://t.me/+stAaKNYl3mtmN2Zl</a>
+        <h3>项目地址</h3>
+        <a href="https://github.com/paperbluster/m3u_subscriber" target="_blank">https://github.com/paperbluster/m3u_subscriber</a>
         <h3>各位路人朋友可以请我喝一杯咖啡吗^_^,您的支持将给予我更多动力迭代这个项目</h3>
         <h4>比特币(bitcoin)</h4>
         <li id="bitcoin"><img id="bitcoin-image" src="#" alt="Bitcoin"></li>
@@ -2203,7 +2222,7 @@
             <h3>超融合Douyin订阅地址:参考m3u格式</h3>
             <h3 class="urllink">Douyin-无加密:http://192.168.5.1:22771/secret/Douyin.m3u</h3>
             <h3 class="urllink">Douyin-无加密-txt:http://192.168.5.1:22771/secret/Douyin.txt</h3>
-            <h3>上传文件导入合并YY频道</h3>
+            <h3>上传文件导入合并Douyin频道</h3>
         </div>
         <div style="width:100%">
             <div>
@@ -2234,6 +2253,49 @@
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
             <table id="input-table29" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="page33" style="display: none;">
+        <h1>alist直播源-静态</h1>
+        <div style="float: left;width: 70%">
+            <h3 style="color: crimson">该功能不适用普通alist资源,只针对加密直播源这一种情况使用</h3>
+            <h3>超融合alist订阅地址:参考m3u格式</h3>
+            <h3 class="urllink">alist-无加密:http://192.168.5.1:22771/secret/alist.m3u</h3>
+            <h3 class="urllink">alist-无加密-txt:http://192.168.5.1:22771/secret/alist.txt</h3>
+            <h3>上传文件导入合并alist频道</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn30" class="uploadjsonbtn" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row30" class="addNewSubscriber" style="width:100%">新增alist直播视频通道</button>
+            </div>
+            <div>
+                <button class="button stepflag" onclick="execute30()" style="width: 100%">生成aist超融合订阅
+                </button>
+            </div>
+            <div>
+                <button id="download-json-btn30" class="button download-json-btn" style="width: 100%">
+                    导出alist直播通道备份
+                </button>
+            </div>
+            <div style="width: 97%;">
+                <input type="text" id="searchInput30" placeholder="搜索框" class="searchbox"
+                       style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks30" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks30')">删除全部订阅
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:alist直播通道父路径(测试40万个视频负载)+频道密码
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table30" style="width:100%">
                 <tbody style="width:100%">
                 </tbody>
             </table>
@@ -2371,6 +2433,7 @@
     const spM3uClock = document.getElementById('spM3uClock');
     const autoDnsSwitchClock = document.getElementById('autoDnsSwitchClock');
     const syncClock = document.getElementById('syncClock');
+    const reliveAlistTsTime = document.getElementById('reliveAlistTsTime');
 
     const allM3u = document.getElementById('allM3u');
     const allM3uSecret = document.getElementById('allM3uSecret');
@@ -2447,6 +2510,10 @@
     const addRowButton29 = document.getElementById('add-row29');
     const inputTable29 = document.getElementById('input-table29');
     const downloadBtn29 = document.getElementById('download-json-btn29');
+
+    const addRowButton30 = document.getElementById('add-row30');
+    const inputTable30 = document.getElementById('input-table30');
+    const downloadBtn30 = document.getElementById('download-json-btn30');
 
     // 输入框显示中国DNS端口
     const chinaDnsPort = document.getElementById('chinaDnsPort');
@@ -2545,6 +2612,8 @@
     searchAddListener(searchInput28, inputTable28)
     // 给DOUYIN直播源搜索框绑定'oninput'事件
     searchAddListener(searchInput29, inputTable29)
+    // 给alist直播源搜索框绑定'oninput'事件
+    searchAddListener(searchInput30, inputTable30)
     // 给简易dns白名单搜索框绑定'oninput'事件
     searchAddListener(searchInput4, inputTable12)
     // 给m3u白名单搜索框绑定'oninput'事件
@@ -2711,7 +2780,7 @@
             var tagnamefile = parts2[2]
             var parts3 = tagnamefile.split(".")
             var tagname = parts3[0]
-            if (tagname === 'youtube' || tagname === 'bilibili' || tagname === 'huya' || tagname === 'YY' || tagname==='TWITCH'||tagname==='Douyin' ) {
+            if (tagname === 'youtube' || tagname === 'bilibili' || tagname === 'huya' || tagname === 'YY' || tagname==='TWITCH'||tagname==='Douyin'||tagname==='alist' ) {
                 elements[i].innerHTML = prefix + "//" + newIp + suffix2 + "/" + tagname + "." + parts3[1];
                 continue
             }
@@ -3241,6 +3310,11 @@
         reloadBase('/api/getall29', inputTable29)
     }
 
+    //aist直播源-从数据库拉取关键字列表数据
+    function reloadAlistM3U() {
+        reloadBase('/api/getall30', inputTable30)
+    }
+
     //加密订阅密码历史记录-从数据库拉取关键字列表数据
     function reloadHistorySubscribePassList() {
         reloadBase('/api/getall14', inputTable14)
@@ -3491,6 +3565,11 @@
         saveInputValuebase(inputValue, name, '/api/addnewm3u29')
     }
 
+    //alist配置
+    function saveInputValue30(inputValue, name) {
+        saveInputValuebase(inputValue, name, '/api/addnewm3u30')
+    }
+
     //永久列表-保留输入行数据
     function savem3uInputValue(url, info) {
         saveInputValuebase(url, info, '/api/addm3udata')
@@ -3639,6 +3718,11 @@
         deleteInputRowBase(row, inputValue, '/api/deletewm3u29')
     }
 
+    //删除alist直播源
+    function deleteInputRow30(row, inputValue) {
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u30')
+    }
+
     //删除加密订阅密码历史记录
     function deleteInputRow14(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u14')
@@ -3723,6 +3807,8 @@
     inputableAddEventListener(inputTable28, 'saveInputValue28', 'deleteInputRow28')
     //DOUYIN直播源
     inputableAddEventListener(inputTable29, 'saveInputValue29', 'deleteInputRow29')
+    //alist直播源
+    inputableAddEventListener(inputTable30, 'saveInputValue30', 'deleteInputRow30')
     //简易DNS黑名单
     inputableAddEventListener(inputTable13, 'saveInputValue13', 'deleteInputRow13')
     //简易DNS白名单
@@ -3825,6 +3911,8 @@
     fileInputAddEventListenerBase('upload-json-btn28', 'redisKeyTWITCH', '/api/upload_json')
     //DOUYIN直播源-导入json配置
     fileInputAddEventListenerBase('upload-json-btn29', 'redisKeyDOUYIN', '/api/upload_json')
+    //alist直播源-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn30', 'redisKeyAlist', '/api/upload_json')
     //网络下载配置加密上传-导入json配置
     fileInputAddEventListenerBase('upload-json-btn17', 'downloadAndSecretUploadUrlPasswordAndName', '/api/upload_json')
     //m3u白名单分组优先级-导入json配置
@@ -4148,6 +4236,7 @@
             getFileName('spM3uClock', 'spM3uClock', spM3uClock)
             getFileName('autoDnsSwitchClock', 'autoDnsSwitchClock', autoDnsSwitchClock)
             getFileName('syncClock', 'syncClock', syncClock)
+            getFileName('reliveAlistTsTime', 'reliveAlistTsTime', reliveAlistTsTime)
         } else if (selectedPage === pages[17].id) {
             //生成有效M3U
             reloadFunctionOpenButton('switch')
@@ -4217,6 +4306,8 @@
             reloadFunctionOpenButton('switch34')
             //youtube-定时器
             reloadFunctionOpenButton('switch35')
+            //youtube-懒人刷新
+            reloadFunctionOpenButton('switch36')
         } else if (selectedPage === pages[18].id) {
             reloadDNSSIMPLEWhiteList()
         } else if (selectedPage === pages[19].id) {
@@ -4244,6 +4335,8 @@
             reloadTWITCHM3U()
         }else if (selectedPage === pages[31].id) {
             reloadDOUYINM3U()
+        }else if (selectedPage === pages[32].id) {
+            reloadAlistM3U()
         }
         if (selectedPage !== pages[1].id) {
             window.removeEventListener('scroll', handleScroll);
@@ -4356,6 +4449,8 @@
     downloadBtnAddEventListenerBase('download-json-btn28', 'redisKeyTWITCH')
     // DOUYIN直播源-导出订阅json配置
     downloadBtnAddEventListenerBase('download-json-btn29', 'redisKeyDOUYIN')
+    // alist直播源-导出订阅json配置
+    downloadBtnAddEventListenerBase('download-json-btn30', 'redisKeyAlist')
     // 下载加密上传-导出订阅json配置
     downloadBtnAddEventListenerBase('download-json-btn17', 'downloadAndSecretUploadUrlPasswordAndName')
     // M3U白名单分组优先级-导出订阅json配置
@@ -4468,6 +4563,8 @@
     addRowButtonAddEventListener(addRowButton28, inputTable28)
     //DOUYIN直播源-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton29, inputTable29)
+    //alist直播源-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton30, inputTable30)
     //DNS简易白名单-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton12, inputTable12)
     //M3U白名单-关键字-只添加一行列表，不存储数据
@@ -4642,6 +4739,11 @@
     //超融合-DOUYIN直播源生成
     function execute29() {
         executeBase('/api/chaoronghe29')
+    }
+
+    //超融合-alist直播源生成
+    function execute30() {
+        executeBase('/api/chaoronghe30')
     }
 
     function executeBase(requestPath) {

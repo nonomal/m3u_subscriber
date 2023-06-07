@@ -10,6 +10,8 @@ import math
 import os
 import queue
 import re
+import uuid
+from datetime import datetime
 from functools import wraps
 import threading
 import hashlib
@@ -25,7 +27,7 @@ import requests
 import time
 from urllib.parse import urlparse, urlencode
 from flask import Flask, jsonify, request, send_file, render_template, send_from_directory, \
-    after_this_request, redirect
+    after_this_request, redirect, Response
 
 import chardet
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -146,7 +148,8 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
                   'usernameSys': 'admin', 'passwordSys': 'password', 'normalM3uClock': '7200',
                   'normalSubscriberClock': '10800',
-                  'proxySubscriberClock': '3600', 'spM3uClock': '3700', 'autoDnsSwitchClock': '600', 'syncClock': '10'}
+                  'proxySubscriberClock': '3600', 'spM3uClock': '3700', 'autoDnsSwitchClock': '600', 'syncClock': '10',
+                  'reliveAlistTsTime': '600'}
 
 # 单独导入导出使用一个配置,需特殊处理:{{url:{pass,name}}}
 # 下载网络配置并且加密后上传:url+加密密钥+加密文件名字
@@ -211,7 +214,22 @@ REDIS_KEY_TWITCH_M3U = 'redisKeyTWITCHM3u'
 # TWITCH频道名字,真实m3u8地址
 redisKeyTWITCHM3u = {}
 
+# alist直播源
+REDIS_KEY_ALIST = 'redisKeyAlist'
+# alist直播源网站某个子路径，该路径通用密码
+redisKeyAlist = {}
+# alist真实m3u8地址
+REDIS_KEY_Alist_M3U = 'redisKeyAlistM3u'
+# alist uuid,请求url地址，主要是查找m3u8路径下全部文件是否有sign属性
+redisKeyAlistM3u = {}
+# alist真实m3u8地址
+REDIS_KEY_Alist_M3U_TS_PATH = 'redisKeyAlistM3uTsPath'
+# alist uuid,相对路径，主要是配合是否存在sign拼接出真实的ts url
+redisKeyAlistM3uTsPath = {}
+
 port_live = 22771
+# 存放alist的m3u8文件目录
+SLICES_ALIST_M3U8 = "/app/m3u8"
 
 NORMAL_REDIS_KEY = 'normalRedisKey'
 # 全部有redis备份字典key-普通redis结构，重要且数据量比较少的
@@ -225,7 +243,7 @@ allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_
 # 数据巨大的redis配置,一键导出时单独导出每个配置
 hugeDataList = [REDIS_KEY_BILIBILI, REDIS_KEY_DNS_SIMPLE_WHITELIST, REDIS_KEY_DNS_SIMPLE_BLACKLIST, REDIS_KEY_YOUTUBE,
                 REDIS_KEY_M3U_WHITELIST_RANK, REDIS_KEY_M3U_BLACKLIST, REDIS_KEY_M3U_WHITELIST, REDIS_KEY_HUYA,
-                REDIS_KEY_YY, REDIS_KEY_TWITCH, REDIS_KEY_DOUYIN]
+                REDIS_KEY_YY, REDIS_KEY_TWITCH, REDIS_KEY_DOUYIN, REDIS_KEY_ALIST]
 
 SPECIAL_REDIS_KEY = 'specialRedisKey'
 specialRedisKey = [REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME,
@@ -369,6 +387,35 @@ def serve_files2(filename):
 
 tv_dict_youtube = {}
 
+# 上次更新时间戳
+time_clock_update_dict_tv = {'douyin': '0', 'youtube': '0', 'bilibili': '0', 'yy': '0', 'huya': '0', 'twitch': '0'}
+
+
+# true-需要更新 false-不需要更新
+def is_update_tv(cachekey):
+    if not isOpenFunction('switch36'):
+        return False
+    lastUpdateTime = float(time_clock_update_dict_tv[cachekey])
+    sysTime = int(getFileNameByTagName('normalM3uClock'))
+    if (time.time() - lastUpdateTime) >= sysTime:
+        return True
+    return False
+
+
+def update_clock_tv(cachekey):
+    time_clock_update_dict_tv[cachekey] = str(time.time())
+
+
+# true-已经更新过了
+def is_updated_tv(cachekey, url):
+    # 更新间隔短的情况下不去测试链接
+    if is_update_tv(cachekey):
+        response = requests.get(url)
+        # 死链，重新刷
+        if response.status_code != 200:
+            return True
+    return False
+
 
 # 路由youtube
 @app.route('/youtube/<path:filename>')
@@ -378,6 +425,11 @@ def serve_files3(filename):
     if not url:
         url = redisKeyYoutubeM3u.get(id)
         tv_dict_youtube.clear()
+        if url and is_updated_tv('youtube', url):
+            chaoronghe24()
+            chaoronghe()
+            update_clock_tv('youtube')
+            url = redisKeyYoutubeM3u.get(id)
         tv_dict_youtube[id] = url
 
     @after_this_request
@@ -401,6 +453,11 @@ def serve_files4(filename):
     if not url:
         url = redisKeyBililiM3u.get(id)
         tv_dict_bilibili.clear()
+        if url and is_updated_tv('bilibili', url):
+            chaoronghe25()
+            chaoronghe()
+            update_clock_tv('bilibili')
+            url = redisKeyBililiM3u.get(id)
         tv_dict_bilibili[id] = url
 
     @after_this_request
@@ -424,6 +481,11 @@ def serve_files5(filename):
     if not url:
         url = redisKeyHuyaM3u.get(id)
         tv_dict_huya.clear()
+        if url and is_updated_tv('huya', url):
+            chaoronghe26()
+            chaoronghe()
+            update_clock_tv('huya')
+            url = redisKeyHuyaM3u.get(id)
         tv_dict_huya[id] = url
 
     @after_this_request
@@ -447,6 +509,11 @@ def serve_files6(filename):
     if not url:
         url = redisKeyYYM3u.get(id)
         tv_dict_yy.clear()
+        if url and is_updated_tv('yy', url):
+            chaoronghe27()
+            chaoronghe()
+            update_clock_tv('yy')
+            url = redisKeyYYM3u.get(id)
         tv_dict_yy[id] = url
 
     @after_this_request
@@ -470,6 +537,11 @@ def serve_files_DOUYIN(filename):
     if not url:
         url = redisKeyDOUYINM3u.get(id)
         tv_dict_douyin.clear()
+        if url and is_updated_tv('douyin', url):
+            chaoronghe29()
+            chaoronghe()
+            update_clock_tv('douyin')
+            url = redisKeyDOUYINM3u.get(id)
         tv_dict_douyin[id] = url
 
     @after_this_request
@@ -481,7 +553,10 @@ def serve_files_DOUYIN(filename):
 
     return redirect(url)
 
+
 tv_dict_twitch = {}
+
+
 # 路由twitch
 @app.route('/TWITCH/<path:filename>')
 def serve_files7(filename):
@@ -490,6 +565,11 @@ def serve_files7(filename):
     if not url:
         url = redisKeyTWITCHM3u.get(id)
         tv_dict_twitch.clear()
+        if url and is_updated_tv('twitch', url):
+            chaoronghe28()
+            chaoronghe()
+            update_clock_tv('twitch')
+            url = redisKeyTWITCHM3u.get(id)
         tv_dict_twitch[id] = url
 
     @after_this_request
@@ -505,12 +585,12 @@ def serve_files7(filename):
 ##############################################################bilibili############################################
 async def pingM3u(session, value, real_dict, key, sem, mintimeout, maxTimeout):
     try:
-        async with sem, session.get(value, timeout=mintimeout) as response:
+        async with sem, session.get(value, timeout=aiohttp.ClientTimeout(total=mintimeout)) as response:
             if response.status == 200:
                 real_dict[key] = value
     except asyncio.TimeoutError:
         try:
-            async with sem, session.get(value, timeout=maxTimeout) as response:
+            async with sem, session.get(value, timeout=aiohttp.ClientTimeout(total=maxTimeout)) as response:
                 if response.status == 200:
                     real_dict[key] = value
         except Exception as e:
@@ -625,6 +705,12 @@ def clock_thread():
             chaoronghe28()
             chaoronghe29()
             update_clock('spM3uClock')
+            update_clock_tv('youtube')
+            update_clock_tv('huya')
+            update_clock_tv('yy')
+            update_clock_tv('bilibili')
+            update_clock_tv('twitch')
+            update_clock_tv('douyin')
         # 通常直播源下载定时器
         if isOpenFunction('switch25') and is_update_clock('normalM3uClock'):
             chaoronghe()
@@ -709,6 +795,9 @@ def toggle_m3u(functionId, value):
     elif functionId == 'switch35':
         function_dict[functionId] = str(value)
         redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
+    elif functionId == 'switch36':
+        function_dict[functionId] = str(value)
+        redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
 
 
 async def checkWriteHealthM3u(url):
@@ -775,6 +864,7 @@ def check_file(m3u_dict):
         path6 = f"{secret_path}YY.m3u"
         path7 = f"{secret_path}TWITCH.m3u"
         path8 = f"{secret_path}Douyin.m3u"
+        path9 = f"{secret_path}alist.m3u"
         source = ''
         if os.path.exists(path3):
             source += copyAndRename(path3).decode()
@@ -793,6 +883,9 @@ def check_file(m3u_dict):
         if os.path.exists(path8):
             source += '\n'
             source += copyAndRename(path8).decode()
+        if os.path.exists(path9):
+            source += '\n'
+            source += copyAndRename(path9).decode()
         with open(path, 'wb') as fdst:
             fdst.write(source.encode('utf-8'))
         path2 = f"{secret_path}{getFileNameByTagName('healthM3u')}.m3u"
@@ -812,6 +905,8 @@ def check_file(m3u_dict):
                 source2 += copyAndRename(path7).decode()
             if os.path.exists(path8):
                 source2 += copyAndRename(path8).decode()
+            if os.path.exists(path9):
+                source2 += copyAndRename(path9).decode()
             with open(path2, 'wb') as fdst:
                 fdst.write(source2.encode('utf-8'))
             # 异步缓慢检测出有效链接
@@ -1708,6 +1803,9 @@ def init_function_dict():
         # YOUTUBE-定时器
         if 'switch35' not in keys:
             dict['switch35'] = '0'
+        # YOUTUBE-懒人刷新
+        if 'switch36' not in keys:
+            dict['switch36'] = '0'
         redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
         function_dict = dict.copy()
     else:
@@ -1719,7 +1817,7 @@ def init_function_dict():
                 'switch21': '0',
                 'switch22': '1', 'switch23': '1', 'switch24': '1', 'switch25': '0', 'switch26': '0', 'switch27': '0'
             , 'switch28': '0', 'switch30': '0', 'switch31': '0', 'switch32': '0', 'switch33': '0',
-                'switch34': '0', 'switch35': '0'}
+                'switch34': '0', 'switch35': '0', 'switch36': '0'}
         redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
         function_dict = dict.copy()
 
@@ -2756,7 +2854,8 @@ CACHE_KEY_TO_GLOBAL_VAR = {
     REDIS_KEY_HUYA: 'redisKeyHuya',
     REDIS_KEY_YY: 'redisKeyYY',
     REDIS_KEY_TWITCH: 'redisKeyTWITCH',
-    REDIS_KEY_DOUYIN: 'redisKeyDOUYIN'
+    REDIS_KEY_DOUYIN: 'redisKeyDOUYIN',
+    REDIS_KEY_ALIST: 'redisKeyAlist'
 }
 
 
@@ -3613,6 +3712,23 @@ def initReloadCacheForNormal():
                     redisKeyDOUYINM3u.update(dict3)
             except Exception as e:
                 pass
+        elif redisKey in REDIS_KEY_ALIST:
+            try:
+                global redisKeyAlist
+                global redisKeyAlistM3u
+                global redisKeyAlistM3uTsPath
+                redisKeyAlist.clear()
+                dict = redis_get_map(REDIS_KEY_ALIST)
+                if dict:
+                    redisKeyAlist.update(dict)
+                dict3 = redis_get_map(REDIS_KEY_Alist_M3U)
+                if dict3:
+                    redisKeyAlistM3u.update(dict3)
+                dict4 = redis_get_map(REDIS_KEY_Alist_M3U_TS_PATH)
+                if dict4:
+                    redisKeyAlistM3uTsPath.update(dict4)
+            except Exception as e:
+                pass
         elif redisKey in REDIS_KEY_TWITCH:
             try:
                 global redisKeyTWITCH
@@ -3996,7 +4112,7 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'usernameSys': 'admin', 'passwordSys': 'password', 'normalM3uClock': '7200',
                           'normalSubscriberClock': '10800',
                           'proxySubscriberClock': '3600', 'spM3uClock': '3700', 'autoDnsSwitchClock': '600',
-                          'syncClock': '10'}
+                          'syncClock': '10', 'reliveAlistTsTime': '600'}
 
 
 def init_file_name():
@@ -4137,7 +4253,7 @@ def getSwitchstate():
 
 # 需要额外操作的
 clockArr = ['switch25', 'switch26', 'switch27', 'switch28', 'switch13', 'switch25', 'switch33', 'switch34',
-            'switch35']
+            'switch35', 'switch36']
 
 
 # 切换功能开关
@@ -4199,6 +4315,7 @@ def serverMode():
         switchSingleFunction('switch33', '0')
         switchSingleFunction('switch34', '0')
         switchSingleFunction('switch35', '0')
+        switchSingleFunction('switch36', '0')
     elif mode == 'client':
         switchSingleFunction('switch2', '0')
         switchSingleFunction('switch3', '0')
@@ -4234,6 +4351,7 @@ def serverMode():
         switchSingleFunction('switch33', '0')
         switchSingleFunction('switch34', '0')
         switchSingleFunction('switch35', '0')
+        switchSingleFunction('switch36', '0')
     return 'success'
 
 
@@ -4326,6 +4444,15 @@ def deletewm3u29():
     return dellist(request, REDIS_KEY_DOUYIN)
 
 
+# 删除alist直播源
+@app.route('/api/deletewm3u30', methods=['POST'])
+@requires_auth
+def deletewm3u30():
+    deleteurl = request.json.get('deleteurl')
+    del redisKeyAlist[deleteurl]
+    return dellist(request, REDIS_KEY_ALIST)
+
+
 # 删除TWITCH直播源
 @app.route('/api/deletewm3u28', methods=['POST'])
 @requires_auth
@@ -4394,6 +4521,14 @@ def getall27():
 def getall29():
     global redisKeyDOUYIN
     return returnDictCache(REDIS_KEY_DOUYIN, redisKeyDOUYIN)
+
+
+# 拉取全部alist
+@app.route('/api/getall30', methods=['GET'])
+@requires_auth
+def getall30():
+    global redisKeyAlist
+    return returnDictCache(REDIS_KEY_ALIST, redisKeyAlist)
 
 
 # 拉取全部TWITCH
@@ -4631,6 +4766,17 @@ def addnewm3u29():
     global redisKeyDOUYIN
     redisKeyDOUYIN[addurl] = name
     return addlist(request, REDIS_KEY_DOUYIN)
+
+
+# 添加alist直播源
+@app.route('/api/addnewm3u30', methods=['POST'])
+@requires_auth
+def addnewm3u30():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    global redisKeyAlist
+    redisKeyAlist[addurl] = name
+    return addlist(request, REDIS_KEY_ALIST)
 
 
 # 添加TWITCH直播源
@@ -5432,11 +5578,11 @@ async def grab2(session, id, m3u_dict, sem, mintimeout, maxTimeout):
         }
         try:
             async with sem, session.get(bilibili_real_url, headers=cim_headers, params=param,
-                                        timeout=mintimeout) as response:
+                                        timeout=aiohttp.ClientTimeout(total=mintimeout), ssl=False) as response:
                 res = await response.json()
         except asyncio.TimeoutError:
             async with sem, session.get(bilibili_real_url, headers=cim_headers, params=param,
-                                        timeout=maxTimeout) as response:
+                                        timeout=aiohttp.ClientTimeout(total=maxTimeout), ssl=False) as response:
                 res = await response.json()
         if '不存在' in res['msg']:
             return
@@ -5454,10 +5600,12 @@ async def grab2(session, id, m3u_dict, sem, mintimeout, maxTimeout):
             'ptype': 8,
         }
         try:
-            async with sem, session.get(biliurl, headers=cim_headers, params=param2, timeout=mintimeout) as response2:
+            async with sem, session.get(biliurl, headers=cim_headers, params=param2,
+                                        timeout=aiohttp.ClientTimeout(total=mintimeout), ssl=False) as response2:
                 res = await response2.json()
         except asyncio.TimeoutError:
-            async with sem, session.get(biliurl, headers=cim_headers, params=param2, timeout=maxTimeout) as response2:
+            async with sem, session.get(biliurl, headers=cim_headers, params=param2,
+                                        timeout=aiohttp.ClientTimeout(total=maxTimeout), ssl=False) as response2:
                 res = await response2.json()
         stream_info = res['data']['playurl_info']['playurl']['stream']
         accept_qn = stream_info[0]['format'][0]['codec'][0]['accept_qn']
@@ -5553,12 +5701,14 @@ headers_YY = {
 async def room_id_(session, id, sem, mintimeout, maxTimeout):
     url = 'https://www.yy.com/{}'.format(id)
     try:
-        async with sem, session.get(url, headers=headers_web_YY, timeout=mintimeout) as response:
+        async with sem, session.get(url, headers=headers_web_YY,
+                                    timeout=aiohttp.ClientTimeout(total=mintimeout), ssl=False) as response:
             if response.status == 200:
                 room_id = re.findall('ssid : "(\d+)', response.text)[0]
                 return room_id
     except asyncio.TimeoutError:
-        async with sem, session.get(url, headers=headers_web_YY, timeout=maxTimeout) as response:
+        async with sem, session.get(url, headers=headers_web_YY,
+                                    timeout=aiohttp.ClientTimeout(total=maxTimeout), ssl=False) as response:
             if response.status == 200:
                 room_id = re.findall('ssid : "(\d+)', response.text)[0]
                 return room_id
@@ -5566,13 +5716,15 @@ async def room_id_(session, id, sem, mintimeout, maxTimeout):
 
 async def fetch_room_url(session, room_url, headers, sem, mintimeout, maxTimeout):
     try:
-        async with sem, session.get(room_url, headers=headers, timeout=mintimeout) as response:
+        async with sem, session.get(room_url, headers=headers,
+                                    timeout=aiohttp.ClientTimeout(total=mintimeout), ssl=False) as response:
             if response.status == 200:
                 return await response.text()
             else:
                 return None
     except asyncio.TimeoutError:
-        async with sem, session.get(room_url, headers=headers, timeout=maxTimeout) as response:
+        async with sem, session.get(room_url, headers=headers,
+                                    timeout=aiohttp.ClientTimeout(total=maxTimeout), ssl=False) as response:
             if response.status == 200:
                 return await response.text()
             else:
@@ -5581,13 +5733,15 @@ async def fetch_room_url(session, room_url, headers, sem, mintimeout, maxTimeout
 
 async def fetch_real_url(session, url, headers, sem, mintimeout, maxTimeout):
     try:
-        async with sem, session.get(url, headers=headers, timeout=mintimeout) as response:
+        async with sem, session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=mintimeout),
+                                    ssl=False) as response:
             if response.status == 200:
                 return await response.text()
             else:
                 return None
     except asyncio.TimeoutError:
-        async with sem, session.get(url, headers=headers, timeout=maxTimeout) as response:
+        async with sem, session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=maxTimeout),
+                                    ssl=False) as response:
             if response.status == 200:
                 return await response.text()
             else:
@@ -5598,10 +5752,10 @@ async def get_client_id(rid, session, sem, mintimeout, maxTimeout):
     try:
         twitch_room_url = f'https://www.twitch.tv/{rid}'
         try:
-            async with sem, session.get(twitch_room_url, timeout=mintimeout) as response:
+            async with sem, session.get(twitch_room_url, timeout=aiohttp.ClientTimeout(total=mintimeout)) as response:
                 res = await response.text()
         except asyncio.TimeoutError:
-            async with sem, session.get(twitch_room_url, timeout=maxTimeout) as response:
+            async with sem, session.get(twitch_room_url, timeout=aiohttp.ClientTimeout(total=maxTimeout)) as response:
                 res = await response.text()
         client_id = re.search(r'clientId="(.*?)"', res).group(1)
         return client_id
@@ -5636,10 +5790,12 @@ async def get_sig_token(rid, session, sem, mintimeout, maxTimeout):
     posturl = 'https://gql.twitch.tv/gql'
     json_data = json.dumps(data)
     try:
-        async with sem, session.post(posturl, headers=headers, data=json_data, timeout=mintimeout) as response:
+        async with sem, session.post(posturl, headers=headers, data=json_data,
+                                     timeout=aiohttp.ClientTimeout(total=mintimeout)) as response:
             res = await response.json()
     except asyncio.TimeoutError:
-        async with sem, session.post(posturl, headers=headers, data=json_data, timeout=maxTimeout) as response:
+        async with sem, session.post(posturl, headers=headers, data=json_data,
+                                     timeout=aiohttp.ClientTimeout(total=maxTimeout)) as response:
             res = await response.json()
     try:
         token, signature, _ = res['data']['streamPlaybackAccessToken'].values()
@@ -5744,12 +5900,14 @@ async def get_room_id_douyin(url, session, sem, mintimeout, maxTimeout):
     url = re.search(r'(https.*)', url).group(1)
 
     try:
-        async with sem, session.get(url, headers=headers, timeout=mintimeout) as response:
+        async with sem, session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=mintimeout),
+                                    ssl=False) as response:
             if response.status == 200:
                 url = response.headers['location']
                 room_id = re.search(r'\d{19}', url).group(0)
     except asyncio.TimeoutError:
-        async with sem, session.get(url, headers=headers, timeout=maxTimeout) as response:
+        async with sem, session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=maxTimeout),
+                                    ssl=False) as response:
             if response.status == 200:
                 url = response.headers['location']
                 room_id = re.search(r'\d{19}', url).group(0)
@@ -5770,13 +5928,15 @@ async def get_room_id_douyin(url, session, sem, mintimeout, maxTimeout):
 
     try:
         async with sem, session.get('https://webcast.amemv.com/webcast/room/reflow/info/?', headers=headers,
-                                    params=params, timeout=mintimeout) as response:
+                                    params=params, timeout=aiohttp.ClientTimeout(total=mintimeout),
+                                    ssl=False) as response:
             if response.status == 200:
                 json_data = await response.json()
                 return json_data['data']['room']['owner']['web_rid']
     except asyncio.TimeoutError:
         async with sem, session.get('https://webcast.amemv.com/webcast/room/reflow/info/?', headers=headers,
-                                    params=params, timeout=maxTimeout) as response:
+                                    params=params, timeout=aiohttp.ClientTimeout(total=maxTimeout),
+                                    ssl=False) as response:
             if response.status == 200:
                 json_data = await response.json()
                 return json_data['data']['room']['owner']['web_rid']
@@ -5800,11 +5960,13 @@ async def grab_douyin(session, id, m3u_dict, sem, mintimeout, maxTimeout):
             "user-agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
         }
         try:
-            async with sem, session.get(url, headers=headers, timeout=mintimeout) as response:
+            async with sem, session.get(url, headers=headers,
+                                        timeout=aiohttp.ClientTimeout(total=mintimeout), ssl=False) as response:
                 if response.status == 200:
                     result = await response.text()
         except asyncio.TimeoutError:
-            async with sem, session.get(url, headers=headers, timeout=maxTimeout) as response:
+            async with sem, session.get(url, headers=headers,
+                                        timeout=aiohttp.ClientTimeout(total=maxTimeout), ssl=False) as response:
                 if response.status == 200:
                     result = await response.text()
                 else:
@@ -5885,11 +6047,11 @@ async def grab3(session, id, m3u_dict, sem, mintimeout, maxTimeout):
         huya_room_url = 'https://m.huya.com/{}'.format(id)
         try:
             async with sem, session.get(huya_room_url, headers=cim_headers_huya, params=param,
-                                        timeout=mintimeout) as response:
+                                        timeout=aiohttp.ClientTimeout(total=mintimeout), ssl=False) as response:
                 res = await response.text()
         except asyncio.TimeoutError:
             async with sem, session.get(huya_room_url, headers=cim_headers_huya, params=param,
-                                        timeout=maxTimeout) as response:
+                                        timeout=aiohttp.ClientTimeout(total=maxTimeout), ssl=False) as response:
                 res = await response.text()
         liveLineUrl = re.findall(r'"liveLineUrl":"([\s\S]*?)",', res)[0]
         liveline = base64.b64decode(liveLineUrl).decode('utf-8')
@@ -5973,10 +6135,10 @@ youtubeUrl = 'https://www.youtube.com/watch?v='
 
 async def get_resolution(session, liveurl, sem, mintimeout, maxTimeout):
     try:
-        async with sem, session.get(liveurl, timeout=mintimeout) as response:
+        async with sem, session.get(liveurl, timeout=aiohttp.ClientTimeout(total=mintimeout)) as response:
             playlist_text = await response.text()
     except asyncio.TimeoutError:
-        async with sem, session.get(liveurl, timeout=maxTimeout) as response:
+        async with sem, session.get(liveurl, timeout=aiohttp.ClientTimeout(total=maxTimeout)) as response:
             playlist_text = await response.text()
     playlist = m3u8.loads(playlist_text)
     playlists = playlist.playlists
@@ -5996,15 +6158,15 @@ async def grab(session, id, m3u_dict, sem, mintimeout, maxTimeout):
     try:
         url = youtubeUrl + id
         try:
-            async with sem, session.get(url, timeout=mintimeout) as response:
+            async with sem, session.get(url, timeout=aiohttp.ClientTimeout(total=mintimeout)) as response:
                 content = await response.text()
                 if '.m3u8' not in content:
-                    async with sem, session.get(url, timeout=maxTimeout) as response2:
+                    async with sem, session.get(url, timeout=aiohttp.ClientTimeout(total=maxTimeout)) as response2:
                         content = await response2.text()
                         if '.m3u8' not in content:
                             return
         except asyncio.TimeoutError:
-            async with sem, session.get(url, timeout=maxTimeout) as response:
+            async with sem, session.get(url, timeout=aiohttp.ClientTimeout(total=maxTimeout)) as response:
                 content = await response.text()
                 if '.m3u8' not in content:
                     return
@@ -6176,7 +6338,7 @@ def chaoronghe29():
         redisKeyDOUYINM3u.clear()
         redis_del_map(REDIS_KEY_DOUYIN_M3U)
         fakeurl = f"http://{ip}:{port_live}/DOUYIN/"
-        #fakeurl = f"http://127.0.0.1:5000/DOUYIN/"
+        # fakeurl = f"http://127.0.0.1:5000/DOUYIN/"
         for id, url in m3u_dict.items():
             try:
                 redisKeyDOUYINM3u[id] = url
@@ -6192,6 +6354,322 @@ def chaoronghe29():
         return "result"
     except Exception as e:
         return "empty"
+
+
+# 生成全部alist直播源
+@app.route('/api/chaoronghe30', methods=['GET'])
+@requires_auth
+def chaoronghe_alist():
+    return chaoronghe30()
+
+
+def safe_del_alist_m3u8():
+    # 新的切片产生，删除全部其他切片
+    if os.path.exists(SLICES_ALIST_M3U8):
+        # 目录下全部文件
+        removePaths = os.listdir(SLICES_ALIST_M3U8)
+        for filename in removePaths:
+            removePath = os.path.join(SLICES_ALIST_M3U8, filename)
+            try:
+                os.remove(removePath)
+            except Exception as e:
+                pass
+
+
+def chaoronghe30():
+    try:
+        global redisKeyAlist
+        if len(redisKeyAlist) == 0:
+            return "empty"
+        global redisKeyAlistM3u
+        global redisKeyAlistM3uTsPath
+        redisKeyAlistM3uTsPath.clear()
+        redisKeyAlistM3u.clear()
+        try:
+            redis_del_map(REDIS_KEY_Alist_M3U)
+            redis_del_map(REDIS_KEY_Alist_M3U_TS_PATH)
+        except:
+            pass
+        safe_del_alist_m3u8()
+        ip = init_IP()
+        #fakeurl = f"http://127.0.0.1:5000/alist/"
+        fakeurl = f"http://{ip}:{port_live}/alist/"
+        pathxxx = f"{secret_path}alist.m3u"
+        thread2 = threading.Thread(target=check_alist_file,
+                                   args=(redisKeyAlist, fakeurl, pathxxx))
+        thread2.start()
+        return "result"
+    except Exception as e:
+        return "empty"
+
+
+def check_alist_file(alist_url_dict, fakeurl, pathxxx):
+    asyncio.run(sluty_alist_hunter(alist_url_dict, fakeurl, pathxxx))
+
+
+# 分割alist路径获取alist主站和path参数,path参数为空字符串说明url就是主站
+def get_site_and_path(url):
+    parsed_url = urlparse(url)
+    domain = parsed_url.scheme + '://' + parsed_url.netloc
+    path = parsed_url.path
+    if not path or path == '':
+        path = None
+    return domain, path
+
+
+async def sluty_alist_hunter(alist_url_dict, fakeurl, pathxxx):
+    if os.path.exists(pathxxx):
+        os.remove(pathxxx)
+    # 获取路径下的文件和文件夹列表数据
+    api_part = 'api/fs/list'
+    # 可以解析出alist网站隐藏的基础路径
+    api_me_base_path = 'api/me'
+
+    sem = asyncio.Semaphore(1000)  # 限制TCP连接的数量为100个
+    async with aiohttp.ClientSession() as session:
+        for site, password in alist_url_dict.items():
+            # 需要迭代访问的路径
+            future_path_set = set()
+            site, startPath = get_site_and_path(site)
+            if not site.endswith('/'):
+                site += '/'
+            base_path_url = site + api_me_base_path
+            async with sem, session.get(base_path_url, ssl=False) as response:
+                json_data = await response.json()
+                base_path = json_data['data']['base_path']
+            full_url = site + api_part
+            await getPathBase(site, full_url, startPath, future_path_set, sem, session, fakeurl, pathxxx,
+                              base_path, password)
+
+            async def process_path(pathbase):
+                await getPathBase(site, full_url, pathbase, future_path_set, sem, session, fakeurl,
+                                  pathxxx, base_path, password
+                                  )
+
+            while len(future_path_set) > 0:
+                tasks = [process_path(pathbase) for pathbase in future_path_set]
+                future_path_set.clear()
+                await asyncio.gather(*tasks)
+
+
+# url-基础请求列表API地址(alist网站/alist/api/fs/list)
+# path-迭代查询路径
+# file_url_dict 已经捕获到的文件(只存储视频文件)
+# 新的路径
+async def getPathBase(site, full_url, path, future_path_set, sem, session, fakeurl, pathxxx,
+                      base_path, password):
+    global redisKeyAlistM3u
+    global redisKeyAlistM3uTsPath
+    if path:
+        if not path.startswith('/'):
+            path = '/' + path
+        if path.endswith('/'):
+            path = path[:-1]
+        url = f'{full_url}?path={path}'
+    else:
+        url = full_url
+    try:
+        async with sem, session.get(url, ssl=False) as response:
+            json_data = await response.json()
+            if not json_data:
+                return
+            content = json_data['data']['content']
+            for item in content:
+                # 名字
+                name = item['name']
+                # false-不是文件夹 true-是文件夹
+                is_dir = item['is_dir']
+                # 是文件夹，计算下一级目录，等待再次访问
+                # 签名
+                sign = item['sign']
+                if is_dir:
+                    if path:
+                        future_path_set.add(f'{path}/{name}')
+                    else:
+                        future_path_set.add(f'/{name}')
+                else:
+                    # 假定是加密m3u8文件
+                    if url.endswith(name):
+                        if path:
+                            same_level_path = f'{path}'
+                            if base_path != '/':
+                                future_path = f'{site}d{base_path}{path}/{name}'
+                                # 不完整ts路径，拼接上具体ts文件名就是完整的
+                                future_path_ts = f'{site}d{base_path}{path}'
+                            else:
+                                future_path = f'{site}d{path}/{name}'
+                                future_path_ts = f'{site}d{path}'
+                        else:
+                            same_level_path = f'/'
+                            if base_path != '/':
+                                future_path = f'{site}d{base_path}/{name}'
+                                future_path_ts = f'{site}d{base_path}'
+                            else:
+                                future_path = f'{site}d/{name}'
+                                future_path_ts = f'{site}d'
+                        encoded_url = urllib.parse.quote(future_path, safe=':/')
+                        if sign and sign != '':
+                            encoded_url = f'{encoded_url}?sign={sign}'
+                        uuid_name = name
+                        tvg_name = await get_alist_uuid_file_data(encoded_url, sem, session, password, uuid_name,
+                                                                  fakeurl)
+                        if tvg_name:
+                            link = f'#EXTINF:-1 group-title="alist"  tvg-name="{tvg_name}",{tvg_name}\n'
+                            # uuid(视频序号),uuid下子目录url，结合这个可以逆推与之同一个目录的加密ts文件的url，主要检查是否有签名,由于数量巨大不予以存储
+                            uuid_same_level_path_url = f'{full_url}?path={same_level_path}'
+                            redisKeyAlistM3u[uuid_name] = uuid_same_level_path_url
+                            redis_add_map(REDIS_KEY_Alist_M3U, {uuid_name: uuid_same_level_path_url})
+                            redisKeyAlistM3uTsPath[uuid_name] = future_path_ts
+                            redis_add_map(REDIS_KEY_Alist_M3U_TS_PATH, {uuid_name: future_path_ts})
+                            # 虚假IP+端口+唯一uuid(文件夹名字)
+                            fake_m3u8 = f'{fakeurl}{uuid_name}.m3u8'
+                            async with aiofiles.open(pathxxx, 'a', encoding='utf-8') as f:  # 异步的方式写入内容
+                                await f.write(f'{link}{fake_m3u8}\n')
+    except Exception as e:
+        pass
+
+
+def get_password(url):
+    site, startPath = get_site_and_path(url)
+    for key, password in redisKeyAlist.items():
+        if key.startswith(site):
+            return password
+    return None
+
+
+# 绕过一些网站对下载工具的限制或检测
+user_agent = '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"'
+
+
+# 获取加密ts文件的真实下载url   uuid_ts-加密ts文件名字
+# same_level_path 加密m3u8文件路径,来源于redisKeyAlistM3u[uuid_name],ts_uuid_secret_name，来源于m3u8文件 加密ts文件名字，根据此二项获取真实有效的加密ts文件文件内容
+def get_true_alist_ts_url(ts_uuid_secret_name):
+    global redisKeyAlistM3u
+    global redisKeyAlistM3uTsPath
+    global redisKeyAlist
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
+    uuid = ts_uuid_secret_name.split('_')[0]
+    same_level_path = redisKeyAlistM3u.get(uuid)
+    if not same_level_path:
+        return None
+    headers = {'User-Agent': user_agent}
+    try:
+        response = requests.get(same_level_path, headers=headers, timeout=mintimeout, verify=False)
+    except requests.exceptions.Timeout:
+        # 处理请求超时异常
+        response = requests.get(same_level_path, headers=headers, timeout=maxTimeout, verify=False)
+    if response.status_code == 200:
+        json_data = response.json()
+        content = json_data['data']['content']
+        for item in content:
+            # 名字
+            name = item['name']
+            if ts_uuid_secret_name != name:
+                continue
+            # 签名
+            sign = item['sign']
+            future_path_ts = f'{redisKeyAlistM3uTsPath.get(uuid)}/{ts_uuid_secret_name}'
+            encoded_url = urllib.parse.quote(future_path_ts, safe=':/')
+            if sign and sign != '':
+                encoded_url = f'{encoded_url}?sign={sign}'
+            try:
+                content = download_file(encoded_url, headers, mintimeout)
+            except requests.exceptions.Timeout:
+                content = download_file(encoded_url, headers, mintimeout)
+                # 处理请求超时异常
+            if content:
+                password = get_password(same_level_path)
+                if not password:
+                    return None
+                # 已经解密的高度加密的m3u8文件(只有uuid，没有格式)，bytes
+                blankContent_alist_uuid_m3u8 = decrypt(password, content)
+                return blankContent_alist_uuid_m3u8
+            return None
+        return None
+    return None
+
+
+def download_file(url, headers, timeout):
+    response = requests.get(url, headers=headers, timeout=timeout, verify=False, stream=True)
+    bytes_data = b''
+    for chunk in response.iter_content(chunk_size=1024):
+        if chunk:
+            bytes_data += chunk
+    return bytes_data
+
+
+# 下载解密全部特殊加密直播文件
+async def get_alist_uuid_file_data(secret_uuid_m3u8_file_url, sem, session, password, uuid_name, fakeurl):
+    headers = {'User-Agent': user_agent}
+    try:
+        async with sem, session.get(secret_uuid_m3u8_file_url, headers=headers,
+                                    timeout=aiohttp.ClientTimeout(total=5), ssl=False) as response:
+            content = await response.read()
+    except asyncio.TimeoutError:
+        async with sem, session.get(secret_uuid_m3u8_file_url, headers=headers,
+                                    timeout=aiohttp.ClientTimeout(total=300), ssl=False) as response:
+            content = await response.read()
+    if content:
+        # 已经解密的高度加密的m3u8文件(只有uuid，没有格式)，bytes
+        blankContent_alist_uuid_m3u8 = decrypt(password, content)
+    else:
+        return None
+    bytes_array = blankContent_alist_uuid_m3u8.splitlines()
+    fix_m3u8_data = b''
+    encode_uuid = uuid_name.encode()
+    fakeurl_encode = fakeurl.encode()
+    filename = ''
+    for line in bytes_array:
+        if not line.startswith(encode_uuid):
+            if line.startswith(b"#my_video_true_name_is="):
+                filename = line.split(b"=")[1].decode()
+            else:
+                fix_m3u8_data += line
+                fix_m3u8_data += b'\n'
+        else:
+            fix_m3u8_data += fakeurl_encode
+            fix_m3u8_data += line
+            fix_m3u8_data += b'\n'
+    # 把解密的m3u8文件落地保存，这样子就不需要定时器拉取m3u8列表文件
+    thread_write_bytes_to_file(f"{SLICES_ALIST_M3U8}/{uuid_name}.m3u8", fix_m3u8_data)
+    if filename != '':
+        return filename
+    return None
+
+
+headers_default = {'Content-Type': 'application/vnd.apple.mpegurl',
+                   'Expect': '100-continue',
+                   'Connection': 'Keep-Alive',
+                   }
+
+
+# 推流加密ts文件
+@app.route('/alist/<path:path>')
+def video_m3u8_alist_ts(path):
+    uuid_ts = path
+    start_time = time.time()  # 获取当前时间戳
+    reliveAlistTsTime = int(getFileNameByTagName('reliveAlistTsTime'))
+    while (time.time() - start_time) < reliveAlistTsTime:
+        bytes_data_ts = get_true_alist_ts_url(uuid_ts)
+        if bytes_data_ts:
+            return Response(bytes_data_ts, mimetype='video/mp2t')
+    return
+
+
+# 推流加密m3u8列表
+@app.route('/alist/<path:path>.m3u8')
+def video_m3u8_alist(path):
+    if path not in redisKeyAlistM3u.keys():
+        return "Video not found", 404
+    m3u8_path = os.path.join(SLICES_ALIST_M3U8, f"{path}.m3u8")
+    # 读取M3U8播放列表文件并返回给客户端
+    with open(m3u8_path, "rb") as f:
+        m3u8_data = f.read()
+    if m3u8_data:
+        return Response(m3u8_data, headers=headers_default)
+    else:
+        return "Video not found", 404
 
 
 # 生成全部TWITCH直播源
@@ -6581,6 +7059,19 @@ def removem3ulinks29():
     return "success"
 
 
+# 删除全部alist直播源
+@app.route('/api/removem3ulinks30', methods=['GET'])
+@requires_auth
+def removem3ulinks30():
+    redisKeyAlist.clear()
+    redis_del_map(REDIS_KEY_ALIST)
+    redisKeyAlistM3u.clear()
+    redis_del_map(REDIS_KEY_Alist_M3U)
+    redisKeyAlistM3uTsPath.clear()
+    redis_del_map(REDIS_KEY_Alist_M3U_TS_PATH)
+    return "success"
+
+
 # 删除全部TWITCH直播源
 @app.route('/api/removem3ulinks28', methods=['GET'])
 @requires_auth
@@ -6906,6 +7397,15 @@ def process_file4():
     with open(filename, 'w', encoding='utf-8') as f:
         f.write(resultContent)
     return send_file(filename, as_attachment=True)
+
+
+# 根据年月日、当前时间、输入的字符串生成的绝对唯一uuid
+def generate_only_uuid(my_string):
+    now = datetime.now()
+    timestamp = now.strftime("%Y%m%d%H%M%S%f")
+    unique_str = f"{timestamp}-{my_string}"
+    serial_number = uuid.uuid5(uuid.NAMESPACE_URL, unique_str)
+    return serial_number
 
 
 def main():

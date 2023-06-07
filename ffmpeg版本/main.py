@@ -7328,7 +7328,7 @@ def repeat_check(true_webdav_m3u_dict_raw_filename):
     if name == '':
         return False, ''
     if name in true_webdav_m3u_dict_raw_filename.keys():
-            return True, name
+        return True, name
     return False, ''
 
 
@@ -7395,7 +7395,7 @@ def chaoronghexxx():
                     faltalDeadLink = True
                     break
                 length = get_length(url, encoded_credentials)
-                videoType=name_type_dict[filename]
+                videoType = name_type_dict[filename]
                 stop_ffmpeg_bilibili()
                 if videoType != 'mkv' or videoType != 'avi':
                     cmd = f'ffmpeg -threads {ffmpegThread} {user_agent} -headers \"Authorization: Basic {encoded_credentials}\" -re -i "{url}" -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -r {bilibilirfps}  -f flv "{bilibiliServer}{bilibilirtsp}"'

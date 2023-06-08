@@ -332,7 +332,7 @@ class MyFrame(tk.Frame):
         self.uuid_text.config(bg=self.master.cget('bg'))
         self.convert_button3.config(bg=self.master.cget('bg'))
         self.file_button.config(bg='green')
-        self.password_text.delete(0, 'end')
+        #self.password_text.delete(0, 'end')
         self.uuid_text.delete(0, 'end')
         self.convert_button5.config(bg=self.master.cget('bg'))
         self.convert_button4.config(bg=self.master.cget('bg'))

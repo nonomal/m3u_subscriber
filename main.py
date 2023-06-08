@@ -387,34 +387,6 @@ def serve_files2(filename):
 
 tv_dict_youtube = {}
 
-# 上次更新时间戳
-time_clock_update_dict_tv = {'douyin': '0', 'youtube': '0', 'bilibili': '0', 'yy': '0', 'huya': '0', 'twitch': '0'}
-
-
-# true-需要更新 false-不需要更新
-def is_update_tv(cachekey):
-    if not isOpenFunction('switch36'):
-        return False
-    lastUpdateTime = float(time_clock_update_dict_tv[cachekey])
-    sysTime = int(getFileNameByTagName('normalM3uClock'))
-    if (time.time() - lastUpdateTime) >= sysTime:
-        return True
-    return False
-
-
-def update_clock_tv(cachekey):
-    time_clock_update_dict_tv[cachekey] = str(time.time())
-
-
-# true-已经更新过了
-def is_updated_tv(cachekey, url):
-    # 更新间隔短的情况下不去测试链接
-    if is_update_tv(cachekey):
-        response = requests.get(url)
-        # 死链，重新刷
-        if response.status_code != 200:
-            return True
-    return False
 
 
 # 路由youtube
@@ -425,11 +397,6 @@ def serve_files3(filename):
     if not url:
         url = redisKeyYoutubeM3u.get(id)
         tv_dict_youtube.clear()
-        if url and is_updated_tv('youtube', url):
-            chaoronghe24()
-            chaoronghe()
-            update_clock_tv('youtube')
-            url = redisKeyYoutubeM3u.get(id)
         tv_dict_youtube[id] = url
 
     @after_this_request
@@ -453,11 +420,6 @@ def serve_files4(filename):
     if not url:
         url = redisKeyBililiM3u.get(id)
         tv_dict_bilibili.clear()
-        if url and is_updated_tv('bilibili', url):
-            chaoronghe25()
-            chaoronghe()
-            update_clock_tv('bilibili')
-            url = redisKeyBililiM3u.get(id)
         tv_dict_bilibili[id] = url
 
     @after_this_request
@@ -481,11 +443,6 @@ def serve_files5(filename):
     if not url:
         url = redisKeyHuyaM3u.get(id)
         tv_dict_huya.clear()
-        if url and is_updated_tv('huya', url):
-            chaoronghe26()
-            chaoronghe()
-            update_clock_tv('huya')
-            url = redisKeyHuyaM3u.get(id)
         tv_dict_huya[id] = url
 
     @after_this_request
@@ -509,11 +466,6 @@ def serve_files6(filename):
     if not url:
         url = redisKeyYYM3u.get(id)
         tv_dict_yy.clear()
-        if url and is_updated_tv('yy', url):
-            chaoronghe27()
-            chaoronghe()
-            update_clock_tv('yy')
-            url = redisKeyYYM3u.get(id)
         tv_dict_yy[id] = url
 
     @after_this_request
@@ -537,11 +489,6 @@ def serve_files_DOUYIN(filename):
     if not url:
         url = redisKeyDOUYINM3u.get(id)
         tv_dict_douyin.clear()
-        if url and is_updated_tv('douyin', url):
-            chaoronghe29()
-            chaoronghe()
-            update_clock_tv('douyin')
-            url = redisKeyDOUYINM3u.get(id)
         tv_dict_douyin[id] = url
 
     @after_this_request
@@ -565,11 +512,6 @@ def serve_files7(filename):
     if not url:
         url = redisKeyTWITCHM3u.get(id)
         tv_dict_twitch.clear()
-        if url and is_updated_tv('twitch', url):
-            chaoronghe28()
-            chaoronghe()
-            update_clock_tv('twitch')
-            url = redisKeyTWITCHM3u.get(id)
         tv_dict_twitch[id] = url
 
     @after_this_request
@@ -585,12 +527,12 @@ def serve_files7(filename):
 ##############################################################bilibili############################################
 async def pingM3u(session, value, real_dict, key, sem, mintimeout, maxTimeout):
     try:
-        async with sem, session.get(value, timeout=aiohttp.ClientTimeout(total=mintimeout)) as response:
+        async with sem, session.get(value, timeout=mintimeout) as response:
             if response.status == 200:
                 real_dict[key] = value
     except asyncio.TimeoutError:
         try:
-            async with sem, session.get(value, timeout=aiohttp.ClientTimeout(total=maxTimeout)) as response:
+            async with sem, session.get(value, timeout=maxTimeout) as response:
                 if response.status == 200:
                     real_dict[key] = value
         except Exception as e:
@@ -705,12 +647,6 @@ def clock_thread():
             chaoronghe28()
             chaoronghe29()
             update_clock('spM3uClock')
-            update_clock_tv('youtube')
-            update_clock_tv('huya')
-            update_clock_tv('yy')
-            update_clock_tv('bilibili')
-            update_clock_tv('twitch')
-            update_clock_tv('douyin')
         # 通常直播源下载定时器
         if isOpenFunction('switch25') and is_update_clock('normalM3uClock'):
             chaoronghe()
@@ -793,9 +729,6 @@ def toggle_m3u(functionId, value):
         function_dict[functionId] = str(value)
         redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
     elif functionId == 'switch35':
-        function_dict[functionId] = str(value)
-        redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
-    elif functionId == 'switch36':
         function_dict[functionId] = str(value)
         redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
 
@@ -1803,9 +1736,6 @@ def init_function_dict():
         # YOUTUBE-定时器
         if 'switch35' not in keys:
             dict['switch35'] = '0'
-        # YOUTUBE-懒人刷新
-        if 'switch36' not in keys:
-            dict['switch36'] = '0'
         redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
         function_dict = dict.copy()
     else:
@@ -1817,7 +1747,7 @@ def init_function_dict():
                 'switch21': '0',
                 'switch22': '1', 'switch23': '1', 'switch24': '1', 'switch25': '0', 'switch26': '0', 'switch27': '0'
             , 'switch28': '0', 'switch30': '0', 'switch31': '0', 'switch32': '0', 'switch33': '0',
-                'switch34': '0', 'switch35': '0', 'switch36': '0'}
+                'switch34': '0', 'switch35': '0'}
         redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
         function_dict = dict.copy()
 
@@ -4253,7 +4183,7 @@ def getSwitchstate():
 
 # 需要额外操作的
 clockArr = ['switch25', 'switch26', 'switch27', 'switch28', 'switch13', 'switch25', 'switch33', 'switch34',
-            'switch35', 'switch36']
+            'switch35']
 
 
 # 切换功能开关
@@ -4315,7 +4245,6 @@ def serverMode():
         switchSingleFunction('switch33', '0')
         switchSingleFunction('switch34', '0')
         switchSingleFunction('switch35', '0')
-        switchSingleFunction('switch36', '0')
     elif mode == 'client':
         switchSingleFunction('switch2', '0')
         switchSingleFunction('switch3', '0')
@@ -4351,7 +4280,6 @@ def serverMode():
         switchSingleFunction('switch33', '0')
         switchSingleFunction('switch34', '0')
         switchSingleFunction('switch35', '0')
-        switchSingleFunction('switch36', '0')
     return 'success'
 
 
@@ -5578,11 +5506,11 @@ async def grab2(session, id, m3u_dict, sem, mintimeout, maxTimeout):
         }
         try:
             async with sem, session.get(bilibili_real_url, headers=cim_headers, params=param,
-                                        timeout=aiohttp.ClientTimeout(total=mintimeout), ssl=False) as response:
+                                        timeout=mintimeout) as response:
                 res = await response.json()
         except asyncio.TimeoutError:
             async with sem, session.get(bilibili_real_url, headers=cim_headers, params=param,
-                                        timeout=aiohttp.ClientTimeout(total=maxTimeout), ssl=False) as response:
+                                        timeout=maxTimeout) as response:
                 res = await response.json()
         if '不存在' in res['msg']:
             return
@@ -5601,11 +5529,11 @@ async def grab2(session, id, m3u_dict, sem, mintimeout, maxTimeout):
         }
         try:
             async with sem, session.get(biliurl, headers=cim_headers, params=param2,
-                                        timeout=aiohttp.ClientTimeout(total=mintimeout), ssl=False) as response2:
+                                        timeout=mintimeout) as response2:
                 res = await response2.json()
         except asyncio.TimeoutError:
             async with sem, session.get(biliurl, headers=cim_headers, params=param2,
-                                        timeout=aiohttp.ClientTimeout(total=maxTimeout), ssl=False) as response2:
+                                        timeout=maxTimeout) as response2:
                 res = await response2.json()
         stream_info = res['data']['playurl_info']['playurl']['stream']
         accept_qn = stream_info[0]['format'][0]['codec'][0]['accept_qn']
@@ -5702,13 +5630,13 @@ async def room_id_(session, id, sem, mintimeout, maxTimeout):
     url = 'https://www.yy.com/{}'.format(id)
     try:
         async with sem, session.get(url, headers=headers_web_YY,
-                                    timeout=aiohttp.ClientTimeout(total=mintimeout), ssl=False) as response:
+                                    timeout=mintimeout) as response:
             if response.status == 200:
                 room_id = re.findall('ssid : "(\d+)', response.text)[0]
                 return room_id
     except asyncio.TimeoutError:
         async with sem, session.get(url, headers=headers_web_YY,
-                                    timeout=aiohttp.ClientTimeout(total=maxTimeout), ssl=False) as response:
+                                    timeout=maxTimeout) as response:
             if response.status == 200:
                 room_id = re.findall('ssid : "(\d+)', response.text)[0]
                 return room_id
@@ -5717,14 +5645,14 @@ async def room_id_(session, id, sem, mintimeout, maxTimeout):
 async def fetch_room_url(session, room_url, headers, sem, mintimeout, maxTimeout):
     try:
         async with sem, session.get(room_url, headers=headers,
-                                    timeout=aiohttp.ClientTimeout(total=mintimeout), ssl=False) as response:
+                                    timeout=mintimeout) as response:
             if response.status == 200:
                 return await response.text()
             else:
                 return None
     except asyncio.TimeoutError:
         async with sem, session.get(room_url, headers=headers,
-                                    timeout=aiohttp.ClientTimeout(total=maxTimeout), ssl=False) as response:
+                                    timeout=maxTimeout) as response:
             if response.status == 200:
                 return await response.text()
             else:
@@ -5733,15 +5661,13 @@ async def fetch_room_url(session, room_url, headers, sem, mintimeout, maxTimeout
 
 async def fetch_real_url(session, url, headers, sem, mintimeout, maxTimeout):
     try:
-        async with sem, session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=mintimeout),
-                                    ssl=False) as response:
+        async with sem, session.get(url, headers=headers, timeout=mintimeout) as response:
             if response.status == 200:
                 return await response.text()
             else:
                 return None
     except asyncio.TimeoutError:
-        async with sem, session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=maxTimeout),
-                                    ssl=False) as response:
+        async with sem, session.get(url, headers=headers, timeout=maxTimeout) as response:
             if response.status == 200:
                 return await response.text()
             else:
@@ -5752,10 +5678,10 @@ async def get_client_id(rid, session, sem, mintimeout, maxTimeout):
     try:
         twitch_room_url = f'https://www.twitch.tv/{rid}'
         try:
-            async with sem, session.get(twitch_room_url, timeout=aiohttp.ClientTimeout(total=mintimeout)) as response:
+            async with sem, session.get(twitch_room_url, timeout=mintimeout) as response:
                 res = await response.text()
         except asyncio.TimeoutError:
-            async with sem, session.get(twitch_room_url, timeout=aiohttp.ClientTimeout(total=maxTimeout)) as response:
+            async with sem, session.get(twitch_room_url, timeout=maxTimeout) as response:
                 res = await response.text()
         client_id = re.search(r'clientId="(.*?)"', res).group(1)
         return client_id
@@ -5791,11 +5717,11 @@ async def get_sig_token(rid, session, sem, mintimeout, maxTimeout):
     json_data = json.dumps(data)
     try:
         async with sem, session.post(posturl, headers=headers, data=json_data,
-                                     timeout=aiohttp.ClientTimeout(total=mintimeout)) as response:
+                                     timeout=mintimeout) as response:
             res = await response.json()
     except asyncio.TimeoutError:
         async with sem, session.post(posturl, headers=headers, data=json_data,
-                                     timeout=aiohttp.ClientTimeout(total=maxTimeout)) as response:
+                                     timeout=maxTimeout) as response:
             res = await response.json()
     try:
         token, signature, _ = res['data']['streamPlaybackAccessToken'].values()
@@ -5900,14 +5826,12 @@ async def get_room_id_douyin(url, session, sem, mintimeout, maxTimeout):
     url = re.search(r'(https.*)', url).group(1)
 
     try:
-        async with sem, session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=mintimeout),
-                                    ssl=False) as response:
+        async with sem, session.get(url, headers=headers, timeout=mintimeout) as response:
             if response.status == 200:
                 url = response.headers['location']
                 room_id = re.search(r'\d{19}', url).group(0)
     except asyncio.TimeoutError:
-        async with sem, session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=maxTimeout),
-                                    ssl=False) as response:
+        async with sem, session.get(url, headers=headers, timeout=maxTimeout) as response:
             if response.status == 200:
                 url = response.headers['location']
                 room_id = re.search(r'\d{19}', url).group(0)
@@ -5928,15 +5852,13 @@ async def get_room_id_douyin(url, session, sem, mintimeout, maxTimeout):
 
     try:
         async with sem, session.get('https://webcast.amemv.com/webcast/room/reflow/info/?', headers=headers,
-                                    params=params, timeout=aiohttp.ClientTimeout(total=mintimeout),
-                                    ssl=False) as response:
+                                    params=params, timeout=mintimeout) as response:
             if response.status == 200:
                 json_data = await response.json()
                 return json_data['data']['room']['owner']['web_rid']
     except asyncio.TimeoutError:
         async with sem, session.get('https://webcast.amemv.com/webcast/room/reflow/info/?', headers=headers,
-                                    params=params, timeout=aiohttp.ClientTimeout(total=maxTimeout),
-                                    ssl=False) as response:
+                                    params=params, timeout=maxTimeout) as response:
             if response.status == 200:
                 json_data = await response.json()
                 return json_data['data']['room']['owner']['web_rid']
@@ -5961,12 +5883,12 @@ async def grab_douyin(session, id, m3u_dict, sem, mintimeout, maxTimeout):
         }
         try:
             async with sem, session.get(url, headers=headers,
-                                        timeout=aiohttp.ClientTimeout(total=mintimeout), ssl=False) as response:
+                                        timeout=mintimeout) as response:
                 if response.status == 200:
                     result = await response.text()
         except asyncio.TimeoutError:
             async with sem, session.get(url, headers=headers,
-                                        timeout=aiohttp.ClientTimeout(total=maxTimeout), ssl=False) as response:
+                                        timeout=maxTimeout) as response:
                 if response.status == 200:
                     result = await response.text()
                 else:
@@ -6047,11 +5969,11 @@ async def grab3(session, id, m3u_dict, sem, mintimeout, maxTimeout):
         huya_room_url = 'https://m.huya.com/{}'.format(id)
         try:
             async with sem, session.get(huya_room_url, headers=cim_headers_huya, params=param,
-                                        timeout=aiohttp.ClientTimeout(total=mintimeout), ssl=False) as response:
+                                        timeout=mintimeout) as response:
                 res = await response.text()
         except asyncio.TimeoutError:
             async with sem, session.get(huya_room_url, headers=cim_headers_huya, params=param,
-                                        timeout=aiohttp.ClientTimeout(total=maxTimeout), ssl=False) as response:
+                                        timeout=maxTimeout) as response:
                 res = await response.text()
         liveLineUrl = re.findall(r'"liveLineUrl":"([\s\S]*?)",', res)[0]
         liveline = base64.b64decode(liveLineUrl).decode('utf-8')
@@ -6135,10 +6057,10 @@ youtubeUrl = 'https://www.youtube.com/watch?v='
 
 async def get_resolution(session, liveurl, sem, mintimeout, maxTimeout):
     try:
-        async with sem, session.get(liveurl, timeout=aiohttp.ClientTimeout(total=mintimeout)) as response:
+        async with sem, session.get(liveurl, timeout=mintimeout) as response:
             playlist_text = await response.text()
     except asyncio.TimeoutError:
-        async with sem, session.get(liveurl, timeout=aiohttp.ClientTimeout(total=maxTimeout)) as response:
+        async with sem, session.get(liveurl, timeout=maxTimeout) as response:
             playlist_text = await response.text()
     playlist = m3u8.loads(playlist_text)
     playlists = playlist.playlists
@@ -6158,15 +6080,15 @@ async def grab(session, id, m3u_dict, sem, mintimeout, maxTimeout):
     try:
         url = youtubeUrl + id
         try:
-            async with sem, session.get(url, timeout=aiohttp.ClientTimeout(total=mintimeout)) as response:
+            async with sem, session.get(url, timeout=mintimeout) as response:
                 content = await response.text()
                 if '.m3u8' not in content:
-                    async with sem, session.get(url, timeout=aiohttp.ClientTimeout(total=maxTimeout)) as response2:
+                    async with sem, session.get(url, timeout=maxTimeout) as response2:
                         content = await response2.text()
                         if '.m3u8' not in content:
                             return
         except asyncio.TimeoutError:
-            async with sem, session.get(url, timeout=aiohttp.ClientTimeout(total=maxTimeout)) as response:
+            async with sem, session.get(url, timeout=maxTimeout) as response:
                 content = await response.text()
                 if '.m3u8' not in content:
                     return
@@ -6555,10 +6477,10 @@ def get_true_alist_ts_url(ts_uuid_secret_name):
         return None
     headers = {'User-Agent': user_agent}
     try:
-        response = requests.get(same_level_path, headers=headers, timeout=mintimeout, verify=False)
+        response = requests.get(same_level_path, headers=headers, timeout=mintimeout)
     except requests.exceptions.Timeout:
         # 处理请求超时异常
-        response = requests.get(same_level_path, headers=headers, timeout=maxTimeout, verify=False)
+        response = requests.get(same_level_path, headers=headers, timeout=maxTimeout)
     if response.status_code == 200:
         json_data = response.json()
         content = json_data['data']['content']
@@ -6591,7 +6513,7 @@ def get_true_alist_ts_url(ts_uuid_secret_name):
 
 
 def download_file(url, headers, timeout):
-    response = requests.get(url, headers=headers, timeout=timeout, verify=False, stream=True)
+    response = requests.get(url, headers=headers, timeout=timeout, stream=True)
     bytes_data = b''
     for chunk in response.iter_content(chunk_size=1024):
         if chunk:
@@ -6630,7 +6552,7 @@ async def get_alist_uuid_file_data(secret_uuid_m3u8_file_url, sem, session, pass
         else:
             fix_m3u8_data += fakeurl_encode
             fix_m3u8_data += line
-            fix_m3u8_data += b'\n'
+            fix_m3u8_data += b'.ts\n'
     # 把解密的m3u8文件落地保存，这样子就不需要定时器拉取m3u8列表文件
     thread_write_bytes_to_file(f"{SLICES_ALIST_M3U8}/{uuid_name}.m3u8", fix_m3u8_data)
     if filename != '':
@@ -6638,14 +6560,12 @@ async def get_alist_uuid_file_data(secret_uuid_m3u8_file_url, sem, session, pass
     return None
 
 
-headers_default = {'Content-Type': 'application/vnd.apple.mpegurl',
-                   'Expect': '100-continue',
-                   'Connection': 'Keep-Alive',
+headers_default = {'Content-Type': 'application/vnd.apple.mpegurl'
                    }
 
 
 # 推流加密ts文件
-@app.route('/alist/<path:path>')
+@app.route('/alist/<path:path>.ts')
 def video_m3u8_alist_ts(path):
     uuid_ts = path
     start_time = time.time()  # 获取当前时间戳
@@ -6653,7 +6573,7 @@ def video_m3u8_alist_ts(path):
     while (time.time() - start_time) < reliveAlistTsTime:
         bytes_data_ts = get_true_alist_ts_url(uuid_ts)
         if bytes_data_ts:
-            return Response(bytes_data_ts, mimetype='video/mp2t')
+            return Response(bytes_data_ts, mimetype='video/MP2T')
     return
 
 

@@ -474,8 +474,8 @@ class MyFrame(tk.Frame):
         file_name_dict['name'] = ''
 
     def on_convert_click(self):
-        video_types=self.file_path.get().split('.')[-1]
-        file_path = self.file_path.get().replace(video_types, 'mp4')
+        file_path = self.file_path.get().replace('mkv', 'mp4')
+        file_path = file_path.replace('avi', 'mp4')
         if file_path.endswith('mkv') or file_path.endswith('avi'):
             self.on_convert_click_mkv_to_mp4()
         if not os.path.exists(file_path):

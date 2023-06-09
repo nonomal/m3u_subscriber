@@ -105,6 +105,40 @@ class MyFrame(tk.Frame):
             video_bytes = f.read()
         return video_bytes
 
+    def on_convert_click_mkv_to_mp4_ignore_sub(self):
+        file_path = self.file_path.get()
+        if not os.path.exists(file_path):
+            messagebox.showerror('错误', '视频文件不存在')
+            return
+        file_path = self.file_path.get()
+        # 提取目录路径
+        dir_path = os.path.dirname(file_path)
+        # 提取文件名
+        file_name = os.path.basename(file_path)
+        video_types=file_name.split('.')[-1]
+        new_file_name = file_name.replace(video_types, 'mp4')
+        slices_path = os.path.join(dir_path,
+                                   f"{new_file_name}")
+        # Windows系统下需要将路径分隔符从/替换成\
+        if os.name == 'nt':
+            escaped_path = file_path.replace('/', '\\\\')
+            slices_path = slices_path.replace('\\', '\\\\')
+            slices_path = slices_path.replace('/', '\\\\')
+        ss = '\:'
+        cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v h264 -preset slow  -crf 18 -c:a aac -b:a 128k  \"{slices_path}\""
+        if not os.path.exists(slices_path):
+            process = subprocess.Popen(cmd, shell=True)
+            process.communicate()  # Wait for process to finish
+        else:
+            if slices_path.endswith('mp4'):
+                # cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx264 -preset slow -crf 18 -c:a aac -b:a 128k -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\':force_style='FontName=微软雅黑,FontSize=19,PrimaryColour=&Hffffff,SecondaryColour=&H000000,TertiaryColour=&H800080,BackColour=&H0f0f0f,Bold=-1,Italic=0,BorderStyle=1,Outline=3,Shadow=2,Alignment=2,MarginL=30,MarginR=30,MarginV=12,AlphaLevel=0,Encoding=134'\" \"{slices_path.replace('.mp4', '2.mp4')}\""
+                cmd = f"ffmpeg   -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v h264 -preset slow  -crf 18 -c:a aac -b:a 128k  \"{slices_path.replace('.mp4', '2.mp4')}\""
+            process = subprocess.Popen(cmd, shell=True)
+            process.communicate()  # Wait for process to finish
+        # 将按钮变成绿色
+        self.convert_button6.config(bg='green')
+        return 'video_bytes'
+
     def on_convert_click_mkv_to_mp4(self):
         file_path = self.file_path.get()
         if not os.path.exists(file_path):
@@ -115,7 +149,8 @@ class MyFrame(tk.Frame):
         dir_path = os.path.dirname(file_path)
         # 提取文件名
         file_name = os.path.basename(file_path)
-        new_file_name = file_name.replace('mkv', 'mp4')
+        video_types=file_name.split('.')[-1]
+        new_file_name = file_name.replace(video_types, 'mp4')
         slices_path = os.path.join(dir_path,
                                    f"{new_file_name}")
 
@@ -170,24 +205,29 @@ class MyFrame(tk.Frame):
         if os.name == 'nt':
             outputfilepath = outputfilepath.replace('/', '\\')
         if videoType == 'mp4':
-            cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v copy -c:a aac  -map 0:v:0 -map 0:a:0?  -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}  {outputfilepath}.m3u8"
+            cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v h264 -c:a aac  -map 0:v:0 -map 0:a:0?  -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}  {outputfilepath}.m3u8"
         elif videoType == 'mkv':
-            cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v copy -c:a aac  -map 0:v:0 -map 0:a:0? -map_chapters -1  -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path}   {outputfilepath}.m3u8"
+            cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v h264 -c:a aac  -map 0:v:0 -map 0:a:0? -map_chapters -1  -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path}   {outputfilepath}.m3u8"
         elif videoType == 'avi':
-            cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v copy -c:a aac  -map 0:v:0 -map 0:a:0?  -map_chapters -1  -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}   {outputfilepath}.m3u8"
+            cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v h264 -c:a aac  -map 0:v:0 -map 0:a:0?  -map_chapters -1  -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}   {outputfilepath}.m3u8"
         else:
-            cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v copy -c:a aac  -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}  {outputfilepath}.m3u8"
+            cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v h264 -c:a aac  -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}  {outputfilepath}.m3u8"
         process = subprocess.Popen(cmd, shell=True)
         process.communicate()  # Wait for process to finish
         match = re.search(r'(.+?)\.[^.]*$', file_name)
         if match:
             result = match.group(1)
-        video_file_name_tag = '#my_video_true_name_is=' + result
+        video_file_name_tag = b'#my_video_true_name_is=' + result.encode()
+        video_type = self.video_type.get()
+        if video_type and video_type != '':
+            video_file_name_tag += b'\n'
+            video_file_name_tag += b'#my_video_group_name_is='
+            video_file_name_tag += video_type.encode()
         # 读取M3U8播放列表文件并返回给客户端
         with open(f'{outputfilepath}.m3u8', "rb") as f:
             m3u8_data = f.read()
         # 在字符串的第一行插入标签信息
-        m3u8_data = m3u8_data + b'\n' + video_file_name_tag.encode()
+        m3u8_data = m3u8_data + b'\n' + video_file_name_tag
         # 将修改后的字符串重新写回到m3u8文件中
         thread_write_bytes_to_file(f'{outputfilepath}.m3u8', m3u8_data)
         self.uuid_text.delete(0, 'end')
@@ -278,7 +318,7 @@ class MyFrame(tk.Frame):
         super().__init__(parent)
 
         self.master.title(title)
-        self.master.geometry("400x600")
+        self.master.geometry("500x700")
 
         self.file_path = tk.Entry(self, state='readonly')
         self.file_path.pack(fill='x', padx=10, pady=10)
@@ -286,7 +326,7 @@ class MyFrame(tk.Frame):
         self.file_button = tk.Button(self, text="第一步:选择视频文件", command=self.on_file_click)
         self.file_button.pack(fill='x', padx=10, pady=10)
 
-        self.convert_button2 = tk.Button(self, text="第二步:mkv转换成mp4", command=self.on_convert_click_mkv_to_mp4)
+        self.convert_button2 = tk.Button(self, text="第二步:mkv转换成mp4(字幕硬转码)", command=self.on_convert_click_mkv_to_mp4)
         self.convert_button2.pack(fill='x', padx=10, pady=10)
 
         self.convert_button = tk.Button(self, text="第三步:mp4转换成ts切片", command=self.on_convert_click)
@@ -301,18 +341,29 @@ class MyFrame(tk.Frame):
         self.convert_button5 = tk.Button(self, text="还原加密切片为完整解密视频", command=self.undone)
         self.convert_button5.pack(fill='x', padx=10, pady=10)
 
+        self.convert_button6 = tk.Button(self, text="mkv转换成mp4(无视字幕,第三步失败时先用这个转一下)", command=self.on_convert_click_mkv_to_mp4_ignore_sub)
+        self.convert_button6.pack(fill='x', padx=10, pady=10)
+
         # 创建一个Label小部件，用于显示文本框的用途
         label = tk.Label(self, text="密码:")
         # 将Label和Entry小部件放置到窗口中
         label.pack()
         self.password_text = tk.Entry(self)
         self.password_text.pack(fill='x', padx=10, pady=10)
+
         # 创建一个Label小部件，用于显示文本框的用途
         label = tk.Label(self, text="视频加密后的文件名字:uuid:")
         # 将Label和Entry小部件放置到窗口中
         label.pack()
         self.uuid_text = tk.Entry(self)
         self.uuid_text.pack(fill='x', padx=10, pady=10)
+
+        # 创建一个Label小部件，用于显示文本框的用途
+        label = tk.Label(self, text="设置视频分类:")
+        # 将Label和Entry小部件放置到窗口中
+        label.pack()
+        self.video_type = tk.Entry(self)
+        self.video_type.pack(fill='x', padx=10, pady=10)
 
     def on_file_click(self):
         file_path = filedialog.askopenfilename(initialdir=os.getcwd(), title="选择视频文件",
@@ -337,6 +388,7 @@ class MyFrame(tk.Frame):
         self.uuid_text.delete(0, 'end')
         self.convert_button5.config(bg=self.master.cget('bg'))
         self.convert_button4.config(bg=self.master.cget('bg'))
+        self.convert_button6.config(bg=self.master.cget('bg'))
         file_name_dict['name'] = ''
 
     def onekey(self):
@@ -410,18 +462,20 @@ class MyFrame(tk.Frame):
         self.password_text.delete(0, 'end')
         self.password_text.insert(0, password)
         self.password_text.config(bg='green')
-        uuid_password_data = self.uuid_text.get() + '\n' + self.password_text.get() + '\n' + file_name_dict.get('name')
-        # m3u8的uuid
-        slices_path2 = os.path.join(dir_path2,
-                                    f"uuid_password.txt")
-        if os.name == 'nt':
-            slices_path2 = slices_path2.replace('/', '\\')
-        thread_write_bytes_to_file(slices_path2, uuid_password_data.encode())
+        # 密码和文件名字，uuid记录
+        # uuid_password_data = self.uuid_text.get() + '\n' + self.password_text.get() + '\n' + file_name_dict.get('name')
+        # # m3u8的uuid
+        # slices_path2 = os.path.join(dir_path2,
+        #                             f"uuid_password.txt")
+        # if os.name == 'nt':
+        #     slices_path2 = slices_path2.replace('/', '\\')
+        # thread_write_bytes_to_file(slices_path2, uuid_password_data.encode())
         os.remove(slices_path)
         file_name_dict['name'] = ''
 
     def on_convert_click(self):
-        file_path = self.file_path.get().replace('mkv', 'mp4')
+        video_types=self.file_path.get().split('.')[-1]
+        file_path = self.file_path.get().replace(video_types, 'mp4')
         if file_path.endswith('mkv') or file_path.endswith('avi'):
             self.on_convert_click_mkv_to_mp4()
         if not os.path.exists(file_path):

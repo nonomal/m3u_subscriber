@@ -388,7 +388,6 @@ def serve_files2(filename):
 tv_dict_youtube = {}
 
 
-
 # 路由youtube
 @app.route('/youtube/<path:filename>')
 def serve_files3(filename):
@@ -6314,7 +6313,7 @@ def chaoronghe30():
             pass
         safe_del_alist_m3u8()
         ip = init_IP()
-        #fakeurl = f"http://127.0.0.1:5000/alist/"
+        # fakeurl = f"http://127.0.0.1:5000/alist/"
         fakeurl = f"http://{ip}:{port_live}/alist/"
         pathxxx = f"{secret_path}alist.m3u"
         thread2 = threading.Thread(target=check_alist_file,
@@ -6433,10 +6432,15 @@ async def getPathBase(site, full_url, path, future_path_set, sem, session, fakeu
                         if sign and sign != '':
                             encoded_url = f'{encoded_url}?sign={sign}'
                         uuid_name = name
-                        tvg_name = await get_alist_uuid_file_data(encoded_url, sem, session, password, uuid_name,
-                                                                  fakeurl)
+                        tvg_name, groupname = await get_alist_uuid_file_data(encoded_url, sem, session, password,
+                                                                             uuid_name,
+                                                                             fakeurl)
                         if tvg_name:
-                            link = f'#EXTINF:-1 group-title="alist"  tvg-name="{tvg_name}",{tvg_name}\n'
+                            if groupname and groupname != '':
+                                groupname = groupname
+                            else:
+                                groupname = 'alist'
+                            link = f'#EXTINF:-1 group-title={groupname}  tvg-name="{tvg_name}",{tvg_name}\n'
                             # uuid(视频序号),uuid下子目录url，结合这个可以逆推与之同一个目录的加密ts文件的url，主要检查是否有签名,由于数量巨大不予以存储
                             uuid_same_level_path_url = f'{full_url}?path={same_level_path}'
                             redisKeyAlistM3u[uuid_name] = uuid_same_level_path_url
@@ -6542,10 +6546,13 @@ async def get_alist_uuid_file_data(secret_uuid_m3u8_file_url, sem, session, pass
     encode_uuid = uuid_name.encode()
     fakeurl_encode = fakeurl.encode()
     filename = ''
+    groupname = ''
     for line in bytes_array:
         if not line.startswith(encode_uuid):
             if line.startswith(b"#my_video_true_name_is="):
-                filename = line.split(b"=")[1].decode()
+                filename = line.split(b"#my_video_true_name_is=")[1].decode()
+            elif line.startswith(b"#my_video_group_name_is="):
+                groupname = line.split(b"#my_video_group_name_is=")[1].decode()
             else:
                 fix_m3u8_data += line
                 fix_m3u8_data += b'\n'
@@ -6556,7 +6563,7 @@ async def get_alist_uuid_file_data(secret_uuid_m3u8_file_url, sem, session, pass
     # 把解密的m3u8文件落地保存，这样子就不需要定时器拉取m3u8列表文件
     thread_write_bytes_to_file(f"{SLICES_ALIST_M3U8}/{uuid_name}.m3u8", fix_m3u8_data)
     if filename != '':
-        return filename
+        return filename, groupname
     return None
 
 

@@ -1,14 +1,7 @@
-            try:
-                videoType = redisKeyWebdavM3uType[path]
-            except:
-                videoType = 'mp4'
-                pass
-            ffmpegThread = int(getFileNameByTagName('ffmpegThread'))
-            if videoType == 'mp4':
-                cmd = f"ffmpeg -threads {ffmpegThread} {user_agent} -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
-            elif videoType == 'mkv':
-                cmd = f"ffmpeg -threads {ffmpegThread} {user_agent} -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}   {os.path.join(slices_dir, path)}.m3u8"
-            elif videoType == 'avi':
-                cmd = f"ffmpeg -threads {ffmpegThread} {user_agent} -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0?  -map_chapters -1 -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}   {os.path.join(slices_dir, path)}.m3u8"
-            else:
-                cmd = f"ffmpeg -threads {ffmpegThread} {user_agent} -headers \"Authorization: Basic {encoded_credentials}\" -i {true_webdav_m3u_dict_raw[path]} -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0 -hls_base_url {hls_url} -hls_segment_filename {slices_path}  {os.path.join(slices_dir, path)}.m3u8"
+        if url and is_updated_tv(url):
+            mintimeout = int(getFileNameByTagName('minTimeout'))
+            maxTimeout = int(getFileNameByTagName('maxTimeout'))
+            m3u_dict = await download_youtube_single(id, mintimeout, maxTimeout)
+            if id in m3u_dict.keys():
+                redisKeyYoutubeM3u[id] = m3u_dict.get(id)
+                url = redisKeyYoutubeM3u.get(id)

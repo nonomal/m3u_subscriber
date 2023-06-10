@@ -390,7 +390,7 @@ tv_dict_youtube = {}
 
 # 路由youtube
 @app.route('/youtube/<path:filename>')
-def serve_files3(filename):
+def serve_youtube(filename):
     id = filename.split('.')[0]
     url = tv_dict_youtube.get(id)
     if not url:
@@ -755,7 +755,12 @@ async def download_url(session, url, value, sem):
                     await f.write(f'{value}{url}\n')
                 await checkWriteHealthM3u(url)
     except aiohttp.ClientSSLError as ssl_err:
-        print(f"SSL Error occurred while downloading {url}: {ssl_err}")
+        async with sem, session.get(url, ssl=False) as resp:  # 使用asyncio.Semaphore限制TCP连接的数量
+            if resp.status == 200:
+                path = f"{secret_path}{getFileNameByTagName('aliveM3u')}.m3u"
+                async with aiofiles.open(path, 'a', encoding='utf-8') as f:  # 异步的方式写入内容
+                    await f.write(f'{value}{url}\n')
+                await checkWriteHealthM3u(url)
     except Exception as e:
         print(f"Error occurred while downloading {url}: {e}")
 
@@ -907,7 +912,7 @@ def checkToDecrydecrypt2(url, redis_dict, m3u_string, filenameDict, secretNameDi
 
 def fetch_url(url, redis_dict):
     try:
-        response = requests.get(url, timeout=5)
+        response = requests.get(url, timeout=5, verify=False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -918,8 +923,8 @@ def fetch_url(url, redis_dict):
         m3u_string += "\n"
         # print(f"success to fetch URL: {url}")
         return m3u_string
-    except requests.exceptions.SSLError:
-        response = requests.get(url, timeout=5, verify=False)
+    except requests.exceptions.Timeout:
+        response = requests.get(url, timeout=30, verify=False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -927,12 +932,12 @@ def fetch_url(url, redis_dict):
         m3u_string = checkToDecrydecrypt(url, redis_dict, m3u_string)
         # 转换成字符串格式返回
         m3u_string = checkbytes(m3u_string)
+        m3u_string += "\n"
+        # print(f"success to fetch URL: {url}")
         return m3u_string
-    except requests.exceptions.Timeout:
-        print("timeout error, try to get data with longer timeout:" + url)
     except requests.exceptions.RequestException as e:
         url = url.decode('utf-8')
-        response = requests.get(url, timeout=5, verify=False)
+        response = requests.get(url, timeout=15, verify=False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -941,6 +946,7 @@ def fetch_url(url, redis_dict):
         # 转换成字符串格式返回
         m3u_string = checkbytes(m3u_string)
         # print(f"success to fetch URL: {url}")
+        m3u_string += "\n"
         return m3u_string
         # print("other error: " + url, e)
     except:
@@ -997,14 +1003,6 @@ def download_files(urls, redis_dict):
 
 def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, uploadGithub, uploadWebdav):
     try:
-        response = requests.get(url, timeout=5)
-        response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
-        # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
-        m3u_string = response.content
-        # 加密文件检测和解码
-        checkToDecrydecrypt2(url, passwordDict, m3u_string, filenameDict, secretNameDict, uploadGitee,
-                             uploadGithub, uploadWebdav)
-    except requests.exceptions.SSLError:
         response = requests.get(url, timeout=5, verify=False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
@@ -1013,10 +1011,16 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
         checkToDecrydecrypt2(url, passwordDict, m3u_string, filenameDict, secretNameDict, uploadGitee,
                              uploadGithub, uploadWebdav)
     except requests.exceptions.Timeout:
-        print("timeout error, try to get data with longer timeout:" + url)
+        response = requests.get(url, timeout=30, verify=False)
+        response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
+        # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
+        m3u_string = response.content
+        # 加密文件检测和解码
+        checkToDecrydecrypt2(url, passwordDict, m3u_string, filenameDict, secretNameDict, uploadGitee,
+                             uploadGithub, uploadWebdav)
     except requests.exceptions.RequestException as e:
         url = url.decode('utf-8')
-        response = requests.get(url, timeout=5, verify=False)
+        response = requests.get(url, timeout=15, verify=False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1030,13 +1034,6 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
 
 def fetch_url3(url, passwordDict, filenameDict):
     try:
-        response = requests.get(url, timeout=5)
-        response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
-        # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
-        m3u_string = response.content
-        # 加密文件检测和解码
-        checkToDecrydecrypt3(url, passwordDict, m3u_string, filenameDict)
-    except requests.exceptions.SSLError:
         response = requests.get(url, timeout=5, verify=False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
@@ -1044,10 +1041,15 @@ def fetch_url3(url, passwordDict, filenameDict):
         # 加密文件检测和解码
         checkToDecrydecrypt3(url, passwordDict, m3u_string, filenameDict)
     except requests.exceptions.Timeout:
-        print("timeout error, try to get data with longer timeout:" + url)
+        response = requests.get(url, timeout=30, verify=False)
+        response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
+        # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
+        m3u_string = response.content
+        # 加密文件检测和解码
+        checkToDecrydecrypt3(url, passwordDict, m3u_string, filenameDict)
     except requests.exceptions.RequestException as e:
         url = url.decode('utf-8')
-        response = requests.get(url, timeout=5, verify=False)
+        response = requests.get(url, timeout=15, verify=False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -6027,7 +6029,7 @@ async def grab3(session, id, m3u_dict, sem, mintimeout, maxTimeout):
         print(f"huya An error occurred while processing {id}. Error: {e}")
 
 
-async def download_files4_single(ids, mintimeout, maxTimeout):
+async def download_youtube_single(ids, mintimeout, maxTimeout):
     m3u_dict = {}
     try:
         sem = asyncio.Semaphore(1000)  # 限制TCP连接的数量为100个
@@ -6047,7 +6049,7 @@ async def download_files4():
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
     ids = redisKeyYoutube.keys()
-    m3u_dict = await download_files4_single(ids, mintimeout, maxTimeout)
+    m3u_dict = await download_youtube_single(ids, mintimeout, maxTimeout)
     return m3u_dict
 
 
@@ -6481,10 +6483,10 @@ def get_true_alist_ts_url(ts_uuid_secret_name):
         return None
     headers = {'User-Agent': user_agent}
     try:
-        response = requests.get(same_level_path, headers=headers, timeout=mintimeout)
+        response = requests.get(same_level_path, headers=headers, timeout=mintimeout, verify=False)
     except requests.exceptions.Timeout:
         # 处理请求超时异常
-        response = requests.get(same_level_path, headers=headers, timeout=maxTimeout)
+        response = requests.get(same_level_path, headers=headers, timeout=maxTimeout, verify=False)
     if response.status_code == 200:
         json_data = response.json()
         content = json_data['data']['content']
@@ -6517,11 +6519,14 @@ def get_true_alist_ts_url(ts_uuid_secret_name):
 
 
 def download_file(url, headers, timeout):
-    response = requests.get(url, headers=headers, timeout=timeout, stream=True)
+    response = requests.get(url, headers=headers, timeout=timeout, stream=True, verify=False)
     bytes_data = b''
-    for chunk in response.iter_content(chunk_size=1024):
-        if chunk:
-            bytes_data += chunk
+    try:
+        for chunk in response.iter_content(chunk_size=1024 * 1024):
+            if chunk:
+                bytes_data += chunk
+    except Exception as e:
+        return bytes_data
     return bytes_data
 
 
@@ -6661,7 +6666,7 @@ def chaoronghe24():
         redisKeyYoutubeM3u.clear()
         redis_del_map(REDIS_KEY_YOUTUBE_M3U)
         redisKeyYoutubeM3uFake = {}
-        # fakeurl:192.168.5.1:22771/youtube?id=xxxxx
+        #fakeurl='http://127.0.0.1:5000/youtube/'
         fakeurl = f"http://{ip}:{port_live}/youtube/"
         for id, url in m3u_dict.items():
             try:

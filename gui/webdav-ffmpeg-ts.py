@@ -124,7 +124,6 @@ class MyFrame(tk.Frame):
             escaped_path = file_path.replace('/', '\\\\')
             slices_path = slices_path.replace('\\', '\\\\')
             slices_path = slices_path.replace('/', '\\\\')
-        ss = '\:'
         cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v h264 -preset slow  -crf 18 -c:a aac -b:a 128k  \"{slices_path}\""
         if not os.path.exists(slices_path):
             process = subprocess.Popen(cmd, shell=True)
@@ -181,66 +180,114 @@ class MyFrame(tk.Frame):
         self.convert_button2.config(bg='green')
         return 'video_bytes'
 
-    def read_video_file_to_slices(self):
-        file_path = self.file_path.get().replace('mkv', 'mp4')
-        # 视频格式
-        videoType = file_path.split('.')[-1]
+    def on_convert_click_mkv_to_mp4_fail(self):
+        file_path = self.file_path.get()
+        if not os.path.exists(file_path):
+            messagebox.showerror('错误', '视频文件不存在')
+            return
+        file_path = self.file_path.get()
         # 提取目录路径
         dir_path = os.path.dirname(file_path)
         # 提取文件名
         file_name = os.path.basename(file_path)
-        new_file_and_path_name = generate_only_uuid(file_name)
-        # 创建新文件夹
-        new_folder_path = os.path.join(dir_path, new_file_and_path_name)
-        os.makedirs(new_folder_path, exist_ok=True)
-        slices_path = os.path.join(new_folder_path,
-                                   f"{new_file_and_path_name}_%05d.ts")
-        if os.name == 'nt':
-            slices_path = slices_path.replace('/', '\\')
-        escaped_path = file_path
+        video_types=file_name.split('.')[-1]
+        new_file_name = file_name.replace(video_types, 'mp4')
+        slices_path = os.path.join(dir_path,
+                                   f"{new_file_name}")
+
         # Windows系统下需要将路径分隔符从/替换成\
         if os.name == 'nt':
-            escaped_path = escaped_path.replace('/', '\\')
-        outputfilepath = os.path.join(new_folder_path, new_file_and_path_name)
-        if os.name == 'nt':
-            outputfilepath = outputfilepath.replace('/', '\\')
-        ts_type = self.ts_type.get()
-        if not ts_type or ts_type=='':
-            ts_type='h264'
-        ts_type_audio=self.ts_type_audio.get()
-        if not ts_type_audio or ts_type_audio == '':
-            ts_type_audio = 'aac'
-        if videoType == 'mp4':
-            cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v {ts_type} -c:a {ts_type_audio}  -map 0:v:0 -map 0:a:0?  -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}  {outputfilepath}.m3u8"
-        elif videoType == 'mkv':
-            cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v {ts_type} -c:a {ts_type_audio}   -map 0:v:0 -map 0:a:0? -map_chapters -1  -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path}   {outputfilepath}.m3u8"
-        elif videoType == 'avi':
-            cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v {ts_type} -c:a {ts_type_audio}   -map 0:v:0 -map 0:a:0?  -map_chapters -1  -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}   {outputfilepath}.m3u8"
+            escaped_path = file_path.replace('/', '\\\\')
+            escaped_path2 = file_path.replace('/', '\\\\')
+            slices_path = slices_path.replace('\\', '\\\\')
+            slices_path = slices_path.replace('/', '\\\\')
+        ss = '\:'
+        cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v h264 -preset slow  -crf 18 -c:a aac -b:a 128k  \"{slices_path}\""
+        if not os.path.exists(slices_path):
+            process = subprocess.Popen(cmd, shell=True)
+            process.communicate()  # Wait for process to finish
         else:
-            cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v {ts_type} -c:a {ts_type_audio}   -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}  {outputfilepath}.m3u8"
-        process = subprocess.Popen(cmd, shell=True)
-        process.communicate()  # Wait for process to finish
-        match = re.search(r'(.+?)\.[^.]*$', file_name)
-        if match:
-            result = match.group(1)
-        video_file_name_tag = b'#my_video_true_name_is=' + result.encode()
-        video_type = self.video_type.get()
-        if video_type and video_type != '':
-            video_file_name_tag += b'\n'
-            video_file_name_tag += b'#my_video_group_name_is='
-            video_file_name_tag += video_type.encode()
-        # 读取M3U8播放列表文件并返回给客户端
-        with open(f'{outputfilepath}.m3u8', "rb") as f:
-            m3u8_data = f.read()
-        # 在字符串的第一行插入标签信息
-        m3u8_data = m3u8_data + b'\n' + video_file_name_tag
-        # 将修改后的字符串重新写回到m3u8文件中
-        thread_write_bytes_to_file(f'{outputfilepath}.m3u8', m3u8_data)
-        self.uuid_text.delete(0, 'end')
-        self.uuid_text.insert(0, new_file_and_path_name)
-        self.uuid_text.config(bg='green')
-        file_name_dict['name'] = result
+            if slices_path.endswith('mp4'):
+                # cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx264 -preset slow -crf 18 -c:a aac -b:a 128k -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\':force_style='FontName=微软雅黑,FontSize=19,PrimaryColour=&Hffffff,SecondaryColour=&H000000,TertiaryColour=&H800080,BackColour=&H0f0f0f,Bold=-1,Italic=0,BorderStyle=1,Outline=3,Shadow=2,Alignment=2,MarginL=30,MarginR=30,MarginV=12,AlphaLevel=0,Encoding=134'\" \"{slices_path.replace('.mp4', '2.mp4')}\""
+                cmd = f"ffmpeg   -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v h264 -preset slow  -crf 18 -c:a aac -b:a 128k  \"{slices_path.replace('.mp4', '2.mp4')}\""
+                new_file_name = new_file_name.replace('.mp4', '2.mp4')
+            process = subprocess.Popen(cmd, shell=True)
+            process.communicate()  # Wait for process to finish
+        # self.file_path = os.path.join(dir_path,
+        #                               f"{new_file_name}")
+        self.file_path.delete(0, 'end')
+        self.file_path.insert(0, os.path.join(dir_path,
+                                              f"{new_file_name}"))
+        # 将按钮变成绿色
+        self.convert_button2.config(bg='green')
         return 'video_bytes'
+
+    def read_video_file_to_slices(self):
+        try:
+            file_path = self.file_path.get().replace('mkv', 'mp4')
+            # 视频格式
+            videoType = file_path.split('.')[-1]
+            # 提取目录路径
+            dir_path = os.path.dirname(file_path)
+            # 提取文件名
+            file_name = os.path.basename(file_path)
+            new_file_and_path_name = generate_only_uuid(file_name)
+            # 创建新文件夹
+            new_folder_path = os.path.join(dir_path, new_file_and_path_name)
+            os.makedirs(new_folder_path, exist_ok=True)
+            slices_path = os.path.join(new_folder_path,
+                                       f"{new_file_and_path_name}_%05d.ts")
+            if os.name == 'nt':
+                slices_path = slices_path.replace('/', '\\')
+            escaped_path = file_path
+            # Windows系统下需要将路径分隔符从/替换成\
+            if os.name == 'nt':
+                escaped_path = escaped_path.replace('/', '\\')
+            outputfilepath = os.path.join(new_folder_path, new_file_and_path_name)
+            if os.name == 'nt':
+                outputfilepath = outputfilepath.replace('/', '\\')
+            ts_type = self.ts_type.get()
+            if not ts_type or ts_type == '':
+                ts_type = 'h264'
+            ts_type_audio = self.ts_type_audio.get()
+            if not ts_type_audio or ts_type_audio == '':
+                ts_type_audio = 'aac'
+            if videoType == 'mp4':
+                cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v {ts_type} -c:a {ts_type_audio}  -map 0:v:0 -map 0:a:0?  -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}  {outputfilepath}.m3u8"
+            elif videoType == 'mkv':
+                cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v {ts_type} -c:a {ts_type_audio}   -map 0:v:0 -map 0:a:0? -map_chapters -1  -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path}   {outputfilepath}.m3u8"
+            elif videoType == 'avi':
+                cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v {ts_type} -c:a {ts_type_audio}   -map 0:v:0 -map 0:a:0?  -map_chapters -1  -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}   {outputfilepath}.m3u8"
+            else:
+                cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v {ts_type} -c:a {ts_type_audio}   -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}  {outputfilepath}.m3u8"
+            process = subprocess.Popen(cmd, shell=True)
+            process.communicate()  # Wait for process to finish
+            match = re.search(r'(.+?)\.[^.]*$', file_name)
+            if match:
+                result = match.group(1)
+            video_file_name_tag = b'#my_video_true_name_is=' + result.encode()
+            video_type = self.video_type.get()
+            if video_type and video_type != '':
+                video_file_name_tag += b'\n'
+                video_file_name_tag += b'#my_video_group_name_is='
+                video_file_name_tag += video_type.encode()
+
+            # 读取M3U8播放列表文件并返回给客户端
+            with open(f'{outputfilepath}.m3u8', "rb") as f:
+                m3u8_data = f.read()
+                self.on_convert_click_mkv_to_mp4_fail()
+            # 在字符串的第一行插入标签信息
+            m3u8_data = m3u8_data + b'\n' + video_file_name_tag
+            # 将修改后的字符串重新写回到m3u8文件中
+            thread_write_bytes_to_file(f'{outputfilepath}.m3u8', m3u8_data)
+            self.uuid_text.delete(0, 'end')
+            self.uuid_text.insert(0, new_file_and_path_name)
+            self.uuid_text.config(bg='green')
+            file_name_dict['name'] = result
+            return 'video_bytes'
+        except Exception as e:
+            self.on_convert_click_mkv_to_mp4_fail()
+            self.read_video_file_to_slices()
 
     def undone(self):
         file_path = self.file_path.get()

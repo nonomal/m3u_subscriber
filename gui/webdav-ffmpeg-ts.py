@@ -182,15 +182,12 @@ class MyFrame(tk.Frame):
 
     def on_convert_click_mkv_to_mp4_fail(self):
         file_path = self.file_path.get()
-        if not os.path.exists(file_path):
-            messagebox.showerror('错误', '视频文件不存在')
-            return
-        file_path = self.file_path.get()
         # 提取目录路径
         dir_path = os.path.dirname(file_path)
         # 提取文件名
         file_name = os.path.basename(file_path)
         video_types=file_name.split('.')[-1]
+        file_path = file_path.replace(video_types, 'mkv')
         new_file_name = file_name.replace(video_types, 'mp4')
         slices_path = os.path.join(dir_path,
                                    f"{new_file_name}")

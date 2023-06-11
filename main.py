@@ -6444,9 +6444,12 @@ async def getPathBase(site, full_url, path, future_path_set, session, fakeurl, p
                         if same_name_file_sign and same_name_file_sign != '':
                             encoded_url = f'{encoded_url}?sign={same_name_file_sign}'
                         uuid_name = name
-                        tvg_name, groupname = await get_alist_uuid_file_data(encoded_url, session, password,
-                                                                             uuid_name,
-                                                                             fakeurl)
+                        try:
+                            tvg_name, groupname = await get_alist_uuid_file_data(encoded_url, session, password,
+                                                                                 uuid_name,
+                                                                                 fakeurl)
+                        except Exception as e:
+                            pass
                         if tvg_name:
                             if groupname and groupname != '':
                                 groupname = groupname
@@ -6493,9 +6496,12 @@ async def getPathBase(site, full_url, path, future_path_set, session, fakeurl, p
                         if sign and sign != '':
                             encoded_url = f'{encoded_url}?sign={sign}'
                         uuid_name = name
-                        tvg_name, groupname = await get_alist_uuid_file_data(encoded_url, session, password,
-                                                                             uuid_name,
-                                                                             fakeurl)
+                        try:
+                            tvg_name, groupname = await get_alist_uuid_file_data(encoded_url, session, password,
+                                                                                 uuid_name,
+                                                                                 fakeurl)
+                        except Exception as e:
+                            pass
                         if tvg_name:
                             if groupname and groupname != '':
                                 groupname = groupname

@@ -204,14 +204,20 @@ class MyFrame(tk.Frame):
         outputfilepath = os.path.join(new_folder_path, new_file_and_path_name)
         if os.name == 'nt':
             outputfilepath = outputfilepath.replace('/', '\\')
+        ts_type = self.ts_type.get()
+        if not ts_type or ts_type=='':
+            ts_type='h264'
+        ts_type_audio=self.ts_type_audio.get()
+        if not ts_type_audio or ts_type_audio == '':
+            ts_type_audio = 'aac'
         if videoType == 'mp4':
-            cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v h264 -c:a aac  -map 0:v:0 -map 0:a:0?  -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}  {outputfilepath}.m3u8"
+            cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v {ts_type} -c:a {ts_type_audio}  -map 0:v:0 -map 0:a:0?  -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}  {outputfilepath}.m3u8"
         elif videoType == 'mkv':
-            cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v h264 -c:a aac  -map 0:v:0 -map 0:a:0? -map_chapters -1  -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path}   {outputfilepath}.m3u8"
+            cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v {ts_type} -c:a {ts_type_audio}   -map 0:v:0 -map 0:a:0? -map_chapters -1  -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path}   {outputfilepath}.m3u8"
         elif videoType == 'avi':
-            cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v h264 -c:a aac  -map 0:v:0 -map 0:a:0?  -map_chapters -1  -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}   {outputfilepath}.m3u8"
+            cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v {ts_type} -c:a {ts_type_audio}   -map 0:v:0 -map 0:a:0?  -map_chapters -1  -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}   {outputfilepath}.m3u8"
         else:
-            cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v h264 -c:a aac  -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}  {outputfilepath}.m3u8"
+            cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v {ts_type} -c:a {ts_type_audio}   -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}  {outputfilepath}.m3u8"
         process = subprocess.Popen(cmd, shell=True)
         process.communicate()  # Wait for process to finish
         match = re.search(r'(.+?)\.[^.]*$', file_name)
@@ -318,7 +324,7 @@ class MyFrame(tk.Frame):
         super().__init__(parent)
 
         self.master.title(title)
-        self.master.geometry("500x700")
+        self.master.geometry("500x800")
 
         self.file_path = tk.Entry(self, state='readonly')
         self.file_path.pack(fill='x', padx=10, pady=10)
@@ -364,6 +370,21 @@ class MyFrame(tk.Frame):
         label.pack()
         self.video_type = tk.Entry(self)
         self.video_type.pack(fill='x', padx=10, pady=10)
+
+        # 创建一个Label小部件，用于显示文本框的用途
+        label = tk.Label(self, text="设置视频切片格式(h264/copy):")
+        # 将Label和Entry小部件放置到窗口中
+        label.pack()
+        self.ts_type = tk.Entry(self)
+        self.ts_type.pack(fill='x', padx=10, pady=10)
+
+
+        # 创建一个Label小部件，用于显示文本框的用途
+        label = tk.Label(self, text="设置音频切片格式(aac/copy):")
+        # 将Label和Entry小部件放置到窗口中
+        label.pack()
+        self.ts_type_audio = tk.Entry(self)
+        self.ts_type_audio.pack(fill='x', padx=10, pady=10)
 
     def on_file_click(self):
         file_path = filedialog.askopenfilename(initialdir=os.getcwd(), title="选择视频文件",

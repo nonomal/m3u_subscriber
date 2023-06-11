@@ -198,10 +198,8 @@ class MyFrame(tk.Frame):
         # Windows系统下需要将路径分隔符从/替换成\
         if os.name == 'nt':
             escaped_path = file_path.replace('/', '\\\\')
-            escaped_path2 = file_path.replace('/', '\\\\')
             slices_path = slices_path.replace('\\', '\\\\')
             slices_path = slices_path.replace('/', '\\\\')
-        ss = '\:'
         cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v h264 -preset slow  -crf 18 -c:a aac -b:a 128k  \"{slices_path}\""
         if not os.path.exists(slices_path):
             process = subprocess.Popen(cmd, shell=True)
@@ -275,7 +273,6 @@ class MyFrame(tk.Frame):
             # 读取M3U8播放列表文件并返回给客户端
             with open(f'{outputfilepath}.m3u8', "rb") as f:
                 m3u8_data = f.read()
-                self.on_convert_click_mkv_to_mp4_fail()
             # 在字符串的第一行插入标签信息
             m3u8_data = m3u8_data + b'\n' + video_file_name_tag
             # 将修改后的字符串重新写回到m3u8文件中

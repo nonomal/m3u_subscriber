@@ -1,54 +1,31 @@
-
-                        if path:
-                            same_level_path = f'{path}'
-                            if base_path != '/':
-                                future_path = f'{site}d{base_path}{path}/{name}'
-                                # 不完整ts路径，拼接上具体ts文件名就是完整的
-                                future_path_ts = f'{site}d{base_path}{path}'
-                            else:
-                                future_path = f'{site}d{path}/{name}'
-                                future_path_ts = f'{site}d{path}'
-                        else:
-                            same_level_path = f'/'
-                            if base_path != '/':
-                                future_path = f'{site}d{base_path}/{name}'
-                                future_path_ts = f'{site}d{base_path}'
-                            else:
-                                future_path = f'{site}d/{name}'
-                                future_path_ts = f'{site}d'
-                        encoded_url = urllib.parse.quote(future_path, safe=':/')
-                        if sign and sign != '':
-                            encoded_url = f'{encoded_url}?sign={sign}'
-                        uuid_name = name
-                        tvg_name, groupname = await get_alist_uuid_file_data(encoded_url, sem, session, password,
-                                                                             uuid_name,
-                                                                             fakeurl)
-                        if tvg_name:
-                            if groupname and groupname != '':
-                                groupname = groupname
-                            else:
-                                groupname = 'alist'
-                            link = f'#EXTINF:-1 group-title={groupname}  tvg-name="{tvg_name}",{tvg_name}\n'
-                            # uuid(视频序号),uuid下子目录url，结合这个可以逆推与之同一个目录的加密ts文件的url，主要检查是否有签名,由于数量巨大不予以存储
-                            uuid_same_level_path_url = f'{full_url}?path={same_level_path}'
-                            redisKeyAlistM3u[uuid_name] = uuid_same_level_path_url
-                            redis_add_map(REDIS_KEY_Alist_M3U, {uuid_name: uuid_same_level_path_url})
-                            redisKeyAlistM3uTsPath[uuid_name] = future_path_ts
-                            redis_add_map(REDIS_KEY_Alist_M3U_TS_PATH, {uuid_name: future_path_ts})
-                            # 虚假IP+端口+唯一uuid(文件夹名字)
-                            fake_m3u8 = f'{fakeurl}{uuid_name}.m3u8'
-                            async with aiofiles.open(pathxxx, 'a', encoding='utf-8') as f:  # 异步的方式写入内容
-                                await f.write(f'{link}{fake_m3u8}\n')
-past_list_item.clear()
-CHANNEL_LOGO.clear()
-CHANNEL_GROUP.clear()
-
+def chaoronghe24():
     try:
-        content = download_file(encoded_url, headers, mintimeout)
-    except requests.exceptions.Timeout:
-        content = download_file(encoded_url, headers, mintimeout)
-        # 处理请求超时异常
-    headers = {'User-Agent': user_agent}
-
-        user_agent = '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"'
-    headers = {'User-Agent': user_agent}
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        m3u_dict = loop.run_until_complete(download_files4())
+        length = len(m3u_dict)
+        if length == 0:
+            return "empty"
+        ip = init_IP()
+        global redisKeyYoutubeM3u
+        global redisKeyYoutube
+        redisKeyYoutubeM3u.clear()
+        redis_del_map(REDIS_KEY_YOUTUBE_M3U)
+        redisKeyYoutubeM3uFake = {}
+        # fakeurl='http://127.0.0.1:5000/youtube/'
+        fakeurl = f"http://{ip}:{port_live}/youtube/"
+        for id, url in m3u_dict.items():
+            try:
+                redisKeyYoutubeM3u[id] = url
+                name = redisKeyYoutube[id]
+                link = f'#EXTINF:-1 group-title="Youtube Live"  tvg-name="{name}",{name}\n'
+                redisKeyYoutubeM3uFake[f'{fakeurl}{id}.m3u8'] = link
+            except:
+                pass
+        # 同步方法写出全部配置
+        distribute_data(redisKeyYoutubeM3uFake, f"{secret_path}youtube.m3u", 10)
+        redis_add_map(REDIS_KEY_YOUTUBE_M3U, redisKeyYoutubeM3u)
+        fuck_m3u_to_txt(f"{secret_path}youtube.m3u", f"{secret_path}youtube.txt")
+        return "result"
+    except Exception as e:
+        return "empty"

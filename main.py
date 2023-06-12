@@ -149,7 +149,8 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'usernameSys': 'admin', 'passwordSys': 'password', 'normalM3uClock': '7200',
                   'normalSubscriberClock': '10800',
                   'proxySubscriberClock': '3600', 'spM3uClock': '3700', 'autoDnsSwitchClock': '600', 'syncClock': '10',
-                  'reliveAlistTsTime': '600', 'recycle': '7200'}
+                  'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国', 'foreignTopDomain':
+                      'xyz,club,online,site,top,win'}
 
 # 单独导入导出使用一个配置,需特殊处理:{{url:{pass,name}}}
 # 下载网络配置并且加密后上传:url+加密密钥+加密文件名字
@@ -303,6 +304,8 @@ REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG = "updatesimplewhitelistflag"
 REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG = "updatesimpleblacklistflag"
 REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG = "updatewhitelistspflag"
 REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG = "updateblacklistspflag"
+REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG = "updatechinadomainflag"
+REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG = "updateforeigndomainflag"
 
 REDIS_KEY_THREADS = "threadsnum"
 threadsNum = {REDIS_KEY_THREADS: 1000}
@@ -3777,6 +3780,12 @@ def changeFileName2(cachekey, newFileName):
     tmp_dict[cachekey] = newFileName
     redis_add_map(REDIS_KEY_FILE_NAME, tmp_dict)
     file_name_dict[cachekey] = newFileName
+    if cachekey == 'chinaTopDomain':
+        # 通知dns服务器更新内存
+        redis_add(REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG, 1)
+    if cachekey == 'foreignTopDomain':
+        # 通知dns服务器更新内存
+        redis_add(REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG, 1)
     return newFileName
 
 
@@ -4051,7 +4060,9 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'usernameSys': 'admin', 'passwordSys': 'password', 'normalM3uClock': '7200',
                           'normalSubscriberClock': '10800',
                           'proxySubscriberClock': '3600', 'spM3uClock': '3700', 'autoDnsSwitchClock': '600',
-                          'syncClock': '10', 'reliveAlistTsTime': '600', 'recycle': '7200'}
+                          'syncClock': '10', 'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国',
+                          'foreignTopDomain':
+                              'xyz,club,online,site,top,win'}
 
 
 def init_file_name():

@@ -54,11 +54,11 @@ black_list_simple_tmp_cache = {}
 # 简易黑名单全部数据库数据
 black_list_simple_policy = {}
 
-# china   api.ttt.sh
-ipCheckDomian = ["ip.skk.moe", "ip.swcdn.skk.moe", "api.ipify.org",
-                 "api-ipv4.ip.sb", "d.skk.moe", "qqwry.api.skk.moe",
-                 "ipinfo.io", "cdn.ipinfo.io", "ip.sb", "api.ttt.sh",
-                 "ip-api.com", 'ip.chinaz.com', 'ip.tool.chinaz.com']
+# # china   api.ttt.sh
+# ipCheckDomian = ["ip.skk.moe", "ip.swcdn.skk.moe", "api.ipify.org",
+#                  "api-ipv4.ip.sb", "d.skk.moe", "qqwry.api.skk.moe",
+#                  "ipinfo.io", "cdn.ipinfo.io", "ip.sb", "api.ttt.sh",
+#                  "ip-api.com", 'ip.chinaz.com', 'ip.tool.chinaz.com']
 
 # 更新队列，避免阻塞
 black_list_simple_policy_queue = queue.Queue(maxsize=100)
@@ -669,9 +669,13 @@ def isChinaDomain(data):
     # if domain_name_str in ipCheckDomian:
     #     return False
     ##########################################中国特色顶级域名，申请必须要经过大陆审批通过，默认全部当成大陆域名#############
+    if is_china_top_domain(domain_name_str):
+        return True
     # if domain_name_str.endswith(".cn") or domain_name_str.endswith(".中国"):
     #     return True
     ##########################################不允许在中国备案使用的顶级域名######################
+    if is_foreign_top_domain(domain_name_str):
+        return False
     # if isInForeign_domain(domain_name_str):
     #     checkAndUpdateSimpleList(True, domain_name_str)
     #     return False
@@ -980,6 +984,8 @@ REDIS_KEY_UPDATE_IPV4_LIST_FLAG = "updateipv4listflag"
 REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG = "updatesimpleblacklistflag"
 REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG = "updatewhitelistspflag"
 REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG = "updateblacklistspflag"
+REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG = "updatechinadomainflag"
+REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG = "updateforeigndomainflag"
 
 
 # true-拉取更新吧
@@ -1119,6 +1125,63 @@ def deal_black_list_simple_policy_queue():
             updateSpData(key, white_list_simple_nameserver_policy)
 
 
+china_top_domain_list = []
+foreign_top_domain_list = []
+REDIS_KEY_FILE_NAME = "redisKeyFileName"
+
+
+def update_china_top_domain(redis_key):
+    global china_top_domain_list
+    function_dict = redis_get_map(REDIS_KEY_FILE_NAME)
+    if function_dict and len(function_dict) > 0:
+        name = function_dict.get('chinaTopDomain')
+        if name:
+            try:
+                arr = name.split[',']
+                if arr:
+                    china_top_domain_list.clear()
+                    for i in arr:
+                        if i == '':
+                            continue
+                        china_top_domain_list.append(f'.{i}')
+                    redis_add(redis_key, 0)
+            except Exception as e:
+                pass
+
+
+def update_foreign_top_domain(redis_key):
+    global foreign_top_domain_list
+    function_dict = redis_get_map(REDIS_KEY_FILE_NAME)
+    if function_dict and len(function_dict) > 0:
+        name = function_dict.get('foreignTopDomain')
+        if name:
+            try:
+                arr = name.split[',']
+                if arr:
+                    foreign_top_domain_list.clear()
+                    for i in arr:
+                        if i == '':
+                            continue
+                        foreign_top_domain_list.append(f'.{i}')
+                    redis_add(redis_key, 0)
+            except Exception as e:
+                pass
+
+
+def is_china_top_domain(domain):
+    for key in china_top_domain_list:
+        if domain.endswith(key):
+            return True
+    return False
+
+
+def is_foreign_top_domain(domain):
+    for key in foreign_top_domain_list:
+        if domain.endswith(key):
+            return True
+    return False
+
+
 def init():
     # if needUpdate(REDIS_KEY_UPDATE_WHITE_LIST_FLAG):
     #     initWhiteList()
@@ -1128,6 +1191,10 @@ def init():
         initWhiteListSP(REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG)
     if needUpdate(REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG):
         initBlackListSP(REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG)
+    if needUpdate(REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG):
+        update_china_top_domain(REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG)
+    if needUpdate(REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG):
+        update_foreign_top_domain(REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG)
     # if needUpdate(REDIS_KEY_UPDATE_THREAD_NUM_FLAG):
     #     init_threads_num()
     # if needUpdate(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG):

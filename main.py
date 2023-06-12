@@ -6328,7 +6328,7 @@ def chaoronghe30():
             pass
         safe_del_alist_m3u8()
         ip = init_IP()
-        # fakeurl = f"http://127.0.0.1:5000/alist/"
+        #fakeurl = f"http://127.0.0.1:5000/alist/"
         fakeurl = f"http://{ip}:{port_live}/alist/"
         pathxxx = f"{secret_path}alist.m3u"
         thread2 = threading.Thread(target=check_alist_file,
@@ -6712,9 +6712,13 @@ async def get_alist_uuid_file_data(secret_uuid_m3u8_file_url, password, uuid_nam
         return filename, groupname
     return None
 
-
-headers_default = {'Content-Type': 'application/vnd.apple.mpegurl'
+headers_default = {'Content-Type': 'application/vnd.apple.mpegurl',
+                   'Expect': '100-continue',
+                   'Connection': 'Keep-Alive',
+                   'Cache-Control': 'no-cache'
                    }
+# headers_default = {'Content-Type': 'application/vnd.apple.mpegurl'
+#                    }
 
 
 # 推流加密ts文件

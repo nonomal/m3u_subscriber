@@ -1364,7 +1364,7 @@ def dns_query(data, china_dns_socket, waiguo_dns_socket, china_dns_server, china
     try:
         sock.sendto(data, (dns_server, port))
         # 接收DNS服务器的响应
-        response, addr = sock.recvfrom(1024)
+        response, addr = sock.recvfrom(2048)
         # 返回响应给客户端
         return response
     except socket.error as e:
@@ -1377,7 +1377,7 @@ def handle_request(sock, executor, china_dns_socket, waiguo_dns_socket, china_dn
                    waiguo_port):
     # 接收DNS请求
     try:
-        data, addr = sock.recvfrom(1024)
+        data, addr = sock.recvfrom(2048)
         # 异步调用dns_query函数
         response = executor.submit(dns_query, data, china_dns_socket, waiguo_dns_socket, china_dns_server, china_port,
                                    waiguo_dns_server,

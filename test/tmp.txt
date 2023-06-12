@@ -39,3 +39,16 @@
                             fake_m3u8 = f'{fakeurl}{uuid_name}.m3u8'
                             async with aiofiles.open(pathxxx, 'a', encoding='utf-8') as f:  # 异步的方式写入内容
                                 await f.write(f'{link}{fake_m3u8}\n')
+past_list_item.clear()
+CHANNEL_LOGO.clear()
+CHANNEL_GROUP.clear()
+
+    try:
+        content = download_file(encoded_url, headers, mintimeout)
+    except requests.exceptions.Timeout:
+        content = download_file(encoded_url, headers, mintimeout)
+        # 处理请求超时异常
+    headers = {'User-Agent': user_agent}
+
+        user_agent = '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"'
+    headers = {'User-Agent': user_agent}

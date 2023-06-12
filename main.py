@@ -149,7 +149,7 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'usernameSys': 'admin', 'passwordSys': 'password', 'normalM3uClock': '7200',
                   'normalSubscriberClock': '10800',
                   'proxySubscriberClock': '3600', 'spM3uClock': '3700', 'autoDnsSwitchClock': '600', 'syncClock': '10',
-                  'reliveAlistTsTime': '600'}
+                  'reliveAlistTsTime': '600', 'recycle': '7200'}
 
 # 单独导入导出使用一个配置,需特殊处理:{{url:{pass,name}}}
 # 下载网络配置并且加密后上传:url+加密密钥+加密文件名字
@@ -610,7 +610,7 @@ def upload_json_base(rediskey, file_content):
 
 # 上次更新时间戳
 time_clock_update_dict = {'proxySubscriberClock': '0', 'spM3uClock': '0', 'normalM3uClock': '0',
-                          'autoDnsSwitchClock': '0', 'normalSubscriberClock': '0', 'syncClock': '0'}
+                          'autoDnsSwitchClock': '0', 'normalSubscriberClock': '0', 'syncClock': '0', 'recycle': '0'}
 
 
 # true-需要更新 false-不需要更新
@@ -626,8 +626,18 @@ def update_clock(cachekey):
     time_clock_update_dict[cachekey] = str(time.time())
 
 
+def recycle():
+    past_list_item.clear()
+    CHANNEL_LOGO.clear()
+    CHANNEL_GROUP.clear()
+
+
 def clock_thread():
     while True:
+        # 回收内存
+        if is_update_clock('recycle'):
+            recycle()
+            update_clock('recycle')
         # 节点订阅下载
         if is_update_clock('proxySubscriberClock'):
             chaoronghe6()
@@ -3702,7 +3712,6 @@ def initReloadCacheForSpecial():
 
 
 def init_pass(cacheKey):
-    # redisKeySecretPassNow = {'m3u': '', 'whitelist': '', 'blacklist': '', 'ipv4': '', 'ipv6': '', 'proxy': ''}
     global redisKeySecretPassNow
     data = redisKeySecretPassNow.get(cacheKey)
     if data and data != '':
@@ -3785,7 +3794,6 @@ def update_m3u_subscribe_pass_by_hand(cachekey, password):
         tagname = '域名黑名单订阅'
     elif cachekey == 'whitelist':
         tagname = '域名白名单订阅'
-    # redisKeySecretPassNow = {'m3u': '', 'whitelist': '', 'blacklist': '', 'ipv4': '', 'ipv6': '', 'proxy': ''}
     global redisKeySecretPassNow
     oldpass = redisKeySecretPassNow.get(cachekey)
     if oldpass:
@@ -4043,7 +4051,7 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'usernameSys': 'admin', 'passwordSys': 'password', 'normalM3uClock': '7200',
                           'normalSubscriberClock': '10800',
                           'proxySubscriberClock': '3600', 'spM3uClock': '3700', 'autoDnsSwitchClock': '600',
-                          'syncClock': '10', 'reliveAlistTsTime': '600'}
+                          'syncClock': '10', 'reliveAlistTsTime': '600', 'recycle': '7200'}
 
 
 def init_file_name():
@@ -6309,7 +6317,7 @@ def chaoronghe30():
             pass
         safe_del_alist_m3u8()
         ip = init_IP()
-        #fakeurl = f"http://127.0.0.1:5000/alist/"
+        # fakeurl = f"http://127.0.0.1:5000/alist/"
         fakeurl = f"http://{ip}:{port_live}/alist/"
         pathxxx = f"{secret_path}alist.m3u"
         thread2 = threading.Thread(target=check_alist_file,
@@ -6445,9 +6453,9 @@ async def getPathBase(site, full_url, path, future_path_set, session, fakeurl, p
                             encoded_url = f'{encoded_url}?sign={same_name_file_sign}'
                         uuid_name = name
                         try:
-                            tvg_name, groupname = await get_alist_uuid_file_data(encoded_url, session, password,
+                            tvg_name, groupname = await get_alist_uuid_file_data(encoded_url, password,
                                                                                  uuid_name,
-                                                                                 fakeurl)
+                                                                                 fakeurl, session)
                         except Exception as e:
                             pass
                         if tvg_name:
@@ -6497,9 +6505,9 @@ async def getPathBase(site, full_url, path, future_path_set, session, fakeurl, p
                             encoded_url = f'{encoded_url}?sign={sign}'
                         uuid_name = name
                         try:
-                            tvg_name, groupname = await get_alist_uuid_file_data(encoded_url, session, password,
+                            tvg_name, groupname = await get_alist_uuid_file_data(encoded_url, password,
                                                                                  uuid_name,
-                                                                                 fakeurl)
+                                                                                 fakeurl, session)
                         except Exception as e:
                             pass
                         if tvg_name:
@@ -6530,9 +6538,6 @@ def get_password(url):
     return None
 
 
-# 绕过一些网站对下载工具的限制或检测
-user_agent = '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"'
-
 past_list_item = []
 past_alist_ts_uuid = {'uuid': ''}
 
@@ -6544,7 +6549,8 @@ def get_content_by_uuid(uuid):
             return past_list_item
     return None
 
-update_lock=threading.Lock()
+
+update_lock = threading.Lock()
 
 
 def get_new_content_by_uuid(mintimeout, maxTimeout, same_level_path, uuid, headers):
@@ -6578,6 +6584,8 @@ def get_true_alist_ts_url(ts_uuid_secret_name):
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
     uuid = ts_uuid_secret_name.split('_')[0]
+    # 绕过一些网站对下载工具的限制或检测
+    user_agent = '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"'
     headers = {'User-Agent': user_agent}
     content_list = get_content_by_uuid(uuid)
     same_level_path = redisKeyAlistM3u.get(uuid)
@@ -6601,9 +6609,9 @@ def get_true_alist_ts_url(ts_uuid_secret_name):
     else:
         encoded_url = f'{encoded_url}?sign='''
     try:
-        content = download_file(encoded_url, headers, mintimeout)
+        content = download_file(encoded_url, headers, mintimeout, 1024 * 64)
     except requests.exceptions.Timeout:
-        content = download_file(encoded_url, headers, mintimeout)
+        content = download_file(encoded_url, headers, mintimeout, 1024 * 64)
         # 处理请求超时异常
     except requests.exceptions.HTTPError as e:
         # 签名异常，重新刷新content数据
@@ -6623,9 +6631,9 @@ def get_true_alist_ts_url(ts_uuid_secret_name):
             else:
                 encoded_url = f'{encoded_url}?sign='''
             try:
-                content = download_file(encoded_url, headers, mintimeout)
+                content = download_file(encoded_url, headers, mintimeout, 1024 * 64)
             except requests.exceptions.Timeout:
-                content = download_file(encoded_url, headers, mintimeout)
+                content = download_file(encoded_url, headers, mintimeout, 1024 * 64)
             except Exception as e:
                 return None
     if content:
@@ -6638,26 +6646,37 @@ def get_true_alist_ts_url(ts_uuid_secret_name):
     return None
 
 
-def download_file(url, headers, timeout):
-    response = requests.get(url, headers=headers, timeout=timeout, stream=True, verify=False)
+def download_file(url, headers, timeout, size):
+    response = requests.get(url, headers=headers, timeout=timeout, stream=True)
     bytes_data = b''
-    for chunk in response.iter_content(chunk_size=1024 * 1024):
+    for chunk in response.iter_content(chunk_size=size):
         if chunk:
             bytes_data += chunk
     return bytes_data
 
 
 # 下载解密全部特殊加密直播文件
-async def get_alist_uuid_file_data(secret_uuid_m3u8_file_url, session, password, uuid_name, fakeurl):
+async def get_alist_uuid_file_data(secret_uuid_m3u8_file_url, password, uuid_name, fakeurl, session):
+    user_agent = '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"'
     headers = {'User-Agent': user_agent}
-    try:
-        async with  session.get(secret_uuid_m3u8_file_url, headers=headers,
-                                timeout=aiohttp.ClientTimeout(total=10), ssl=False) as response:
-            content = await response.read()
-    except asyncio.TimeoutError:
-        async with  session.get(secret_uuid_m3u8_file_url, headers=headers,
-                                timeout=aiohttp.ClientTimeout(total=30), ssl=False) as response:
-            content = await response.read()
+    start_time = time.time()
+    while time.time() - start_time < 30:
+        try:
+            async with  session.get(secret_uuid_m3u8_file_url, headers=headers,
+                                    timeout=aiohttp.ClientTimeout(total=15)) as response:
+                content = await response.read()
+        except asyncio.TimeoutError:
+            async with  session.get(secret_uuid_m3u8_file_url, headers=headers,
+                                    timeout=aiohttp.ClientTimeout(total=30)) as response:
+                content = await response.read()
+        if content and len(content) > 0:
+            break
+    # try:
+    #     response = requests.get(secret_uuid_m3u8_file_url, timeout=10, verify=False)
+    #     content = response.content
+    # except requests.exceptions.Timeout:
+    #     response = requests.get(secret_uuid_m3u8_file_url, timeout=30, verify=False)
+    #     content = response.content
     if content:
         # 已经解密的高度加密的m3u8文件(只有uuid，没有格式)，bytes
         blankContent_alist_uuid_m3u8 = decrypt(password, content)

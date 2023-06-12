@@ -6671,12 +6671,6 @@ async def get_alist_uuid_file_data(secret_uuid_m3u8_file_url, password, uuid_nam
                 content = await response.read()
         if content and len(content) > 0:
             break
-    # try:
-    #     response = requests.get(secret_uuid_m3u8_file_url, timeout=10, verify=False)
-    #     content = response.content
-    # except requests.exceptions.Timeout:
-    #     response = requests.get(secret_uuid_m3u8_file_url, timeout=30, verify=False)
-    #     content = response.content
     if content:
         # 已经解密的高度加密的m3u8文件(只有uuid，没有格式)，bytes
         blankContent_alist_uuid_m3u8 = decrypt(password, content)

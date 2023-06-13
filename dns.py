@@ -54,12 +54,6 @@ black_list_simple_tmp_cache = {}
 # 简易黑名单全部数据库数据
 black_list_simple_policy = {}
 
-# # china   api.ttt.sh
-# ipCheckDomian = ["ip.skk.moe", "ip.swcdn.skk.moe", "api.ipify.org",
-#                  "api-ipv4.ip.sb", "d.skk.moe", "qqwry.api.skk.moe",
-#                  "ipinfo.io", "cdn.ipinfo.io", "ip.sb", "api.ttt.sh",
-#                  "ip-api.com", 'ip.chinaz.com', 'ip.tool.chinaz.com']
-
 # 更新队列，避免阻塞
 black_list_simple_policy_queue = queue.Queue(maxsize=100)
 white_list_simple_nameserver_policy_queue = queue.Queue(maxsize=100)
@@ -75,15 +69,6 @@ black_list_tmp_policy_queue = queue.Queue(maxsize=100)
 
 white_list_tmp_cache_queue = queue.Queue(maxsize=100)
 white_list_tmp_policy_queue = queue.Queue(maxsize=100)
-
-
-# 添加元素到队列中
-def put_element(q, element):
-    if not q.full():
-        q.put(element)
-        # print(f"元素 {element} 已经添加到队列中")
-    # else:
-    #     print("队列已满，不能添加更多元素")
 
 
 # redis删除map字典
@@ -285,11 +270,11 @@ def getWeakThread(length):
 
 # 检测域名是否在全部简易黑名单域名策略  是-true  不是-false
 def inSimpleBlackListPolicy(domain_name_str):
-    sourceDict = findBottomDict(domain_name_str, black_list_simple_policy)
-    if sourceDict:
-        if len(sourceDict) == 0:
+    items = findBottomDict(domain_name_str, black_list_simple_policy)
+    items = removeRepeatList(items)
+    if items:
+        if len(items) == 0:
             return False
-        items = removeRepeatList(sourceDict)
         length = len(items)
         trueThreadNum = getWeakThread(length)
         # 计算每个线程处理的数据大小
@@ -298,6 +283,7 @@ def inSimpleBlackListPolicy(domain_name_str):
         finalindex = trueThreadNum - 1
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
+                futures = []
                 for i in range(trueThreadNum):
                     start_index = i * chunk_size
                     if i == finalindex:
@@ -306,7 +292,12 @@ def inSimpleBlackListPolicy(domain_name_str):
                         end_index = min(start_index + chunk_size, length)
                     black_list_chunk = items[start_index:end_index]
                     future = executor.submit(check_domain_inSimpleBlackListPolicy, domain_name_str, black_list_chunk)
-                    if future.result():
+                    futures.append(future)
+                # 使用wait等待第一个非None结果
+                done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
+                for future in done:
+                    result = future.result()
+                    if result is not None:
                         return True
         finally:
             executor.shutdown(wait=False)
@@ -377,11 +368,11 @@ def inSimpleWhiteListPolicyCache(domain_name_str):
 
 # 检测域名是否在全部简易白名单域名策略  是-true  不是-false
 def inSimpleWhiteListPolicy(domain_name_str):
-    sourceDict = findBottomDict(domain_name_str, white_list_simple_nameserver_policy)
-    if sourceDict:
-        if len(sourceDict) == 0:
+    items = findBottomDict(domain_name_str, white_list_simple_nameserver_policy)
+    items = removeRepeatList(items)
+    if items:
+        if len(items) == 0:
             return False
-        items = removeRepeatList(sourceDict)
         length = len(items)
         trueThreadNum = getWeakThread(length)
         # 计算每个线程处理的数据大小
@@ -390,6 +381,7 @@ def inSimpleWhiteListPolicy(domain_name_str):
         finalIndex = trueThreadNum - 1
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
+                futures = []
                 for i in range(0, trueThreadNum):
                     start_index = i * chunk_size
                     if i == finalIndex:
@@ -398,7 +390,12 @@ def inSimpleWhiteListPolicy(domain_name_str):
                         end_index = min(start_index + chunk_size, length)
                     white_list_chunk = items[start_index:end_index]
                     future = executor.submit(check_domain_inSimpleWhiteListPolicy, domain_name_str, white_list_chunk)
-                    if future.result():
+                    futures.append(future)
+                # 使用wait等待第一个非None结果
+                done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
+                for future in done:
+                    result = future.result()
+                    if result is not None:
                         return True
         finally:
             executor.shutdown(wait=False)
@@ -447,11 +444,11 @@ def inWhiteListPolicyCache(domain_name_str):
 
 # 检测域名是否在全部黑名单域名策略  是-true  不是-false
 def inBlackListPolicy(domain_name_str):
-    sourceDict = findBottomDict(domain_name_str, blacklistSpData)
-    if sourceDict:
-        if len(sourceDict) == 0:
+    items = findBottomDict(domain_name_str, blacklistSpData)
+    items = removeRepeatList(items)
+    if items:
+        if len(items) == 0:
             return False
-        items = removeRepeatList(sourceDict)
         length = len(items)
         trueThreadNum = getWeakThread(length)
         # 计算每个线程处理的数据大小
@@ -460,6 +457,7 @@ def inBlackListPolicy(domain_name_str):
         finalindex = trueThreadNum - 1
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
+                futures = []
                 for i in range(trueThreadNum):
                     start_index = i * chunk_size
                     if i == finalindex:
@@ -468,7 +466,12 @@ def inBlackListPolicy(domain_name_str):
                         end_index = min(start_index + chunk_size, length)
                     black_list_chunk = items[start_index:end_index]
                     future = executor.submit(check_domain_inBlackListPolicy, domain_name_str, black_list_chunk)
-                    if future.result():
+                    futures.append(future)
+                # 使用wait等待第一个非None结果
+                done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
+                for future in done:
+                    result = future.result()
+                    if result is not None:
                         return True
         finally:
             executor.shutdown(wait=False)
@@ -496,11 +499,11 @@ def check_domain_inBlackListPolicy(domain_name_str, black_list_chunk):
 
 # 检测域名是否在全部白名单域名策略  是-true  不是-false
 def inWhiteListPolicy(domain_name_str):
-    sourceDict = findBottomDict(domain_name_str, whitelistSpData)
-    if sourceDict:
-        if len(sourceDict) == 0:
+    items = findBottomDict(domain_name_str, whitelistSpData)
+    items = removeRepeatList(items)
+    if items:
+        if len(items) == 0:
             return False
-        items = removeRepeatList(sourceDict)
         length = len(items)
         trueThreadNum = getWeakThread(length)
         # 计算每个线程处理的数据大小
@@ -509,6 +512,7 @@ def inWhiteListPolicy(domain_name_str):
         finalIndex = trueThreadNum - 1
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
+                futures = []
                 for i in range(0, trueThreadNum):
                     start_index = i * chunk_size
                     if i == finalIndex:
@@ -517,7 +521,12 @@ def inWhiteListPolicy(domain_name_str):
                         end_index = min(start_index + chunk_size, length)
                     white_list_chunk = items[start_index:end_index]
                     future = executor.submit(check_domain_inWhiteListPolicy, domain_name_str, white_list_chunk)
-                    if future.result():
+                    futures.append(future)
+                # 使用wait等待第一个非None结果
+                done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
+                for future in done:
+                    result = future.result()
+                    if result is not None:
                         return True
         finally:
             executor.shutdown(wait=False)
@@ -587,25 +596,25 @@ def findBottomDict(domain_name_str, whitelistSpData):
         # 1级域名数组首位字符串
         startStr2 = arr2[0]
         if end not in whitelistSpData.keys():
-            return {}
+            return []
         # 顶级域名字典
         endDict = whitelistSpData[end]
         if startStr2 not in endDict.keys():
-            return {}
+            return []
         # 一级域名开头字母
         weightDict = endDict[startStr2]
         if length2 not in weightDict.keys():
-            return {}
+            return []
         # 一级域名长度
         length1Dict = weightDict[length2]
         if middle not in length1Dict.keys():
-            return {}
+            return []
         # 一级域名
         startStr1Dict = length1Dict[middle]
         if startStr1Dict:
-            return startStr1Dict
+            return startStr1Dict.keys()
         else:
-            return {}
+            return []
     except Exception as e:
         # 只有一级域名
         # print(e)
@@ -619,21 +628,21 @@ def findBottomDict(domain_name_str, whitelistSpData):
             # 一级域名数组首位字符串
             startStr = arr[0]
             if end not in whitelistSpData.keys():
-                return {}
+                return []
             endDict = whitelistSpData[end]
             if startStr not in endDict.keys():
-                return {}
+                return []
             weightDict = endDict[startStr]
             if length not in weightDict.keys():
-                return {}
+                return []
             lengthDict = weightDict[length]
             if start not in lengthDict.keys():
-                return {}
+                return []
             startStrDict = lengthDict[start]
             if startStrDict:
-                return startStrDict
+                return startStrDict.keys()
             else:
-                return {}
+                return []
         except Exception as e:
             # 只有顶级域名
             # print(e)
@@ -643,14 +652,95 @@ def findBottomDict(domain_name_str, whitelistSpData):
 ignore_domain = ['com.', 'cn.', 'org.', 'net.', 'edu.', 'gov.', 'mil.', 'int.', 'biz.', 'info.', 'name.', 'pro.',
                  'asia.', 'us.', 'uk.', 'jp.', 'hk.', 'tw.']
 
-# 不允许在中国大陆备案的顶级域名:
-foreign_domain = ['.eu', '.jp', '.kr', '.tw', '.uk']
+
+def hungry_check_in_multi_method(domain_name_str):
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            for i in range(2):
+                # 为各个任务分配ThreadPoolExecutor
+                futures = [executor.submit(check_by_choice, domain_name_str, i) for i in range(2)]
+                # 使用wait等待第一个非None结果
+                done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
+                # 使用as_completed以非阻塞的方式返回第一个非None结果
+                for future in done:
+                    result = future.result()
+                    if result is not None:
+                        if result == find_white or result == find_black:
+                            return result
+    finally:
+        executor.shutdown(wait=False)
+    return find_none
 
 
-def isInForeign_domain(domain):
-    for key in foreign_domain:
-        if domain.endswith(key):
-            return True
+find_white = 1
+find_black = -1
+find_none = 0
+
+
+# 0-没有查到 1-是白名单 -1-是黑名单
+def check_by_choice(domain_name_str, type):
+    if type == 0:
+        if check_in_white(domain_name_str):
+            return find_white
+        return None
+    elif type == 1:
+        if check_in_black(domain_name_str):
+            return find_black
+        return None
+    return None
+
+
+def check_in_white(domain_name_str):
+    ###########################################个人日常冲浪的域名分流策略，自己维护##############################
+    # 在已经命中的简易中国域名查找，直接丢给5336
+    if inSimpleWhiteListCache(domain_name_str):
+        return True
+    # 在今日已经命中的简易白名单规则里查找
+    if inSimpleWhiteListPolicyCache(domain_name_str):
+        return True
+    # 在全部简易白名单规则里查找
+    if inSimpleWhiteListPolicy(domain_name_str):
+        return True
+    ####################################保底查询策略，基于互联网维护的黑白名单域名爬虫数据################################
+    # 在已经命中的中国域名查找，直接丢给5336
+    if inWhiteListCache(domain_name_str):
+        checkAndUpdateSimpleList(False, domain_name_str)
+        return True
+    # 在今日已经命中的白名单规则里查找
+    if inWhiteListPolicyCache(domain_name_str):
+        checkAndUpdateSimpleList(False, domain_name_str)
+        return True
+    # 在全部白名单规则里查找
+    if inWhiteListPolicy(domain_name_str):
+        checkAndUpdateSimpleList(False, domain_name_str)
+        return True
+    return False
+
+
+def check_in_black(domain_name_str):
+    ###########################################个人日常冲浪的域名分流策略，自己维护##############################
+    # 在已经命中的简易外国域名查找，直接丢给5335
+    if inSimpleBlackListCache(domain_name_str):
+        return False
+    # 在今日已经命中的简易黑名单规则里查找
+    if inSimpleBlackListPolicyCache(domain_name_str):
+        return False
+    # 简易黑名单规则里查找
+    if inSimpleBlackListPolicy(domain_name_str):
+        return False
+    ####################################保底查询策略，基于互联网维护的黑白名单域名爬虫数据################################
+    # 在已经命中的外国域名查找，直接丢给5335
+    if inBlackListCache(domain_name_str):
+        checkAndUpdateSimpleList(True, domain_name_str)
+        return False
+    # 在今日已经命中的黑名单规则里查找
+    if inBlackListPolicyCache(domain_name_str):
+        checkAndUpdateSimpleList(True, domain_name_str)
+        return False
+    # 黑名单规则里查找
+    if inBlackListPolicy(domain_name_str):
+        checkAndUpdateSimpleList(True, domain_name_str)
+        return False
     return False
 
 
@@ -665,70 +755,74 @@ def isChinaDomain(data):
     domain_name_str = str(domain_name)
     domain_name_str = domain_name_str[:-1]
     # domain_name_str = stupidThink(domain_name_str)
-    ###########################################无脑放行IP检测，排除中国的#######################################
-    # if domain_name_str in ipCheckDomian:
-    #     return False
     ##########################################中国特色顶级域名，申请必须要经过大陆审批通过，默认全部当成大陆域名#############
     if is_china_top_domain(domain_name_str):
         return True
-    # if domain_name_str.endswith(".cn") or domain_name_str.endswith(".中国"):
-    #     return True
     ##########################################不允许在中国备案使用的顶级域名######################
     if is_foreign_top_domain(domain_name_str):
         return False
-    # if isInForeign_domain(domain_name_str):
-    #     checkAndUpdateSimpleList(True, domain_name_str)
-    #     return False
-    ###########################################个人日常冲浪的域名分流策略，自己维护##############################
-    # 在已经命中的简易外国域名查找，直接丢给5335
-    if inSimpleBlackListCache(domain_name_str):
+    mode = getFileNameByTagName('dnsMode')
+    # 并发多个方法，哪一个方法最先返回结果就执行哪个，依赖硬件和黑白名单数据都是准确干净的
+    if mode == '0':
+        result = hungry_check_in_multi_method(domain_name_str)
+        if result == find_white:
+            return True
+        elif result == find_black:
+            return False
+        elif result == find_none:
+            return False
+    else:
+        # 顺序执行查询，考虑老旧硬件的使用
+        ###########################################个人日常冲浪的域名分流策略，自己维护##############################
+        # 在已经命中的简易外国域名查找，直接丢给5335
+        if inSimpleBlackListCache(domain_name_str):
+            return False
+        # 在今日已经命中的简易黑名单规则里查找
+        if inSimpleBlackListPolicyCache(domain_name_str):
+            return False
+        # 简易黑名单规则里查找
+        if inSimpleBlackListPolicy(domain_name_str):
+            return False
+        # 在已经命中的简易中国域名查找，直接丢给5336
+        if inSimpleWhiteListCache(domain_name_str):
+            return True
+        # 在今日已经命中的简易白名单规则里查找
+        if inSimpleWhiteListPolicyCache(domain_name_str):
+            return True
+        # 在全部简易白名单规则里查找
+        if inSimpleWhiteListPolicy(domain_name_str):
+            return True
+        ####################################保底查询策略，基于互联网维护的黑白名单域名爬虫数据################################
+        # 在已经命中的外国域名查找，直接丢给5335
+        if inBlackListCache(domain_name_str):
+            checkAndUpdateSimpleList(True, domain_name_str)
+            return False
+        # 在今日已经命中的黑名单规则里查找
+        if inBlackListPolicyCache(domain_name_str):
+            checkAndUpdateSimpleList(True, domain_name_str)
+            return False
+        # 黑名单规则里查找
+        if inBlackListPolicy(domain_name_str):
+            checkAndUpdateSimpleList(True, domain_name_str)
+            return False
+        # 在已经命中的中国域名查找，直接丢给5336
+        if inWhiteListCache(domain_name_str):
+            checkAndUpdateSimpleList(False, domain_name_str)
+            return True
+        # 在今日已经命中的白名单规则里查找
+        if inWhiteListPolicyCache(domain_name_str):
+            checkAndUpdateSimpleList(False, domain_name_str)
+            return True
+        # 在全部白名单规则里查找
+        if inWhiteListPolicy(domain_name_str):
+            checkAndUpdateSimpleList(False, domain_name_str)
+            return True
+            ############################################后背隐藏能源:基于超大量的中国ip去对比查找############################
+            # 在ipv4网段规则里查找，有个祖父悖论的问题，根据域名查ip需要联网，妈的
+            # if isChinaIPV4(domain_name_str):
+            #     checkAndUpdateSimpleList(False, domain_name_str)
+            #     return True
         return False
-    # 在今日已经命中的简易黑名单规则里查找
-    if inSimpleBlackListPolicyCache(domain_name_str):
-        return False
-    # 简易黑名单规则里查找
-    if inSimpleBlackListPolicy(domain_name_str):
-        return False
-    # 在已经命中的简易中国域名查找，直接丢给5336
-    if inSimpleWhiteListCache(domain_name_str):
-        return True
-    # 在今日已经命中的简易白名单规则里查找
-    if inSimpleWhiteListPolicyCache(domain_name_str):
-        return True
-    # 在全部简易白名单规则里查找
-    if inSimpleWhiteListPolicy(domain_name_str):
-        return True
-    ####################################保底查询策略，基于互联网维护的黑白名单域名爬虫数据################################
-    # 在已经命中的外国域名查找，直接丢给5335
-    if inBlackListCache(domain_name_str):
-        checkAndUpdateSimpleList(True, domain_name_str)
-        return False
-    # 在今日已经命中的黑名单规则里查找
-    if inBlackListPolicyCache(domain_name_str):
-        checkAndUpdateSimpleList(True, domain_name_str)
-        return False
-    # 黑名单规则里查找
-    if inBlackListPolicy(domain_name_str):
-        checkAndUpdateSimpleList(True, domain_name_str)
-        return False
-    # 在已经命中的中国域名查找，直接丢给5336
-    if inWhiteListCache(domain_name_str):
-        checkAndUpdateSimpleList(False, domain_name_str)
-        return True
-    # 在今日已经命中的白名单规则里查找
-    if inWhiteListPolicyCache(domain_name_str):
-        checkAndUpdateSimpleList(False, domain_name_str)
-        return True
-    # 在全部白名单规则里查找
-    if inWhiteListPolicy(domain_name_str):
-        checkAndUpdateSimpleList(False, domain_name_str)
-        return True
-    ############################################后背隐藏能源:基于超大量的中国ip去对比查找############################
-    # 在ipv4网段规则里查找，有个祖父悖论的问题，根据域名查ip需要联网，妈的
-    # if isChinaIPV4(domain_name_str):
-    #     checkAndUpdateSimpleList(False, domain_name_str)
-    #     return True
-    return False
 
 
 def simpleDomain(domain_name):
@@ -986,6 +1080,7 @@ REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG = "updatewhitelistspflag"
 REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG = "updateblacklistspflag"
 REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG = "updatechinadomainflag"
 REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG = "updateforeigndomainflag"
+REDIS_KEY_UPDATE_DNS_MODE_FLAG = "updatednsmodeflag"
 
 
 # true-拉取更新吧
@@ -1129,6 +1224,35 @@ china_top_domain_list = []
 foreign_top_domain_list = []
 REDIS_KEY_FILE_NAME = "redisKeyFileName"
 
+file_name_dict = {'chinaTopDomain': 'cn,中国', 'foreignTopDomain':
+    'xyz,club,online,site,top,win', 'dnsMode': '0'}
+
+file_name_dict_default = {'chinaTopDomain': 'cn,中国', 'foreignTopDomain':
+    'xyz,club,online,site,top,win', 'dnsMode': '0'}
+
+
+def getFileNameByTagName(tagname):
+    name = file_name_dict.get(tagname)
+    if name and name != '':
+        return name
+    else:
+        dict = redis_get_map(REDIS_KEY_FILE_NAME)
+        if dict:
+            name = dict.get(tagname)
+            if name and name != '':
+                file_name_dict[tagname] = name
+                return name
+            else:
+                name = file_name_dict_default.get(tagname)
+                file_name_dict[tagname] = name
+                redis_add_map(REDIS_KEY_FILE_NAME, {tagname: name})
+                return name
+        else:
+            name = file_name_dict_default.get(tagname)
+            file_name_dict[tagname] = name
+            redis_add_map(REDIS_KEY_FILE_NAME, {tagname: name})
+            return name
+
 
 def update_china_top_domain(redis_key):
     global china_top_domain_list
@@ -1144,9 +1268,22 @@ def update_china_top_domain(redis_key):
                         if i == '':
                             continue
                         china_top_domain_list.append(f'.{i}')
-                    redis_add(redis_key, 0)
+                file_name_dict['chinaTopDomain'] = name
             except Exception as e:
                 pass
+            finally:
+                redis_add(redis_key, 0)
+
+
+def update_dns_mode(redis_key):
+    global file_name_dict
+    function_dict = redis_get_map(REDIS_KEY_FILE_NAME)
+    if function_dict and len(function_dict) > 0:
+        name = function_dict.get('dnsMode')
+        if name and name != getFileNameByTagName('dnsMode'):
+            if name == '0' or name == '1':
+                file_name_dict['dnsMode'] = name
+        redis_add(redis_key, 0)
 
 
 def update_foreign_top_domain(redis_key):
@@ -1163,9 +1300,11 @@ def update_foreign_top_domain(redis_key):
                         if i == '':
                             continue
                         foreign_top_domain_list.append(f'.{i}')
-                    redis_add(redis_key, 0)
+                file_name_dict['foreignTopDomain'] = name
             except Exception as e:
                 pass
+            finally:
+                redis_add(redis_key, 0)
 
 
 def is_china_top_domain(domain):
@@ -1195,6 +1334,8 @@ def init():
         update_china_top_domain(REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG)
     if needUpdate(REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG):
         update_foreign_top_domain(REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG)
+    if needUpdate(REDIS_KEY_UPDATE_DNS_MODE_FLAG):
+        update_dns_mode(REDIS_KEY_UPDATE_DNS_MODE_FLAG)
     # if needUpdate(REDIS_KEY_UPDATE_THREAD_NUM_FLAG):
     #     init_threads_num()
     # if needUpdate(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG):
@@ -1404,6 +1545,9 @@ def main():
     init_dns_timeout()
     initWhiteListSP(REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG)
     initBlackListSP(REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG)
+    update_china_top_domain(REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG)
+    update_foreign_top_domain(REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG)
+    update_dns_mode(REDIS_KEY_UPDATE_DNS_MODE_FLAG)
     # initIPV4List()
     initSimpleWhiteList()
     initSimpleBlackList()

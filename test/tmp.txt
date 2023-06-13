@@ -1,31 +1,6 @@
-def chaoronghe24():
-    try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        m3u_dict = loop.run_until_complete(download_files4())
-        length = len(m3u_dict)
-        if length == 0:
-            return "empty"
-        ip = init_IP()
-        global redisKeyYoutubeM3u
-        global redisKeyYoutube
-        redisKeyYoutubeM3u.clear()
-        redis_del_map(REDIS_KEY_YOUTUBE_M3U)
-        redisKeyYoutubeM3uFake = {}
-        # fakeurl='http://127.0.0.1:5000/youtube/'
-        fakeurl = f"http://{ip}:{port_live}/youtube/"
-        for id, url in m3u_dict.items():
-            try:
-                redisKeyYoutubeM3u[id] = url
-                name = redisKeyYoutube[id]
-                link = f'#EXTINF:-1 group-title="Youtube Live"  tvg-name="{name}",{name}\n'
-                redisKeyYoutubeM3uFake[f'{fakeurl}{id}.m3u8'] = link
-            except:
-                pass
-        # 同步方法写出全部配置
-        distribute_data(redisKeyYoutubeM3uFake, f"{secret_path}youtube.m3u", 10)
-        redis_add_map(REDIS_KEY_YOUTUBE_M3U, redisKeyYoutubeM3u)
-        fuck_m3u_to_txt(f"{secret_path}youtube.m3u", f"{secret_path}youtube.txt")
-        return "result"
-    except Exception as e:
-        return "empty"
+futures = []
+                    futures.append(future)
+                for future in concurrent.futures.as_completed(futures):
+                    result = future.result()
+                    if result is not None:
+                        return True

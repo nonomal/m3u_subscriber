@@ -281,6 +281,7 @@ def inSimpleBlackListPolicy(domain_name_str):
         chunk_size = length // trueThreadNum
         left = length - chunk_size * trueThreadNum
         finalindex = trueThreadNum - 1
+        executor = None
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
                 futures = []
@@ -299,6 +300,8 @@ def inSimpleBlackListPolicy(domain_name_str):
                     result = future.result()
                     if result is not None:
                         return True
+        except TypeError:
+            return False
         finally:
             executor.shutdown(wait=False)
         return False
@@ -379,6 +382,7 @@ def inSimpleWhiteListPolicy(domain_name_str):
         chunk_size = length // trueThreadNum
         left = length - chunk_size * trueThreadNum
         finalIndex = trueThreadNum - 1
+        executor = None
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
                 futures = []
@@ -397,6 +401,8 @@ def inSimpleWhiteListPolicy(domain_name_str):
                     result = future.result()
                     if result is not None:
                         return True
+        except TypeError:
+            return False
         finally:
             executor.shutdown(wait=False)
         return False
@@ -455,6 +461,7 @@ def inBlackListPolicy(domain_name_str):
         chunk_size = length // trueThreadNum
         left = length - chunk_size * trueThreadNum
         finalindex = trueThreadNum - 1
+        executor = None
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
                 futures = []
@@ -473,6 +480,8 @@ def inBlackListPolicy(domain_name_str):
                     result = future.result()
                     if result is not None:
                         return True
+        except TypeError:
+            return False
         finally:
             executor.shutdown(wait=False)
         return False
@@ -510,6 +519,7 @@ def inWhiteListPolicy(domain_name_str):
         chunk_size = length // trueThreadNum
         left = length - chunk_size * trueThreadNum
         finalIndex = trueThreadNum - 1
+        executor = None
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=trueThreadNum) as executor:
                 futures = []
@@ -528,6 +538,8 @@ def inWhiteListPolicy(domain_name_str):
                     result = future.result()
                     if result is not None:
                         return True
+        except TypeError:
+            return False
         finally:
             executor.shutdown(wait=False)
         return False
@@ -654,6 +666,7 @@ ignore_domain = ['com.', 'cn.', 'org.', 'net.', 'edu.', 'gov.', 'mil.', 'int.', 
 
 
 def hungry_check_in_multi_method(domain_name_str):
+    executor = None
     try:
         with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
             for i in range(2):
@@ -667,6 +680,8 @@ def hungry_check_in_multi_method(domain_name_str):
                     if result is not None:
                         if result == find_white or result == find_black:
                             return result
+    except TypeError:
+        return find_none
     finally:
         executor.shutdown(wait=False)
     return find_none
@@ -735,6 +750,7 @@ def check_by_choice(domain_name_str, type):
         return None
     return None
 
+
 # 外国判断  1  1  1  1   0   1   0    0
 # 中国判断  1     0      0       1
 # 直接信任黑名单规则
@@ -755,7 +771,11 @@ def isChinaDomain(data):
     mode = getFileNameByTagName('dnsMode')
     # 并发多个方法，哪一个方法最先返回结果就执行哪个，依赖硬件和黑白名单数据都是准确干净的
     if mode == '0':
-        result = hungry_check_in_multi_method(domain_name_str)
+        try:
+            result = hungry_check_in_multi_method(domain_name_str)
+        except Exception as e:
+            print(e)
+            return False
         if result == find_white:
             return True
         elif result == find_black:
@@ -1252,7 +1272,7 @@ def update_china_top_domain(redis_key):
         name = function_dict.get('chinaTopDomain')
         if name:
             try:
-                arr = name.split[',']
+                arr = name.split(',')
                 if arr:
                     china_top_domain_list.clear()
                     for i in arr:
@@ -1284,7 +1304,7 @@ def update_foreign_top_domain(redis_key):
         name = function_dict.get('foreignTopDomain')
         if name:
             try:
-                arr = name.split[',']
+                arr = name.split(',')
                 if arr:
                     foreign_top_domain_list.clear()
                     for i in arr:

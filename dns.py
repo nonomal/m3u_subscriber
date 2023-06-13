@@ -655,10 +655,10 @@ ignore_domain = ['com.', 'cn.', 'org.', 'net.', 'edu.', 'gov.', 'mil.', 'int.', 
 
 def hungry_check_in_multi_method(domain_name_str):
     try:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
             for i in range(2):
                 # 为各个任务分配ThreadPoolExecutor
-                futures = [executor.submit(check_by_choice, domain_name_str, i) for i in range(2)]
+                futures = [executor.submit(check_by_choice, domain_name_str, i) for i in range(12)]
                 # 使用wait等待第一个非None结果
                 done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
                 # 使用as_completed以非阻塞的方式返回第一个非None结果
@@ -680,69 +680,60 @@ find_none = 0
 # 0-没有查到 1-是白名单 -1-是黑名单
 def check_by_choice(domain_name_str, type):
     if type == 0:
-        if check_in_white(domain_name_str):
+        if inSimpleWhiteListCache(domain_name_str):
             return find_white
         return None
     elif type == 1:
-        if check_in_black(domain_name_str):
+        if inSimpleBlackListCache(domain_name_str):
+            return find_black
+        return None
+    elif type == 2:
+        if inSimpleWhiteListPolicyCache(domain_name_str):
+            return find_white
+        return None
+    elif type == 3:
+        if inSimpleWhiteListPolicy(domain_name_str):
+            return find_white
+        return None
+    elif type == 4:
+        if inWhiteListCache(domain_name_str):
+            checkAndUpdateSimpleList(False, domain_name_str)
+            return find_white
+        return None
+    elif type == 5:
+        if inWhiteListPolicyCache(domain_name_str):
+            checkAndUpdateSimpleList(False, domain_name_str)
+            return find_white
+        return None
+    elif type == 6:
+        if inWhiteListPolicy(domain_name_str):
+            checkAndUpdateSimpleList(False, domain_name_str)
+            return find_white
+        return None
+    elif type == 7:
+        if inSimpleBlackListPolicyCache(domain_name_str):
+            return find_black
+        return None
+    elif type == 8:
+        if inSimpleBlackListPolicy(domain_name_str):
+            return find_black
+        return None
+    elif type == 9:
+        if inBlackListCache(domain_name_str):
+            checkAndUpdateSimpleList(True, domain_name_str)
+            return find_black
+        return None
+    elif type == 10:
+        if inBlackListPolicyCache(domain_name_str):
+            checkAndUpdateSimpleList(True, domain_name_str)
+            return find_black
+        return None
+    elif type == 11:
+        if inBlackListPolicy(domain_name_str):
+            checkAndUpdateSimpleList(True, domain_name_str)
             return find_black
         return None
     return None
-
-
-def check_in_white(domain_name_str):
-    ###########################################个人日常冲浪的域名分流策略，自己维护##############################
-    # 在已经命中的简易中国域名查找，直接丢给5336
-    if inSimpleWhiteListCache(domain_name_str):
-        return True
-    # 在今日已经命中的简易白名单规则里查找
-    if inSimpleWhiteListPolicyCache(domain_name_str):
-        return True
-    # 在全部简易白名单规则里查找
-    if inSimpleWhiteListPolicy(domain_name_str):
-        return True
-    ####################################保底查询策略，基于互联网维护的黑白名单域名爬虫数据################################
-    # 在已经命中的中国域名查找，直接丢给5336
-    if inWhiteListCache(domain_name_str):
-        checkAndUpdateSimpleList(False, domain_name_str)
-        return True
-    # 在今日已经命中的白名单规则里查找
-    if inWhiteListPolicyCache(domain_name_str):
-        checkAndUpdateSimpleList(False, domain_name_str)
-        return True
-    # 在全部白名单规则里查找
-    if inWhiteListPolicy(domain_name_str):
-        checkAndUpdateSimpleList(False, domain_name_str)
-        return True
-    return False
-
-
-def check_in_black(domain_name_str):
-    ###########################################个人日常冲浪的域名分流策略，自己维护##############################
-    # 在已经命中的简易外国域名查找，直接丢给5335
-    if inSimpleBlackListCache(domain_name_str):
-        return False
-    # 在今日已经命中的简易黑名单规则里查找
-    if inSimpleBlackListPolicyCache(domain_name_str):
-        return False
-    # 简易黑名单规则里查找
-    if inSimpleBlackListPolicy(domain_name_str):
-        return False
-    ####################################保底查询策略，基于互联网维护的黑白名单域名爬虫数据################################
-    # 在已经命中的外国域名查找，直接丢给5335
-    if inBlackListCache(domain_name_str):
-        checkAndUpdateSimpleList(True, domain_name_str)
-        return False
-    # 在今日已经命中的黑名单规则里查找
-    if inBlackListPolicyCache(domain_name_str):
-        checkAndUpdateSimpleList(True, domain_name_str)
-        return False
-    # 黑名单规则里查找
-    if inBlackListPolicy(domain_name_str):
-        checkAndUpdateSimpleList(True, domain_name_str)
-        return False
-    return False
-
 
 # 外国判断  1  1  1  1   0   1   0    0
 # 中国判断  1     0      0       1

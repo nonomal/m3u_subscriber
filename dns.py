@@ -267,6 +267,7 @@ def removeRepeatList(item_policy):
 def getWeakThread(length):
     return min(length, MAXTHREAD)
 
+
 #
 # def quick_sort(items):
 #     if len(items) <= 1:
@@ -280,7 +281,7 @@ def getWeakThread(length):
 # 检测域名是否在全部简易黑名单域名策略  是-true  不是-false
 def inSimpleBlackListPolicy(domain_name_str):
     items = findBottomDict(domain_name_str, black_list_simple_policy)
-    #items = quick_sort(items)
+    # items = quick_sort(items)
     if items:
         if len(items) == 0:
             return False
@@ -297,9 +298,9 @@ def inSimpleBlackListPolicy(domain_name_str):
                 for i in range(trueThreadNum):
                     start_index = i * chunk_size
                     if i == finalindex:
-                        end_index = min(start_index + chunk_size + left, length-1)
+                        end_index = min(start_index + chunk_size + left, length - 1)
                     else:
-                        end_index = min(start_index + chunk_size, length-1)
+                        end_index = min(start_index + chunk_size, length - 1)
                     black_list_chunk = items[start_index:end_index]
                     future = executor.submit(check_domain_inSimpleBlackListPolicy, domain_name_str, black_list_chunk)
                     futures.append(future)
@@ -382,7 +383,7 @@ def inSimpleWhiteListPolicyCache(domain_name_str):
 # 检测域名是否在全部简易白名单域名策略  是-true  不是-false
 def inSimpleWhiteListPolicy(domain_name_str):
     items = findBottomDict(domain_name_str, white_list_simple_nameserver_policy)
-    #items = quick_sort(items)
+    # items = quick_sort(items)
     if items:
         if len(items) == 0:
             return False
@@ -399,9 +400,9 @@ def inSimpleWhiteListPolicy(domain_name_str):
                 for i in range(0, trueThreadNum):
                     start_index = i * chunk_size
                     if i == finalIndex:
-                        end_index = min(start_index + chunk_size + left, length-1)
+                        end_index = min(start_index + chunk_size + left, length - 1)
                     else:
-                        end_index = min(start_index + chunk_size, length-1)
+                        end_index = min(start_index + chunk_size, length - 1)
                     white_list_chunk = items[start_index:end_index]
                     future = executor.submit(check_domain_inSimpleWhiteListPolicy, domain_name_str, white_list_chunk)
                     futures.append(future)
@@ -462,7 +463,7 @@ def inWhiteListPolicyCache(domain_name_str):
 # 检测域名是否在全部黑名单域名策略  是-true  不是-false
 def inBlackListPolicy(domain_name_str):
     items = findBottomDict(domain_name_str, blacklistSpData)
-    #items = quick_sort(items)
+    # items = quick_sort(items)
     if items:
         if len(items) == 0:
             return False
@@ -479,9 +480,9 @@ def inBlackListPolicy(domain_name_str):
                 for i in range(trueThreadNum):
                     start_index = i * chunk_size
                     if i == finalindex:
-                        end_index = min(start_index + chunk_size + left, length-1)
+                        end_index = min(start_index + chunk_size + left, length - 1)
                     else:
-                        end_index = min(start_index + chunk_size, length-1)
+                        end_index = min(start_index + chunk_size, length - 1)
                     black_list_chunk = items[start_index:end_index]
                     future = executor.submit(check_domain_inBlackListPolicy, domain_name_str, black_list_chunk)
                     futures.append(future)
@@ -521,7 +522,7 @@ def check_domain_inBlackListPolicy(domain_name_str, black_list_chunk):
 # 检测域名是否在全部白名单域名策略  是-true  不是-false
 def inWhiteListPolicy(domain_name_str):
     items = findBottomDict(domain_name_str, whitelistSpData)
-    #items = quick_sort(items)
+    # items = quick_sort(items)
     if items:
         if len(items) == 0:
             return False
@@ -538,9 +539,9 @@ def inWhiteListPolicy(domain_name_str):
                 for i in range(0, trueThreadNum):
                     start_index = i * chunk_size
                     if i == finalIndex:
-                        end_index = min(start_index + chunk_size + left, length-1)
+                        end_index = min(start_index + chunk_size + left, length - 1)
                     else:
-                        end_index = min(start_index + chunk_size, length-1)
+                        end_index = min(start_index + chunk_size, length - 1)
                     white_list_chunk = items[start_index:end_index]
                     future = executor.submit(check_domain_inWhiteListPolicy, domain_name_str, white_list_chunk)
                     futures.append(future)
@@ -1235,6 +1236,7 @@ def deal_black_list_simple_policy_queue():
     global black_list_simple_policy
     add_dict = {}
     add_dict2 = {}
+    total_black = redis_get_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST)
     for i in range(10):
         if not black_list_simple_policy_queue.empty():
             domain = black_list_simple_policy_queue.get()
@@ -1243,14 +1245,19 @@ def deal_black_list_simple_policy_queue():
         if not white_list_simple_nameserver_policy_queue.empty():
             domain2 = white_list_simple_nameserver_policy_queue.get()
             domain2 = stupidThink(domain2)
-            add_dict2[domain2] = ''
+            if domain2 not in total_black.keys():
+                add_dict2[domain2] = ''
     if len(add_dict) > 0:
         redis_add_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST, add_dict)
         for key in add_dict.keys():
             updateSpData(key, black_list_simple_policy)
-    if len(add_dict2) > 0:
-        redis_add_map(REDIS_KEY_DNS_SIMPLE_WHITELIST, add_dict2)
-        for key in add_dict2.keys():
+    add_dict3 = {}
+    for key in add_dict2.keys():
+        if key not in add_dict.keys():
+            add_dict3[key] = ''
+    if len(add_dict3) > 0:
+        redis_add_map(REDIS_KEY_DNS_SIMPLE_WHITELIST, add_dict3)
+        for key in add_dict3.keys():
             updateSpData(key, white_list_simple_nameserver_policy)
 
 

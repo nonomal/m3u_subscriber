@@ -570,18 +570,28 @@ def stupidThink(domain_name):
     except Exception as e:
         return ''
     # 一级域名,不是顶级域名那种
-    domain = sub_domains[-1]
+    domain_first = sub_domains[-1]
+    domain_second = None
     try:
-        for key in ignore_domain:
-            # 一级域名有顶级域名，找二级域名
-            if domain.startswith(key):
-                try:  # 二级域名仍然可能有顶级域名，但很少
-                    return sub_domains[-2]
-                except Exception as e:
-                    return domain
-        return domain
+        # 二级域名
+        domain_second = sub_domains[-2]
     except Exception as e:
-        return domain
+        print(e)
+        pass
+    try:
+        # 尽可能争取存储到二级域名，但是要避免垃圾域名和测试域名
+        if domain_second:
+            for key in ignore_domain:
+                # 一级域名有顶级域名，找二级域名,没有还是用一级域名
+                if domain_first.startswith(key):
+                    return domain_second
+            # 怀疑是垃圾二级域名，只记录一级域名
+            if len(domain_second.split('.')[0]) >= 20:
+                return domain_first
+            return domain_second
+        return domain_first
+    except Exception as e:
+        return domain_first
 
 
 # 白名单三段字典:顶级域名,一级域名长度,一级域名首位,一级域名数据

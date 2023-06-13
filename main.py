@@ -4007,16 +4007,31 @@ ignore_domain = ['com.', 'cn.', 'org.', 'net.', 'edu.', 'gov.', 'mil.', 'int.', 
 def stupidThinkForChina(domain_name):
     try:
         sub_domains = ['.'.join(domain_name.split('.')[i:]) for i in range(len(domain_name.split('.')) - 1)]
-        domain = sub_domains[-1]
-        for key in ignore_domain:
-            if domain.startswith(key):
-                try:
-                    return sub_domains[-2]
-                except Exception as e:
-                    return ''
-        return domain
     except Exception as e:
         return ''
+    # 一级域名,不是顶级域名那种
+    domain_first = sub_domains[-1]
+    domain_second = None
+    try:
+        # 二级域名
+        domain_second = sub_domains[-2]
+    except Exception as e:
+        print(e)
+        pass
+    try:
+        # 尽可能争取存储到二级域名，但是要避免垃圾域名和测试域名
+        if domain_second:
+            for key in ignore_domain:
+                # 一级域名有顶级域名，找二级域名,没有还是用一级域名
+                if domain_first.startswith(key):
+                    return domain_second
+            # 怀疑是垃圾二级域名，只记录一级域名
+            if len(domain_second.split('.')[0]) >= 20:
+                return domain_first
+            return domain_second
+        return domain_first
+    except Exception as e:
+        return domain_first
 
 
 # 提取二级、一级级域名
@@ -4025,17 +4040,29 @@ def stupidThink(domain_name):
         sub_domains = ['.'.join(domain_name.split('.')[i:]) for i in range(len(domain_name.split('.')) - 1)]
     except Exception as e:
         return ''
+    # 一级域名,不是顶级域名那种
+    domain_first = sub_domains[-1]
+    domain_second = None
     try:
-        return sub_domains[-2]
+        # 二级域名
+        domain_second = sub_domains[-2]
     except Exception as e:
-        try:
-            return sub_domains[-1]
-        except Exception as e:
-            return ''
-    # sub_domains = []
-    # for i in range(len(domain_name.split('.')) - 1):
-    #     sub_domains.append('.'.join(domain_name.split('.')[i:]))
-    # return sub_domains[len(sub_domains) - 1]
+        print(e)
+        pass
+    try:
+        # 尽可能争取存储到二级域名，但是要避免垃圾域名和测试域名
+        if domain_second:
+            for key in ignore_domain:
+                # 一级域名有顶级域名，找二级域名,没有还是用一级域名
+                if domain_first.startswith(key):
+                    return domain_second
+            # 怀疑是垃圾二级域名，只记录一级域名
+            if len(domain_second.split('.')[0]) >= 20:
+                return domain_first
+            return domain_second
+        return domain_first
+    except Exception as e:
+        return domain_first
 
 
 def addHistorySubscribePass(password, name):

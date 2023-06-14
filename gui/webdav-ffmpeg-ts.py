@@ -197,14 +197,14 @@ class MyFrame(tk.Frame):
             escaped_path = file_path.replace('/', '\\\\')
             slices_path = slices_path.replace('\\', '\\\\')
             slices_path = slices_path.replace('/', '\\\\')
-        cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v h264 -c:a aac -b:a 128k  \"{slices_path}\""
+        cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -r 24 -c:v libx264 -preset slow -c:a aac -b:a 128k  \"{slices_path}\""
         if not os.path.exists(slices_path):
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
         else:
             if slices_path.endswith('mp4'):
                 # cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx264 -preset slow -crf 18 -c:a aac -b:a 128k -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\':force_style='FontName=微软雅黑,FontSize=19,PrimaryColour=&Hffffff,SecondaryColour=&H000000,TertiaryColour=&H800080,BackColour=&H0f0f0f,Bold=-1,Italic=0,BorderStyle=1,Outline=3,Shadow=2,Alignment=2,MarginL=30,MarginR=30,MarginV=12,AlphaLevel=0,Encoding=134'\" \"{slices_path.replace('.mp4', '2.mp4')}\""
-                cmd = f"ffmpeg   -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v h264 -c:a aac -b:a 128k  \"{slices_path.replace('.mp4', '2.mp4')}\""
+                cmd = f"ffmpeg   -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -r 24 -c:v libx264 -preset slow -c:a aac -b:a 128k  \"{slices_path.replace('.mp4', '2.mp4')}\""
                 new_file_name = new_file_name.replace('.mp4', '2.mp4')
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
@@ -248,13 +248,13 @@ class MyFrame(tk.Frame):
             if not ts_type_audio or ts_type_audio == '':
                 ts_type_audio = 'copy'
             if videoType == 'mp4':
-                cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v {ts_type} -c:a {ts_type_audio}  -map 0:v:0 -map 0:a:0?  -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}  {outputfilepath}.m3u8"
+                cmd = f"ffmpeg  -i \"{escaped_path}\" -r 24 -c:v {ts_type} -preset slower -c:a {ts_type_audio}  -map 0:v:0 -map 0:a:0?  -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}  {outputfilepath}.m3u8"
             elif videoType == 'mkv':
-                cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v {ts_type} -c:a {ts_type_audio}   -map 0:v:0 -map 0:a:0? -map_chapters -1  -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path}   {outputfilepath}.m3u8"
+                cmd = f"ffmpeg  -i \"{escaped_path}\" -r 24 -c:v {ts_type} -preset slower -c:a {ts_type_audio}   -map 0:v:0 -map 0:a:0? -map_chapters -1  -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path}   {outputfilepath}.m3u8"
             elif videoType == 'avi':
-                cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v {ts_type} -c:a {ts_type_audio}   -map 0:v:0 -map 0:a:0?  -map_chapters -1  -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}   {outputfilepath}.m3u8"
+                cmd = f"ffmpeg  -i \"{escaped_path}\" -r 24 -c:v {ts_type} -preset slower -c:a {ts_type_audio}   -map 0:v:0 -map 0:a:0?  -map_chapters -1  -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}   {outputfilepath}.m3u8"
             else:
-                cmd = f"ffmpeg  -i \"{escaped_path}\" -c:v {ts_type} -c:a {ts_type_audio}   -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}  {outputfilepath}.m3u8"
+                cmd = f"ffmpeg  -i \"{escaped_path}\" -r 24 -c:v {ts_type} -preset slower -c:a {ts_type_audio}   -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}  {outputfilepath}.m3u8"
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
             match = re.search(r'(.+?)\.[^.]*$', file_name)
@@ -413,7 +413,7 @@ class MyFrame(tk.Frame):
         self.video_type.pack(fill='x', padx=10, pady=10)
 
         # 创建一个Label小部件，用于显示文本框的用途
-        label = tk.Label(self, text="设置视频切片格式(h264/copy):")
+        label = tk.Label(self, text="设置视频切片格式(libx264/copy):")
         # 将Label和Entry小部件放置到窗口中
         label.pack()
         self.ts_type = tk.Entry(self)

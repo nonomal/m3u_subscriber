@@ -116,7 +116,7 @@ class MyFrame(tk.Frame):
         # 提取文件名
         file_name = os.path.basename(file_path)
         video_types=file_name.split('.')[-1]
-        new_file_name = file_name.replace(video_types, 'mp4')
+        new_file_name = file_name.replace(video_types, 'ts')
         slices_path = os.path.join(dir_path,
                                    f"{new_file_name}")
         # Windows系统下需要将路径分隔符从/替换成\
@@ -124,14 +124,14 @@ class MyFrame(tk.Frame):
             escaped_path = file_path.replace('/', '\\\\')
             slices_path = slices_path.replace('\\', '\\\\')
             slices_path = slices_path.replace('/', '\\\\')
-        cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v h264 -c:a aac -b:a 128k  \"{slices_path}\""
+        cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v h264 -c:a aac -b:a 128k -vbsf h264_mp4toannexb   \"{slices_path}\""
         if not os.path.exists(slices_path):
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
         else:
-            if slices_path.endswith('mp4'):
+            if slices_path.endswith('ts'):
                 # cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx264 -preset slow -crf 18 -c:a aac -b:a 128k -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\':force_style='FontName=微软雅黑,FontSize=19,PrimaryColour=&Hffffff,SecondaryColour=&H000000,TertiaryColour=&H800080,BackColour=&H0f0f0f,Bold=-1,Italic=0,BorderStyle=1,Outline=3,Shadow=2,Alignment=2,MarginL=30,MarginR=30,MarginV=12,AlphaLevel=0,Encoding=134'\" \"{slices_path.replace('.mp4', '2.mp4')}\""
-                cmd = f"ffmpeg   -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v h264 -c:a aac -b:a 128k  \"{slices_path.replace('.mp4', '2.mp4')}\""
+                cmd = f"ffmpeg   -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v h264 -c:a aac -b:a 128k -vbsf h264_mp4toannexb   \"{slices_path.replace('.ts', '2.ts')}\""
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
         # 将按钮变成绿色
@@ -149,7 +149,7 @@ class MyFrame(tk.Frame):
         # 提取文件名
         file_name = os.path.basename(file_path)
         video_types=file_name.split('.')[-1]
-        new_file_name = file_name.replace(video_types, 'mp4')
+        new_file_name = file_name.replace(video_types, 'ts')
         slices_path = os.path.join(dir_path,
                                    f"{new_file_name}")
 
@@ -160,15 +160,15 @@ class MyFrame(tk.Frame):
             slices_path = slices_path.replace('\\', '\\\\')
             slices_path = slices_path.replace('/', '\\\\')
         ss = '\:'
-        cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v h264 -c:a aac -b:a 128k  -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" \"{slices_path}\""
+        cmd = f"ffmpeg  -i \"{escaped_path}\" -threads 10 -map 0:v:0 -map 0:a:0 -r 24 -c:v h264 -preset slow -c:a aac -b:a 128k -vbsf h264_mp4toannexb   -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" \"{slices_path}\""
         if not os.path.exists(slices_path):
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
         else:
-            if slices_path.endswith('mp4'):
+            if slices_path.endswith('ts'):
                 # cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx264 -preset slow -crf 18 -c:a aac -b:a 128k -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\':force_style='FontName=微软雅黑,FontSize=19,PrimaryColour=&Hffffff,SecondaryColour=&H000000,TertiaryColour=&H800080,BackColour=&H0f0f0f,Bold=-1,Italic=0,BorderStyle=1,Outline=3,Shadow=2,Alignment=2,MarginL=30,MarginR=30,MarginV=12,AlphaLevel=0,Encoding=134'\" \"{slices_path.replace('.mp4', '2.mp4')}\""
-                cmd = f"ffmpeg   -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v h264 -c:a aac -b:a 128k -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" \"{slices_path.replace('.mp4', '2.mp4')}\""
-                new_file_name = new_file_name.replace('.mp4', '2.mp4')
+                cmd = f"ffmpeg   -i \"{escaped_path}\" -threads 10 -map 0:v:0 -map 0:a:0 -r 24 -c:v h264 -preset slow -c:a aac -b:a 128k -vbsf h264_mp4toannexb  -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" \"{slices_path.replace('.ts', '2.ts')}\""
+                new_file_name = new_file_name.replace('.ts', '2.ts')
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
         # self.file_path = os.path.join(dir_path,
@@ -188,7 +188,7 @@ class MyFrame(tk.Frame):
         file_name = os.path.basename(file_path)
         video_types=file_name.split('.')[-1]
         file_path = file_path.replace(video_types, 'mkv')
-        new_file_name = file_name.replace(video_types, 'mp4')
+        new_file_name = file_name.replace(video_types, 'ts')
         slices_path = os.path.join(dir_path,
                                    f"{new_file_name}")
 
@@ -197,15 +197,15 @@ class MyFrame(tk.Frame):
             escaped_path = file_path.replace('/', '\\\\')
             slices_path = slices_path.replace('\\', '\\\\')
             slices_path = slices_path.replace('/', '\\\\')
-        cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -r 24 -c:v libx264 -preset slow -c:a aac -b:a 128k  \"{slices_path}\""
+        cmd = f"ffmpeg  -i \"{escaped_path}\" -threads 10 -map 0:v:0 -map 0:a:0 -r 24 -c:v h264 -preset slow -c:a aac -b:a 128k -vbsf h264_mp4toannexb  \"{slices_path}\""
         if not os.path.exists(slices_path):
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
         else:
-            if slices_path.endswith('mp4'):
+            if slices_path.endswith('ts'):
                 # cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx264 -preset slow -crf 18 -c:a aac -b:a 128k -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\':force_style='FontName=微软雅黑,FontSize=19,PrimaryColour=&Hffffff,SecondaryColour=&H000000,TertiaryColour=&H800080,BackColour=&H0f0f0f,Bold=-1,Italic=0,BorderStyle=1,Outline=3,Shadow=2,Alignment=2,MarginL=30,MarginR=30,MarginV=12,AlphaLevel=0,Encoding=134'\" \"{slices_path.replace('.mp4', '2.mp4')}\""
-                cmd = f"ffmpeg   -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -r 24 -c:v libx264 -preset slow -c:a aac -b:a 128k  \"{slices_path.replace('.mp4', '2.mp4')}\""
-                new_file_name = new_file_name.replace('.mp4', '2.mp4')
+                cmd = f"ffmpeg   -i \"{escaped_path}\" -threads 10 -map 0:v:0 -map 0:a:0 -r 24 -c:v h264 -preset slow -c:a aac -b:a 128k -vbsf h264_mp4toannexb  \"{slices_path.replace('.ts', '2.ts')}\""
+                new_file_name = new_file_name.replace('.ts', '2.ts')
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
         # self.file_path = os.path.join(dir_path,
@@ -219,7 +219,7 @@ class MyFrame(tk.Frame):
 
     def read_video_file_to_slices(self):
         try:
-            file_path = self.file_path.get().replace('mkv', 'mp4')
+            file_path = self.file_path.get().replace('mkv', 'ts')
             # 视频格式
             videoType = file_path.split('.')[-1]
             # 提取目录路径
@@ -248,13 +248,13 @@ class MyFrame(tk.Frame):
             if not ts_type_audio or ts_type_audio == '':
                 ts_type_audio = 'copy'
             if videoType == 'mp4':
-                cmd = f"ffmpeg  -i \"{escaped_path}\" -r 24 -c:v {ts_type} -preset slower -c:a {ts_type_audio}  -map 0:v:0 -map 0:a:0?  -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}  {outputfilepath}.m3u8"
+                cmd = f"ffmpeg  -i \"{escaped_path}\" -threads 10 -r 24 -c:v {ts_type} -preset slower -c:a {ts_type_audio}  -vbsf h264_mp4toannexb  -map 0:v:0 -map 0:a:0? -force_key_frames \"expr:gte(t,n_forced*10)\" -strict -2   -f hls -start_number 0 -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}  {outputfilepath}.m3u8"
             elif videoType == 'mkv':
-                cmd = f"ffmpeg  -i \"{escaped_path}\" -r 24 -c:v {ts_type} -preset slower -c:a {ts_type_audio}   -map 0:v:0 -map 0:a:0? -map_chapters -1  -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path}   {outputfilepath}.m3u8"
+                cmd = f"ffmpeg  -i \"{escaped_path}\" -threads 10 -r 24 -c:v {ts_type} -preset slower -c:a {ts_type_audio}  -vbsf h264_mp4toannexb   -map 0:v:0 -map 0:a:0? -map_chapters -1 -force_key_frames \"expr:gte(t,n_forced*10)\"  -strict -2  -f hls -start_number 0 -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path}   {outputfilepath}.m3u8"
             elif videoType == 'avi':
-                cmd = f"ffmpeg  -i \"{escaped_path}\" -r 24 -c:v {ts_type} -preset slower -c:a {ts_type_audio}   -map 0:v:0 -map 0:a:0?  -map_chapters -1  -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}   {outputfilepath}.m3u8"
+                cmd = f"ffmpeg  -i \"{escaped_path}\" -threads 10 -r 24 -c:v {ts_type} -preset slower -c:a {ts_type_audio}  -vbsf h264_mp4toannexb  -map 0:v:0 -map 0:a:0?  -map_chapters -1 -force_key_frames \"expr:gte(t,n_forced*10)\"  -strict -2  -f hls -start_number 0 -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}   {outputfilepath}.m3u8"
             else:
-                cmd = f"ffmpeg  -i \"{escaped_path}\" -r 24 -c:v {ts_type} -preset slower -c:a {ts_type_audio}   -map 0:v:0 -map 0:a:0? -f hls -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}  {outputfilepath}.m3u8"
+                cmd = f"ffmpeg  -i \"{escaped_path}\" -threads 10 -r 24 -c:v {ts_type} -preset slower -c:a {ts_type_audio}  -vbsf h264_mp4toannexb  -map 0:v:0 -map 0:a:0?  -force_key_frames \"expr:gte(t,n_forced*10)\"  -strict -2 -f hls -start_number 0 -hls_time 10 -hls_list_size 0  -hls_segment_filename {slices_path}  {outputfilepath}.m3u8"
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
             match = re.search(r'(.+?)\.[^.]*$', file_name)
@@ -413,7 +413,7 @@ class MyFrame(tk.Frame):
         self.video_type.pack(fill='x', padx=10, pady=10)
 
         # 创建一个Label小部件，用于显示文本框的用途
-        label = tk.Label(self, text="设置视频切片格式(libx264/copy):")
+        label = tk.Label(self, text="设置视频切片格式(h264/copy):")
         # 将Label和Entry小部件放置到窗口中
         label.pack()
         self.ts_type = tk.Entry(self)
@@ -536,8 +536,8 @@ class MyFrame(tk.Frame):
         file_name_dict['name'] = ''
 
     def on_convert_click(self):
-        file_path = self.file_path.get().replace('mkv', 'mp4')
-        file_path = file_path.replace('avi', 'mp4')
+        file_path = self.file_path.get().replace('mkv', 'ts')
+        file_path = file_path.replace('avi', 'ts')
         if file_path.endswith('mkv') or file_path.endswith('avi'):
             self.on_convert_click_mkv_to_mp4()
         if not os.path.exists(file_path):

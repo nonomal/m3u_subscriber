@@ -1151,13 +1151,13 @@ def init_threads_num():
     if num:
         num = int(num.decode())
         if num == 0:
-            num = 100
+            num = 1000
             threadsNum[REDIS_KEY_THREADS] = num
             MAXTHREAD = num
         threadsNum[REDIS_KEY_THREADS] = num
         MAXTHREAD = num
     else:
-        num = 100
+        num = 1000
         threadsNum[REDIS_KEY_THREADS] = num
         MAXTHREAD = num
 

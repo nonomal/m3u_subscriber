@@ -131,8 +131,6 @@ def deal_tmp_cache_policy_queue(queue, dict):
 REDIS_KEY_THREADS = "threadsnum"
 threadsNum = {REDIS_KEY_THREADS: 1000}
 
-MAXTHREAD = 1000
-
 # 中国DNS服务器主键
 REDIS_KEY_CHINA_DNS_SERVER = "chinadnsserver"
 chinadnsserver = {REDIS_KEY_CHINA_DNS_SERVER: ""}
@@ -265,7 +263,10 @@ def removeRepeatList(item_policy):
 
 
 def getWeakThread(length):
-    return min(length, MAXTHREAD)
+    max = threadsNum.get(REDIS_KEY_THREADS)
+    if max is None:
+        max = 1000
+    return min(length, max)
 
 
 #
@@ -1377,8 +1378,9 @@ def init():
         update_foreign_top_domain(REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG)
     if needUpdate(REDIS_KEY_UPDATE_DNS_MODE_FLAG):
         update_dns_mode(REDIS_KEY_UPDATE_DNS_MODE_FLAG)
-    # if needUpdate(REDIS_KEY_UPDATE_THREAD_NUM_FLAG):
-    #     init_threads_num()
+    if needUpdate(REDIS_KEY_UPDATE_THREAD_NUM_FLAG):
+        init_threads_num()
+        redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 0)
     # if needUpdate(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG):
     #     init_china_dns_server()
     # if needUpdate(REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG):
@@ -1427,20 +1429,16 @@ def checkAndUpdateSimpleList(isBlack, domain):
 
 # 线程数获取
 def init_threads_num():
-    global MAXTHREAD
     num = redis_get(REDIS_KEY_THREADS)
     if num:
         num = int(num.decode())
         if num == 0:
-            num = 100
+            num = 1000
             threadsNum[REDIS_KEY_THREADS] = num
-            MAXTHREAD = num
         threadsNum[REDIS_KEY_THREADS] = num
-        MAXTHREAD = num
     else:
-        num = 100
+        num = 1000
         threadsNum[REDIS_KEY_THREADS] = num
-        MAXTHREAD = num
 
 
 # 中国DNS端口获取

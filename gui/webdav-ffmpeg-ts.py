@@ -124,14 +124,14 @@ class MyFrame(tk.Frame):
             escaped_path = file_path.replace('/', '\\\\')
             slices_path = slices_path.replace('\\', '\\\\')
             slices_path = slices_path.replace('/', '\\\\')
-        cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -r 23.976  -c:v libx265  -c:a aac -b:a 128k -ac 2  \"{slices_path}\""
+        cmd = f"ffmpeg -threads 0   -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -r 23.976  -c:v libx265 -b:v 2M  -c:a aac -b:a 128k -ac 2  \"{slices_path}\""
         if not os.path.exists(slices_path):
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
         else:
             if slices_path.endswith('ts'):
                 # cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx265 -preset slow -crf 18 -c:a aac -b:a 128k -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\':force_style='FontName=微软雅黑,FontSize=19,PrimaryColour=&Hffffff,SecondaryColour=&H000000,TertiaryColour=&H800080,BackColour=&H0f0f0f,Bold=-1,Italic=0,BorderStyle=1,Outline=3,Shadow=2,Alignment=2,MarginL=30,MarginR=30,MarginV=12,AlphaLevel=0,Encoding=134'\" \"{slices_path.replace('.mp4', '2.mp4')}\""
-                cmd = f"ffmpeg   -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -r 23.976 -c:v libx265 -c:a aac -b:a 128k -ac 2   \"{slices_path.replace('.ts', '2.ts')}\""
+                cmd = f"ffmpeg -threads 0    -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -r 23.976 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2   \"{slices_path.replace('.ts', '2.ts')}\""
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
         # 将按钮变成绿色
@@ -160,7 +160,7 @@ class MyFrame(tk.Frame):
             slices_path = slices_path.replace('\\', '\\\\')
             slices_path = slices_path.replace('/', '\\\\')
         ss = '\:'
-        cmd = f"ffmpeg -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2  -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" -r 23.976 \"{slices_path}\""
+        cmd = f"ffmpeg -threads 0 -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2  -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" -r 23.976 \"{slices_path}\""
         #cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -r 25 -g 60 -c:v libx265 -preset medium -c:a aac -b:a 128k -ac 2  -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" \"{slices_path}\""
         if not os.path.exists(slices_path):
             process = subprocess.Popen(cmd, shell=True)
@@ -168,7 +168,7 @@ class MyFrame(tk.Frame):
         else:
             if slices_path.endswith('ts'):
                 # cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx265 -preset slow -crf 18 -c:a aac -b:a 128k -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\':force_style='FontName=微软雅黑,FontSize=19,PrimaryColour=&Hffffff,SecondaryColour=&H000000,TertiaryColour=&H800080,BackColour=&H0f0f0f,Bold=-1,Italic=0,BorderStyle=1,Outline=3,Shadow=2,Alignment=2,MarginL=30,MarginR=30,MarginV=12,AlphaLevel=0,Encoding=134'\" \"{slices_path.replace('.mp4', '2.mp4')}\""
-                cmd = f"ffmpeg -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2  -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" -r 23.976  \"{slices_path.replace('.ts', '2.ts')}\""
+                cmd = f"ffmpeg -threads 0  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2  -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" -r 23.976  \"{slices_path.replace('.ts', '2.ts')}\""
                 new_file_name = new_file_name.replace('.ts', '2.ts')
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
@@ -198,14 +198,14 @@ class MyFrame(tk.Frame):
             escaped_path = file_path.replace('/', '\\\\')
             slices_path = slices_path.replace('\\', '\\\\')
             slices_path = slices_path.replace('/', '\\\\')
-        cmd = f"ffmpeg -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2   \"{slices_path}\""
+        cmd = f"ffmpeg -threads 0  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2   \"{slices_path}\""
         if not os.path.exists(slices_path):
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
         else:
             if slices_path.endswith('ts'):
                 # cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx265 -preset slow -crf 18 -c:a aac -b:a 128k -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\':force_style='FontName=微软雅黑,FontSize=19,PrimaryColour=&Hffffff,SecondaryColour=&H000000,TertiaryColour=&H800080,BackColour=&H0f0f0f,Bold=-1,Italic=0,BorderStyle=1,Outline=3,Shadow=2,Alignment=2,MarginL=30,MarginR=30,MarginV=12,AlphaLevel=0,Encoding=134'\" \"{slices_path.replace('.mp4', '2.mp4')}\""
-                cmd = f"ffmpeg -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2   \"{slices_path.replace('.ts', '2.ts')}\""
+                cmd = f"ffmpeg -threads 0  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2   \"{slices_path.replace('.ts', '2.ts')}\""
                 new_file_name = new_file_name.replace('.ts', '2.ts')
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
@@ -249,14 +249,14 @@ class MyFrame(tk.Frame):
             if not ts_type_audio or ts_type_audio == '':
                 ts_type_audio = 'copy'
             if videoType == 'mp4':
-                cmd = f"ffmpeg -y -i \"{escaped_path}\" -c:v {ts_type}   -c:a {ts_type_audio}  -map 0:v:0 -map 0:a:0? -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path} -f hls {outputfilepath}.m3u8"
+                cmd = f"ffmpeg -threads 0 -i \"{escaped_path}\" -c:v {ts_type}   -c:a {ts_type_audio}  -map 0:v:0 -map 0:a:0? -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path} -f hls {outputfilepath}.m3u8"
             elif videoType == 'mkv':
-                cmd = f"ffmpeg -i \"{escaped_path}\" -c:v {ts_type}    -c:a {ts_type_audio} -map 0:v:0 -map 0:a:0? -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path} -f hls {outputfilepath}.m3u8"
+                cmd = f"ffmpeg -threads 0 -i \"{escaped_path}\" -c:v {ts_type}    -c:a {ts_type_audio} -map 0:v:0 -map 0:a:0? -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path} -f hls {outputfilepath}.m3u8"
 
             elif videoType == 'avi':
-                cmd = f"ffmpeg -i \"{escaped_path}\" -c:v {ts_type}    -c:a {ts_type_audio}  -map 0:v:0 -map 0:a:0? -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path} -f hls {outputfilepath}.m3u8"
+                cmd = f"ffmpeg -threads 0 -i \"{escaped_path}\" -c:v {ts_type}    -c:a {ts_type_audio}  -map 0:v:0 -map 0:a:0? -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path} -f hls {outputfilepath}.m3u8"
             else:
-                cmd = f"ffmpeg -y -i \"{escaped_path}\" -c:v {ts_type}    -c:a {ts_type_audio}  -map 0:v:0 -map 0:a:0? -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path} -f hls {outputfilepath}.m3u8"
+                cmd = f"ffmpeg -threads 0 -i \"{escaped_path}\" -c:v {ts_type}    -c:a {ts_type_audio}  -map 0:v:0 -map 0:a:0? -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path} -f hls {outputfilepath}.m3u8"
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
             match = re.search(r'(.+?)\.[^.]*$', file_name)

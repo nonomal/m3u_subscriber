@@ -406,6 +406,10 @@
         <input type="radio" name="page" id="page33">
         <span>alist直播源-改</span>
     </label>
+    <label>
+        <input type="radio" name="page" id="page34">
+        <span>普通直播源</span>
+    </label>
 </div>
 <div id="choice">
     <div id="page1" style="display: block;">
@@ -2323,6 +2327,49 @@
             </table>
         </div>
     </div>
+    <div id="page34" style="display: none;">
+        <h1>普通直播源</h1>
+        <div style="float: left;width: 70%">
+            <h3 style="color: crimson">综合互联网相关直播源源码集成而来</h3>
+            <h3>超融合订阅地址:参考m3u格式</h3>
+            <h3 class="urllink">normal-无加密:http://192.168.5.1:22771/secret/normal.m3u</h3>
+            <h3 class="urllink">normal-无加密-txt:http://192.168.5.1:22771/secret/normal.txt</h3>
+            <h3>上传文件导入合并频道配置</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn31" class="uploadjsonbtn" style="width: 100%"></input>
+            </div>
+            <div>
+                <button id="add-row31" class="addNewSubscriber" style="width:100%">新增频道</button>
+            </div>
+            <div>
+                <button class="button stepflag" onclick="execute31()" style="width: 100%">生成普通直播源超融合订阅
+                </button>
+            </div>
+            <div>
+                <button id="download-json-btn31" class="button download-json-btn" style="width: 100%">
+                    导出频道备份
+                </button>
+            </div>
+            <div style="width: 97%;">
+                <input type="text" id="searchInput31" placeholder="搜索框" class="searchbox"
+                       style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks31" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks31')">删除全部订阅
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:频道id+频道名字
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table31" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -2540,6 +2587,10 @@
     const inputTable30 = document.getElementById('input-table30');
     const downloadBtn30 = document.getElementById('download-json-btn30');
 
+    const addRowButton31 = document.getElementById('add-row31');
+    const inputTable31 = document.getElementById('input-table31');
+    const downloadBtn31 = document.getElementById('download-json-btn31');
+
     // 输入框显示中国DNS端口
     const chinaDnsPort = document.getElementById('chinaDnsPort');
 
@@ -2639,6 +2690,8 @@
     searchAddListener(searchInput29, inputTable29)
     // 给alist直播源搜索框绑定'oninput'事件
     searchAddListener(searchInput30, inputTable30)
+    // 给normal直播源搜索框绑定'oninput'事件
+    searchAddListener(searchInput31, inputTable31)
     // 给简易dns白名单搜索框绑定'oninput'事件
     searchAddListener(searchInput4, inputTable12)
     // 给m3u白名单搜索框绑定'oninput'事件
@@ -2805,7 +2858,7 @@
             var tagnamefile = parts2[2]
             var parts3 = tagnamefile.split(".")
             var tagname = parts3[0]
-            if (tagname === 'youtube' || tagname === 'bilibili' || tagname === 'huya' || tagname === 'YY' || tagname==='TWITCH'||tagname==='Douyin'||tagname==='alist' ) {
+            if (tagname === 'youtube' || tagname === 'bilibili' || tagname === 'huya' || tagname === 'YY' || tagname==='TWITCH'||tagname==='Douyin'||tagname==='alist'||tagname==='normal' ) {
                 elements[i].innerHTML = prefix + "//" + newIp + suffix2 + "/" + tagname + "." + parts3[1];
                 continue
             }
@@ -3340,6 +3393,11 @@
         reloadBase('/api/getall30', inputTable30)
     }
 
+    //normal直播源-从数据库拉取关键字列表数据
+    function reloadNormalM3U() {
+        reloadBase('/api/getall31', inputTable31)
+    }
+
     //加密订阅密码历史记录-从数据库拉取关键字列表数据
     function reloadHistorySubscribePassList() {
         reloadBase('/api/getall14', inputTable14)
@@ -3595,6 +3653,11 @@
         saveInputValuebase(inputValue, name, '/api/addnewm3u30')
     }
 
+    //normal配置
+    function saveInputValue31(inputValue, name) {
+        saveInputValuebase(inputValue, name, '/api/addnewm3u31')
+    }
+
     //永久列表-保留输入行数据
     function savem3uInputValue(url, info) {
         saveInputValuebase(url, info, '/api/addm3udata')
@@ -3748,6 +3811,11 @@
         deleteInputRowBase(row, inputValue, '/api/deletewm3u30')
     }
 
+    //删除normal直播源
+    function deleteInputRow31(row, inputValue) {
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u31')
+    }
+
     //删除加密订阅密码历史记录
     function deleteInputRow14(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u14')
@@ -3834,6 +3902,8 @@
     inputableAddEventListener(inputTable29, 'saveInputValue29', 'deleteInputRow29')
     //alist直播源
     inputableAddEventListener(inputTable30, 'saveInputValue30', 'deleteInputRow30')
+    //normal直播源
+    inputableAddEventListener(inputTable31, 'saveInputValue31', 'deleteInputRow31')
     //简易DNS黑名单
     inputableAddEventListener(inputTable13, 'saveInputValue13', 'deleteInputRow13')
     //简易DNS白名单
@@ -3938,6 +4008,8 @@
     fileInputAddEventListenerBase('upload-json-btn29', 'redisKeyDOUYIN', '/api/upload_json')
     //alist直播源-导入json配置
     fileInputAddEventListenerBase('upload-json-btn30', 'redisKeyAlist', '/api/upload_json')
+    //normal直播源-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn31', 'redisKeyNormal', '/api/upload_json')
     //网络下载配置加密上传-导入json配置
     fileInputAddEventListenerBase('upload-json-btn17', 'downloadAndSecretUploadUrlPasswordAndName', '/api/upload_json')
     //m3u白名单分组优先级-导入json配置
@@ -4363,6 +4435,8 @@
             reloadDOUYINM3U()
         }else if (selectedPage === pages[32].id) {
             reloadAlistM3U()
+        }else if (selectedPage === pages[33].id) {
+            reloadNormalM3U()
         }
         if (selectedPage !== pages[1].id) {
             window.removeEventListener('scroll', handleScroll);
@@ -4477,6 +4551,8 @@
     downloadBtnAddEventListenerBase('download-json-btn29', 'redisKeyDOUYIN')
     // alist直播源-导出订阅json配置
     downloadBtnAddEventListenerBase('download-json-btn30', 'redisKeyAlist')
+    // normal直播源-导出订阅json配置
+    downloadBtnAddEventListenerBase('download-json-btn31', 'redisKeyNormal')
     // 下载加密上传-导出订阅json配置
     downloadBtnAddEventListenerBase('download-json-btn17', 'downloadAndSecretUploadUrlPasswordAndName')
     // M3U白名单分组优先级-导出订阅json配置
@@ -4591,6 +4667,8 @@
     addRowButtonAddEventListener(addRowButton29, inputTable29)
     //alist直播源-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton30, inputTable30)
+    //normal直播源-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton31, inputTable31)
     //DNS简易白名单-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton12, inputTable12)
     //M3U白名单-关键字-只添加一行列表，不存储数据
@@ -4770,6 +4848,11 @@
     //超融合-alist直播源生成
     function execute30() {
         executeBase('/api/chaoronghe30')
+    }
+
+    //超融合-normal直播源生成
+    function execute31() {
+        executeBase('/api/chaoronghe31')
     }
 
     function executeBase(requestPath) {

@@ -150,7 +150,7 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'normalSubscriberClock': '10800',
                   'proxySubscriberClock': '3600', 'spM3uClock': '3700', 'autoDnsSwitchClock': '600', 'syncClock': '10',
                   'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国', 'foreignTopDomain':
-                      'xyz,club,online,site,top,win','dnsMode':'0'}
+                      'xyz,club,online,site,top,win', 'dnsMode': '0'}
 
 # 单独导入导出使用一个配置,需特殊处理:{{url:{pass,name}}}
 # 下载网络配置并且加密后上传:url+加密密钥+加密文件名字
@@ -215,6 +215,15 @@ REDIS_KEY_TWITCH_M3U = 'redisKeyTWITCHM3u'
 # TWITCH频道名字,真实m3u8地址
 redisKeyTWITCHM3u = {}
 
+# normal直播源
+REDIS_KEY_NORMAL = 'redisKeyNormal'
+# normal直播源地址，频道名字
+redisKeyNormal = {}
+# normal真实m3u8地址
+REDIS_KEY_NORMAL_M3U = 'redisKeyNormalM3U'
+# normal频道名字,真实m3u8地址
+redisKeyNormalM3U = {}
+
 # alist直播源
 REDIS_KEY_ALIST = 'redisKeyAlist'
 # alist直播源网站某个子路径，该路径通用密码
@@ -244,7 +253,7 @@ allListArr = [REDIS_KEY_M3U_LINK, REDIS_KEY_WHITELIST_LINK, REDIS_KEY_BLACKLIST_
 # 数据巨大的redis配置,一键导出时单独导出每个配置
 hugeDataList = [REDIS_KEY_BILIBILI, REDIS_KEY_DNS_SIMPLE_WHITELIST, REDIS_KEY_DNS_SIMPLE_BLACKLIST, REDIS_KEY_YOUTUBE,
                 REDIS_KEY_M3U_WHITELIST_RANK, REDIS_KEY_M3U_BLACKLIST, REDIS_KEY_M3U_WHITELIST, REDIS_KEY_HUYA,
-                REDIS_KEY_YY, REDIS_KEY_TWITCH, REDIS_KEY_DOUYIN, REDIS_KEY_ALIST]
+                REDIS_KEY_YY, REDIS_KEY_TWITCH, REDIS_KEY_DOUYIN, REDIS_KEY_ALIST, REDIS_KEY_NORMAL]
 
 SPECIAL_REDIS_KEY = 'specialRedisKey'
 specialRedisKey = [REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME,
@@ -526,6 +535,27 @@ def serve_files7(filename):
 
     return redirect(url)
 
+tv_dict_normal = {}
+
+
+# 路由normal
+@app.route('/normal/<path:filename>')
+def serve_files_normal(filename):
+    id = filename.split('.')[0]
+    url = tv_dict_normal.get(id)
+    if not url:
+        url = redisKeyNormalM3U.get(id)
+        tv_dict_normal.clear()
+        tv_dict_normal[id] = url
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        return response
+
+    return redirect(url)
 
 ##############################################################bilibili############################################
 async def pingM3u(session, value, real_dict, key, mintimeout, maxTimeout):
@@ -659,6 +689,7 @@ def clock_thread():
             chaoronghe27()
             chaoronghe28()
             chaoronghe29()
+            chaoronghe31()
             update_clock('spM3uClock')
         # 通常直播源下载定时器
         if isOpenFunction('switch25') and is_update_clock('normalM3uClock'):
@@ -816,6 +847,7 @@ def check_file(m3u_dict):
         path7 = f"{secret_path}TWITCH.m3u"
         path8 = f"{secret_path}Douyin.m3u"
         path9 = f"{secret_path}alist.m3u"
+        path10 = f"{secret_path}normal.m3u"
         source = ''
         if os.path.exists(path3):
             source += copyAndRename(path3).decode()
@@ -837,6 +869,9 @@ def check_file(m3u_dict):
         if os.path.exists(path9):
             source += '\n'
             source += copyAndRename(path9).decode()
+        if os.path.exists(path10):
+            source += '\n'
+            source += copyAndRename(path10).decode()
         with open(path, 'wb') as fdst:
             fdst.write(source.encode('utf-8'))
         path2 = f"{secret_path}{getFileNameByTagName('healthM3u')}.m3u"
@@ -858,6 +893,8 @@ def check_file(m3u_dict):
                 source2 += copyAndRename(path8).decode()
             if os.path.exists(path9):
                 source2 += copyAndRename(path9).decode()
+            if os.path.exists(path10):
+                source2 += copyAndRename(path10).decode()
             with open(path2, 'wb') as fdst:
                 fdst.write(source2.encode('utf-8'))
             # 异步缓慢检测出有效链接
@@ -2800,7 +2837,8 @@ CACHE_KEY_TO_GLOBAL_VAR = {
     REDIS_KEY_YY: 'redisKeyYY',
     REDIS_KEY_TWITCH: 'redisKeyTWITCH',
     REDIS_KEY_DOUYIN: 'redisKeyDOUYIN',
-    REDIS_KEY_ALIST: 'redisKeyAlist'
+    REDIS_KEY_ALIST: 'redisKeyAlist',
+    REDIS_KEY_NORMAL: 'redisKeyNormal'
 }
 
 
@@ -3687,6 +3725,19 @@ def initReloadCacheForNormal():
                     redisKeyTWITCHM3u.update(dict3)
             except Exception as e:
                 pass
+        elif redisKey in REDIS_KEY_NORMAL:
+            try:
+                global redisKeyNormal
+                global redisKeyNormalM3U
+                redisKeyNormal.clear()
+                dict = redis_get_map(REDIS_KEY_NORMAL)
+                if dict:
+                    redisKeyNormal.update(dict)
+                dict3 = redis_get_map(REDIS_KEY_NORMAL_M3U)
+                if dict3:
+                    redisKeyNormalM3U.update(dict3)
+            except Exception as e:
+                pass
 
 
 def initReloadCacheForSpecial():
@@ -4093,7 +4144,7 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'proxySubscriberClock': '3600', 'spM3uClock': '3700', 'autoDnsSwitchClock': '600',
                           'syncClock': '10', 'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国',
                           'foreignTopDomain':
-                              'xyz,club,online,site,top,win','dnsMode':'0'}
+                              'xyz,club,online,site,top,win', 'dnsMode': '0'}
 
 
 def init_file_name():
@@ -4441,6 +4492,15 @@ def deletewm3u28():
     return dellist(request, REDIS_KEY_TWITCH)
 
 
+# 删除NORMAL直播源
+@app.route('/api/deletewm3u31', methods=['POST'])
+@requires_auth
+def deletewm3u31():
+    deleteurl = request.json.get('deleteurl')
+    del redisKeyNormal[deleteurl]
+    return dellist(request, REDIS_KEY_NORMAL)
+
+
 # 添加DNS简易黑名单
 @app.route('/api/addnewm3u13', methods=['POST'])
 @requires_auth
@@ -4516,6 +4576,14 @@ def getall30():
 def getall28():
     global redisKeyTWITCH
     return returnDictCache(REDIS_KEY_TWITCH, redisKeyTWITCH)
+
+
+# 拉取全部normal
+@app.route('/api/getall31', methods=['GET'])
+@requires_auth
+def getall31():
+    global redisKeyNormal
+    return returnDictCache(REDIS_KEY_NORMAL, redisKeyNormal)
 
 
 def returnDictCache(redisKey, cacheDict):
@@ -4767,6 +4835,17 @@ def addnewm3u28():
     global redisKeyTWITCH
     redisKeyTWITCH[addurl] = name
     return addlist(request, REDIS_KEY_TWITCH)
+
+
+# 添加normal直播源
+@app.route('/api/addnewm3u31', methods=['POST'])
+@requires_auth
+def addnewm3u31():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    global redisKeyNormal
+    redisKeyNormal[addurl] = name
+    return addlist(request, REDIS_KEY_NORMAL)
 
 
 # 添加M3U白名单分组优先级
@@ -5505,6 +5584,20 @@ async def download_files8_single(ids, mintimeout, maxTimeout):
     return m3u_dict
 
 
+async def download_files_normal_single(ids, mintimeout, maxTimeout):
+    m3u_dict = {}
+    try:
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for id in ids:
+                task = asyncio.ensure_future(grab_normal_chongqin(session, id, m3u_dict, mintimeout, maxTimeout))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        print(f"normal Failed to fetch files. Error: {e}")
+    return m3u_dict
+
+
 async def download_files7():
     global redisKeyYY
     ids = redisKeyYY.keys()
@@ -5529,6 +5622,15 @@ async def download_files8():
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
     m3u_dict = await download_files8_single(ids, mintimeout, maxTimeout)
+    return m3u_dict
+
+
+async def download_files_normal():
+    global redisKeyNormal
+    ids = redisKeyNormal.keys()
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
+    m3u_dict = await download_files_normal_single(ids, mintimeout, maxTimeout)
     return m3u_dict
 
 
@@ -5799,6 +5901,39 @@ async def grab5(session, rid, m3u_dict, mintimeout, maxTimeout):
         else:
             m3u_dict[rid] = url
 
+    except Exception as e:
+        print(f"twitch An error occurred while processing {rid}. Error: {e}")
+
+
+async def grab_normal_chongqin(session, rid, m3u_dict, mintimeout, maxTimeout):
+    try:
+        cityId = '5A'
+        playId = rid
+        relativeId = playId
+        type = '1'
+        appId = "kdds-chongqingdemo"
+        url = 'http://portal.centre.bo.cbnbn.cn/others/common/playUrlNoAuth?cityId=5A&playId=' + playId + '&relativeId=' + relativeId + '&type=1'
+        timestamps = round(time.time() * 1000)
+        sign = hashlib.md5(
+            f"aIErXY1rYjSpjQs7pq2Gp5P8k2W7P^Y@appId{appId}cityId{cityId}playId{playId}relativeId{relativeId}timestamps{timestamps}type{type}".encode(
+                'utf-8')).hexdigest()
+        headers = {
+            "appId": appId,
+            "sign": sign,
+            "timestamps": str(timestamps),
+            "Content-Type": "application/json;charset=utf-8"
+        }
+        try:
+            async with session.get(url, headers=headers,timeout=mintimeout) as response:
+                data = await response.json()
+                codes = data['data']['result']['protocol'][0]['transcode'][0]['url']
+        except asyncio.TimeoutError:
+            async with session.get(url, headers=headers,timeout=maxTimeout) as response:
+                data = await response.json()
+                codes = data['data']['result']['protocol'][0]['transcode'][0]['url']
+        if codes is None:
+            return
+        m3u_dict[rid] = codes
     except Exception as e:
         print(f"twitch An error occurred while processing {rid}. Error: {e}")
 
@@ -6359,7 +6494,7 @@ def chaoronghe30():
             pass
         safe_del_alist_m3u8()
         ip = init_IP()
-        #fakeurl = f"http://127.0.0.1:5000/alist/"
+        # fakeurl = f"http://127.0.0.1:5000/alist/"
         fakeurl = f"http://{ip}:{port_live}/alist/"
         pathxxx = f"{secret_path}alist.m3u"
         thread2 = threading.Thread(target=check_alist_file,
@@ -6743,11 +6878,14 @@ async def get_alist_uuid_file_data(secret_uuid_m3u8_file_url, password, uuid_nam
         return filename, groupname
     return None
 
+
 headers_default = {'Content-Type': 'application/vnd.apple.mpegurl',
                    'Expect': '100-continue',
                    'Connection': 'Keep-Alive',
                    'Cache-Control': 'no-cache'
                    }
+
+
 # headers_default = {'Content-Type': 'application/vnd.apple.mpegurl'
 #                    }
 
@@ -6816,6 +6954,47 @@ def chaoronghe28():
         distribute_data(redisKeyTWITCHM3uFake, f"{secret_path}TWITCH.m3u", 10)
         redis_add_map(REDIS_KEY_TWITCH_M3U, redisKeyTWITCHM3u)
         fuck_m3u_to_txt(f"{secret_path}TWITCH.m3u", f"{secret_path}TWITCH.txt")
+        return "result"
+    except Exception as e:
+        return "empty"
+
+
+# 生成全部normal直播源
+@app.route('/api/chaoronghe31', methods=['GET'])
+@requires_auth
+def chaoronghe_normal():
+    return chaoronghe31()
+
+
+def chaoronghe31():
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        # 有效直播源,名字/id
+        m3u_dict = loop.run_until_complete(download_files_normal())
+        length = len(m3u_dict)
+        if length == 0:
+            return "empty"
+        ip = init_IP()
+        global redisKeyNormalM3U
+        global redisKeyNormal
+        redisKeyM3uFake = {}
+        redisKeyNormalM3U.clear()
+        redis_del_map(REDIS_KEY_NORMAL_M3U)
+        #fakeurl = f"http://127.0.0.1:5000/normal/"
+        fakeurl = f"http://{ip}:{port_live}/normal/"
+        for id, url in m3u_dict.items():
+            try:
+                redisKeyNormalM3U[id] = url
+                name = redisKeyNormal[id]
+                link = f'#EXTINF:-1 group-title="国内"  tvg-name="{name}",{name}\n'
+                redisKeyM3uFake[f'{fakeurl}{id}.m3u8'] = link
+            except:
+                pass
+        # 同步方法写出全部配置
+        distribute_data(redisKeyM3uFake, f"{secret_path}normal.m3u", 10)
+        redis_add_map(REDIS_KEY_NORMAL_M3U, redisKeyNormalM3U)
+        fuck_m3u_to_txt(f"{secret_path}normal.m3u", f"{secret_path}normal.txt")
         return "result"
     except Exception as e:
         return "empty"
@@ -7188,6 +7367,17 @@ def removem3ulinks28():
     redis_del_map(REDIS_KEY_TWITCH)
     redisKeyTWITCHM3u.clear()
     redis_del_map(REDIS_KEY_TWITCH_M3U)
+    return "success"
+
+
+# 删除全部normal直播源
+@app.route('/api/removem3ulinks31', methods=['GET'])
+@requires_auth
+def removem3ulinks31():
+    redisKeyNormal.clear()
+    redis_del_map(REDIS_KEY_NORMAL)
+    redisKeyNormalM3U.clear()
+    redis_del_map(REDIS_KEY_NORMAL_M3U)
     return "success"
 
 

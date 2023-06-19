@@ -1,6 +1,8 @@
-futures = []
-                    futures.append(future)
-                for future in concurrent.futures.as_completed(futures):
-                    result = future.result()
-                    if result is not None:
-                        return True
+# normal直播源
+REDIS_KEY_NORMAL = 'redisKeyNormal'
+# normal直播源地址，频道名字
+redisKeyNormal = {}
+# normal真实m3u8地址
+REDIS_KEY_NORMAL_M3U = 'redisKeyNormalM3U'
+# normal频道名字,真实m3u8地址
+redisKeyNormalM3U = {}

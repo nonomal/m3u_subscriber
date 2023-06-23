@@ -5599,7 +5599,7 @@ async def download_files_normal_single(ids, mintimeout, maxTimeout):
     setv_ids = []
     qiumihui_ids = []
     ipanda_ids = {}
-    longzhu_ids=[]
+    longzhu_ids = []
     for key in ids:
         id_arr = key.split(',')
         if id_arr[0] == 'cq':
@@ -6109,9 +6109,9 @@ async def grab_normal_cetv(session, rid, m3u_dict, mintimeout, maxTimeout, sourc
 
 
 async def grab_normal_ipanda(session, rid, m3u_dict, mintimeout, maxTimeout, source_type, value):
-    url = f'https://vdn.live.cntv.cn/api2/liveHtml5.do?channel={rid}&channel_id={value}&video_player=1&im=0&client=flash&tsp=1687495941&vn=1537&vc=1&uid=5A9A2532F878A0DB8EFE2BC8B2B191FC&wlan='
+    url = f'https://vdn.live.cntv.cn/api2/liveHtml5.do?channel=pc://{rid}&channel_id={value}&video_player=1&im=0&client=flash&tsp=1687495941&vn=1537&vc=1&uid=5A9A2532F878A0DB8EFE2BC8B2B191FC&wlan='
     try:
-        async with session.get(url, timeout=mintimeout) as response:
+        async with session.get(url, headers=bili_header, timeout=mintimeout) as response:
             data = await response.read()
             # 将bytes转换成字符串并去掉前缀和后缀
             html5VideoDataStr = data.decode('utf-8').replace("var html5VideoData = '", '').replace(
@@ -6127,7 +6127,7 @@ async def grab_normal_ipanda(session, rid, m3u_dict, mintimeout, maxTimeout, sou
                         m3u_dict[f'{source_type},{rid},{value}'] = url
                         break
     except asyncio.TimeoutError:
-        async with session.get(url, timeout=maxTimeout) as response:
+        async with session.get(url, headers=bili_header, timeout=maxTimeout) as response:
             data = await response.read()
             # 将bytes转换成字符串并去掉前缀和后缀
             html5VideoDataStr = data.decode('utf-8').replace("var html5VideoData = '", '').replace(
@@ -6165,19 +6165,20 @@ async def grab_normal_setv(session, rid, m3u_dict, mintimeout, maxTimeout, sourc
 async def grab_normal_qiumihui(session, rid, m3u_dict, mintimeout, maxTimeout, source_type):
     m3u8_url = f'https://aapi.qmh01.com/api/room/detail?roomId={rid}&channelId=3&platform=1'
     try:
-        async with session.get(m3u8_url, timeout=mintimeout) as response:
+        async with session.get(m3u8_url,headers=bili_header, timeout=mintimeout) as response:
             data = await response.read()
             m3u8 = json.loads(data.decode('utf-8'))['data']['pushUrl']
             m3u_dict[f'{source_type},{rid}'] = m3u8
     except asyncio.TimeoutError:
-        async with session.get(m3u8_url, timeout=maxTimeout) as response:
+        async with session.get(m3u8_url,headers=bili_header, timeout=maxTimeout) as response:
             data = await response.read()
             m3u8 = json.loads(data.decode('utf-8'))['data']['pushUrl']
             m3u_dict[f'{source_type},{rid}'] = m3u8
     except Exception as e:
         print(f"qiumihui An error occurred while processing {rid}. Error: {e}")
 
-def update_longzhu(dict_url,m3u_dict,rid,source_type):
+
+def update_longzhu(dict_url, m3u_dict, rid, source_type):
     if dict_url:
         if 'ud' in dict_url.keys():
             data_dict = dict_url['hd']
@@ -6207,10 +6208,11 @@ def update_longzhu(dict_url,m3u_dict,rid,source_type):
             if url is not None and url != '':
                 m3u_dict[f'{source_type},{rid}'] = url
 
+
 async def grab_normal_longzhu(session, rid, m3u_dict, mintimeout, maxTimeout, source_type):
     m3u8_url = f'https://api.ansongqiubo.com/v2/common/room/info?uid={rid}&versionCode=111&virtualId=_'
     try:
-        async with session.get(m3u8_url, timeout=mintimeout) as response:
+        async with session.get(m3u8_url, headers=bili_header, timeout=mintimeout) as response:
             data = await response.read()
             try:
                 dict_url = json.loads(data.decode('utf-8'))['data']['source'][0]
@@ -6218,7 +6220,7 @@ async def grab_normal_longzhu(session, rid, m3u_dict, mintimeout, maxTimeout, so
             except Exception as e:
                 pass
     except asyncio.TimeoutError:
-        async with session.get(m3u8_url, timeout=maxTimeout) as response:
+        async with session.get(m3u8_url, headers=bili_header, timeout=maxTimeout) as response:
             data = await response.read()
             try:
                 dict_url = json.loads(data.decode('utf-8'))['data']['source'][0]
@@ -6227,6 +6229,7 @@ async def grab_normal_longzhu(session, rid, m3u_dict, mintimeout, maxTimeout, so
                 pass
     except Exception as e:
         print(f"longzhu An error occurred while processing {rid}. Error: {e}")
+
 
 async def grab_normal_aomen(session, rid, m3u_dict, mintimeout, maxTimeout, source_type):
     m3u8_url = "http://live-hls.macaulotustv.com/lotustv/macaulotustv.m3u8"

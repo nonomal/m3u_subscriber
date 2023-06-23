@@ -694,7 +694,6 @@ def hungry_check_in_multi_method(domain_name_str):
     executor = None
     try:
         with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
-            for i in range(2):
                 # 为各个任务分配ThreadPoolExecutor
                 futures = [executor.submit(check_by_choice, domain_name_str, i) for i in range(12)]
                 # 使用wait等待第一个非None结果

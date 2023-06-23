@@ -2850,7 +2850,7 @@ CACHE_KEY_TO_GLOBAL_VAR = {
 def importToReloadCache(cachekey, dict):
     if cachekey in CACHE_KEY_TO_GLOBAL_VAR:
         global_var = globals()[CACHE_KEY_TO_GLOBAL_VAR[cachekey]]
-        #global_var.clear()
+        # global_var.clear()
         global_var.update(dict)
 
     # Define mapping between cache keys and global variables
@@ -5595,6 +5595,11 @@ async def download_files_normal_single(ids, mintimeout, maxTimeout):
     migu_ids = {}
     aomen_ids = []
     guizhou_ids = {}
+    cetv_ids = {}
+    setv_ids = []
+    qiumihui_ids = []
+    ipanda_ids = {}
+    longzhu_ids=[]
     for key in ids:
         id_arr = key.split(',')
         if id_arr[0] == 'cq':
@@ -5605,44 +5610,98 @@ async def download_files_normal_single(ids, mintimeout, maxTimeout):
             aomen_ids.append(id_arr[1])
         elif id_arr[0] == 'gzstv':
             guizhou_ids[id_arr[1]] = id_arr[2]
-    try:
-        async with aiohttp.ClientSession() as session:
+        elif id_arr[0] == 'cetv':
+            # tv序号,网站序号
+            cetv_ids[id_arr[1]] = id_arr[2]
+        elif id_arr[0] == 'setv':
+            setv_ids.append(id_arr[1])
+        elif id_arr[0] == 'qiumihui':
+            qiumihui_ids.append(id_arr[1])
+        elif id_arr[0] == 'ipanda':
+            # channel,channel_id
+            ipanda_ids[id_arr[1]] = id_arr[2]
+        elif id_arr[0] == 'longzhu':
+            longzhu_ids.append(id_arr[1])
+    async with aiohttp.ClientSession() as session:
+        try:
             tasks = []
             for id in chongqing_ids:
                 task = asyncio.ensure_future(grab_normal_chongqin(session, id, m3u_dict, mintimeout, maxTimeout, 'cq'))
                 tasks.append(task)
             await asyncio.gather(*tasks)
-    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-        print(f"normal Failed to fetch files. Error: {e}")
-    try:
-        async with aiohttp.ClientSession() as session:
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f"normal Failed to fetch files. Error: {e}")
+        try:
             tasks = []
             for id in migu_ids.keys():
                 task = asyncio.ensure_future(
                     grab_normal_migu(session, id, m3u_dict, mintimeout, maxTimeout, 'migu', migu_ids.get(id)))
                 tasks.append(task)
             await asyncio.gather(*tasks)
-    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-        print(f"migu Failed to fetch files. Error: {e}")
-    try:
-        async with aiohttp.ClientSession() as session:
-            tasks = []
-            for id in aomen_ids:
-                task = asyncio.ensure_future(grab_normal_aomen(session, id, m3u_dict, mintimeout, maxTimeout, 'aomen'))
-                tasks.append(task)
-            await asyncio.gather(*tasks)
-    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-        print(f"normal Failed to fetch files. Error: {e}")
-    try:
-        async with aiohttp.ClientSession() as session:
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f"migu Failed to fetch files. Error: {e}")
+        # try:
+        #     tasks = []
+        #     for id in aomen_ids:
+        #         task = asyncio.ensure_future(grab_normal_aomen(session, id, m3u_dict, mintimeout, maxTimeout, 'aomen'))
+        #         tasks.append(task)
+        #     await asyncio.gather(*tasks)
+        # except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        #     print(f"normal Failed to fetch files. Error: {e}")
+        try:
             tasks = []
             for id, value in guizhou_ids.items():
                 task = asyncio.ensure_future(
                     grab_normal_guizhou(session, id, m3u_dict, mintimeout, maxTimeout, 'gzstv', value))
                 tasks.append(task)
             await asyncio.gather(*tasks)
-    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-        print(f"guizhou Failed to fetch files. Error: {e}")
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f"guizhou Failed to fetch files. Error: {e}")
+        try:
+            tasks = []
+            for id, value in cetv_ids.items():
+                task = asyncio.ensure_future(
+                    grab_normal_cetv(session, id, m3u_dict, mintimeout, maxTimeout, 'cetv', value))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f"cetv Failed to fetch files. Error: {e}")
+        try:
+            tasks = []
+            for id in setv_ids:
+                task = asyncio.ensure_future(
+                    grab_normal_setv(session, id, m3u_dict, mintimeout, maxTimeout, 'setv'))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f"setv Failed to fetch files. Error: {e}")
+        try:
+            tasks = []
+            for id in qiumihui_ids:
+                task = asyncio.ensure_future(
+                    grab_normal_qiumihui(session, id, m3u_dict, mintimeout, maxTimeout, 'qiumihui'))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f"qiumihui Failed to fetch files. Error: {e}")
+        try:
+            tasks = []
+            for id, value in ipanda_ids.items():
+                task = asyncio.ensure_future(
+                    grab_normal_ipanda(session, id, m3u_dict, mintimeout, maxTimeout, 'ipanda', value))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f"cetv Failed to fetch files. Error: {e}")
+        try:
+            tasks = []
+            for id in longzhu_ids:
+                task = asyncio.ensure_future(
+                    grab_normal_longzhu(session, id, m3u_dict, mintimeout, maxTimeout, 'longzhu'))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f"longzhu Failed to fetch files. Error: {e}")
     return m3u_dict
 
 
@@ -6026,6 +6085,148 @@ async def grab_normal_guizhou(session, rid, m3u_dict, mintimeout, maxTimeout, so
     except Exception as e:
         print(f"guizhou An error occurred while processing {rid}. Error: {e}")
 
+
+async def grab_normal_cetv(session, rid, m3u_dict, mintimeout, maxTimeout, source_type, value):
+    url = f'http://app.cetv.cn/video/player/stream?stream_id={rid}&site_id={value}'
+    try:
+        async with session.get(url, timeout=mintimeout) as response:
+            data = await response.read()
+            m3u8 = json.loads(data.decode('utf-8'))['play_url']
+            if m3u8 == '':
+                m3u8 = json.loads(data.decode('utf-8'))['stream']
+            if m3u8 != '':
+                m3u_dict[f'{source_type},{rid},{value}'] = m3u8
+    except asyncio.TimeoutError:
+        async with session.get(url, timeout=maxTimeout) as response:
+            data = await response.read()
+            m3u8 = json.loads(data.decode('utf-8'))['play_url']
+            if m3u8 == '':
+                m3u8 = json.loads(data.decode('utf-8'))['stream']
+            if m3u8 != '':
+                m3u_dict[f'{source_type},{rid},{value}'] = m3u8
+    except Exception as e:
+        print(f"cetv An error occurred while processing {rid}. Error: {e}")
+
+
+async def grab_normal_ipanda(session, rid, m3u_dict, mintimeout, maxTimeout, source_type, value):
+    url = f'https://vdn.live.cntv.cn/api2/liveHtml5.do?channel={rid}&channel_id={value}&video_player=1&im=0&client=flash&tsp=1687495941&vn=1537&vc=1&uid=5A9A2532F878A0DB8EFE2BC8B2B191FC&wlan='
+    try:
+        async with session.get(url, timeout=mintimeout) as response:
+            data = await response.read()
+            # 将bytes转换成字符串并去掉前缀和后缀
+            html5VideoDataStr = data.decode('utf-8').replace("var html5VideoData = '", '').replace(
+                "';getHtml5VideoData(html5VideoData);", '')
+            # 将字符串转换成字典
+            dict = json.loads(html5VideoDataStr)['hls_url']
+            if dict:
+                for key, url in dict.items():
+                    if '.m3u8' in url:
+                        m3u_dict[f'{source_type},{rid},{value}'] = url
+                        break
+                    elif '.fly' in url:
+                        m3u_dict[f'{source_type},{rid},{value}'] = url
+                        break
+    except asyncio.TimeoutError:
+        async with session.get(url, timeout=maxTimeout) as response:
+            data = await response.read()
+            # 将bytes转换成字符串并去掉前缀和后缀
+            html5VideoDataStr = data.decode('utf-8').replace("var html5VideoData = '", '').replace(
+                "';getHtml5VideoData(html5VideoData);", '')
+            # 将字符串转换成字典
+            dict = json.loads(html5VideoDataStr)['hls_url']
+            if dict:
+                for key, url in dict.items():
+                    if '.m3u8' in url:
+                        m3u_dict[f'{source_type},{rid},{value}'] = url
+                        break
+                    elif '.fly' in url:
+                        m3u_dict[f'{source_type},{rid},{value}'] = url
+                        break
+    except Exception as e:
+        print(f"cetv An error occurred while processing {rid}. Error: {e}")
+
+
+async def grab_normal_setv(session, rid, m3u_dict, mintimeout, maxTimeout, source_type):
+    m3u8_url = f'http://www.setv.fjtv.net/m2o/channel/channel_info.php?channel_id={rid}'
+    try:
+        async with session.get(m3u8_url, timeout=mintimeout) as response:
+            data = await response.read()
+            m3u8 = json.loads(data.decode('utf-8'))[0]['channel_stream'][0]['url']
+            m3u_dict[f'{source_type},{rid}'] = m3u8
+    except asyncio.TimeoutError:
+        async with session.get(m3u8_url, timeout=maxTimeout) as response:
+            data = await response.read()
+            m3u8 = json.loads(data.decode('utf-8'))[0]['channel_stream'][0]['url']
+            m3u_dict[f'{source_type},{rid}'] = m3u8
+    except Exception as e:
+        print(f"setv An error occurred while processing {rid}. Error: {e}")
+
+
+async def grab_normal_qiumihui(session, rid, m3u_dict, mintimeout, maxTimeout, source_type):
+    m3u8_url = f'https://aapi.qmh01.com/api/room/detail?roomId={rid}&channelId=3&platform=1'
+    try:
+        async with session.get(m3u8_url, timeout=mintimeout) as response:
+            data = await response.read()
+            m3u8 = json.loads(data.decode('utf-8'))['data']['pushUrl']
+            m3u_dict[f'{source_type},{rid}'] = m3u8
+    except asyncio.TimeoutError:
+        async with session.get(m3u8_url, timeout=maxTimeout) as response:
+            data = await response.read()
+            m3u8 = json.loads(data.decode('utf-8'))['data']['pushUrl']
+            m3u_dict[f'{source_type},{rid}'] = m3u8
+    except Exception as e:
+        print(f"qiumihui An error occurred while processing {rid}. Error: {e}")
+
+def update_longzhu(dict_url,m3u_dict,rid,source_type):
+    if dict_url:
+        if 'ud' in dict_url.keys():
+            data_dict = dict_url['hd']
+            url = data_dict['m3u8']
+            if url is None or url == '':
+                url = data_dict['fly']
+            if url is None or url == '':
+                data_dict = dict_url['sd']
+                url = data_dict['m3u8']
+            if url is None or url == '':
+                url = data_dict['fly']
+            if url is None or url == '':
+                data_dict = dict_url['ld']
+                url = data_dict['m3u8']
+            if url is None or url == '':
+                url = data_dict['fly']
+            if url is None or url == '':
+                data_dict = dict_url['ud']
+                url = data_dict['m3u8']
+            if url is None or url == '':
+                url = data_dict['fly']
+            if url is None or url == '':
+                data_dict = dict_url['playStreamInfo']
+                url = data_dict['m3u8']
+            if url is None or url == '':
+                url = data_dict['fly']
+            if url is not None and url != '':
+                m3u_dict[f'{source_type},{rid}'] = url
+
+async def grab_normal_longzhu(session, rid, m3u_dict, mintimeout, maxTimeout, source_type):
+    m3u8_url = f'https://api.ansongqiubo.com/v2/common/room/info?uid={rid}&versionCode=111&virtualId=_'
+    try:
+        async with session.get(m3u8_url, timeout=mintimeout) as response:
+            data = await response.read()
+            try:
+                dict_url = json.loads(data.decode('utf-8'))['data']['source'][0]
+                update_longzhu(dict_url, m3u_dict, rid, source_type)
+            except Exception as e:
+                pass
+    except asyncio.TimeoutError:
+        async with session.get(m3u8_url, timeout=maxTimeout) as response:
+            data = await response.read()
+            try:
+                dict_url = json.loads(data.decode('utf-8'))['data']['source'][0]
+                update_longzhu(dict_url, m3u_dict, rid, source_type)
+            except Exception as e:
+                pass
+    except Exception as e:
+        print(f"longzhu An error occurred while processing {rid}. Error: {e}")
 
 async def grab_normal_aomen(session, rid, m3u_dict, mintimeout, maxTimeout, source_type):
     m3u8_url = "http://live-hls.macaulotustv.com/lotustv/macaulotustv.m3u8"
@@ -7147,11 +7348,6 @@ def chaoronghe31():
                     name, logo = name.split(',')
                 except Exception as e:
                     logo = None
-                if not id.startswith('cq,') and not id.startswith('migu,'):
-                    if logo is None:
-                        link = f'#EXTINF:-1 group-title="国内"  tvg-name="{name}",{name}\n'
-                    else:
-                        link = f'#EXTINF:-1 group-title="国内" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 if id.startswith('cq,'):
                     if logo is None:
                         link = f'#EXTINF:-1 group-title="重庆源"  tvg-name="{name}",{name}\n'
@@ -7167,6 +7363,26 @@ def chaoronghe31():
                         link = f'#EXTINF:-1 group-title="贵州源"  tvg-name="{name}",{name}\n'
                     else:
                         link = f'#EXTINF:-1 group-title="贵州源" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                elif id.startswith('qiumihui,'):
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="球迷汇体育"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="球迷汇体育" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                elif id.startswith('ipanda,'):
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="iPanda熊猫频道"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="iPanda熊猫频道" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                elif id.startswith('longzhu,'):
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="龙珠直播"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="龙珠直播" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                else:
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="国内"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="国内" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 redisKeyM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except Exception as e:
                 pass

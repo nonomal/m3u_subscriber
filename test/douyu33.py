@@ -1,189 +1,123 @@
-#  -*- coding: utf-8 -*-
-# @Time:2022/10/13   18:34
-# @Author: Lanser
-# @File:douyu.py
-# Software:PyCharm
-
-# 获取斗鱼直播间的真实流媒体地址，默认最高画质
-# 使用 https://github.com/wbt5/real-url/issues/185 中两位大佬@wjxgzz @4bbu6j5885o3gpv6ss8找到的的CDN，在此感谢！
 import hashlib
 import json
 import re
 import time
-import sys
-from multiprocessing.pool import ThreadPool
-import execjs
 import requests
+import js2py
 
-def requests_get_code(real_dict):
-    for real_ in real_dict:
-        try:
-            code = requests.get(real_dict[real_], stream=True, timeout=1).status_code
-            if code == 200:
-                return real_dict
-        except:
-            pass
 
-class DouYu:
-    """
-    可用来替换返回链接中的主机部分
-    两个阿里的CDN：
-    dyscdnali1.douyucdn.cn
-    dyscdnali3.douyucdn.cn
-    墙外不用带尾巴的akm cdn：
-    hls3-akm.douyucdn.cn
-    hlsa-akm.douyucdn.cn
-    hls1a-akm.douyucdn.cn
-    """
-
-    def __init__(self, rid):
-        self.rate_list = []
-        """
-        房间号通常为1~8位纯数字，浏览器地址栏中看到的房间号不一定是真实rid.
-        Args:
-            rid:
-        """
-        self.did = '10000000000000000000000000001501'
-        self.t10 = str(int(time.time()))
-        self.t13 = str(int((time.time() * 1000)))
+class Douyu:
+    def __init__(self, rid, stream_type, cdn_type):
         self.rid = rid
-        self.s = requests.Session()
+        self.stream_type = stream_type
+        self.cdn_type = cdn_type
 
+    def md5V3(self, s):
+        m = hashlib.md5()
+        m.update(s.encode('utf-8'))
+        return m.hexdigest()
 
-    @staticmethod
-    def md5(data):
-        return hashlib.md5(data.encode('utf-8')).hexdigest()
-
-    def get_pre(self):
-        url = 'https://playweb.douyucdn.cn/lapi/live/hlsH5Preview/' + self.rid
-        data = {
-            'rid': self.rid,
-            'did': self.did
-        }
-        auth = DouYu.md5(self.rid + self.t13)
+    def get_did(self):
+        client = requests.session()
+        timestamp = str(int(time.time() * 1000))
+        url = f"https://passport.douyu.com/lapi/did/api/get?client_id=25&_=\
+               {timestamp}&callback=axiosJsonpCallback1"
         headers = {
-            'rid': self.rid,
-            'time': self.t13,
-            'auth': auth
+            "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_3 like Mac OS X) \
+                            AppleWebKit/605.1.15 (KHTML, like Gecko) \
+                            Version/16.3 Mobile/15E148 Safari/604.1",
+            "referer": "https://m.douyu.com/",
         }
-        res = self.s.post(url, headers=headers, data=data, timeout=2).json()
-        error = res['error']
-        data = res['data']
-        try:
-            for i in res['data']['settings']:
-                self.rate_list.append(i)
-        except:
-            pass
-        key = ''
-        if data:
-            rtmp_live = data['rtmp_live']
-            key = re.search(
-                r'(\d{1,8}[0-9a-zA-Z]+)_?\d{0,4}(/playlist|.m3u8)', rtmp_live).group(1)
-        return error, key
-
-    def get_js(self):
-        result = re.search(
-            r'(function ub98484234.*)\s(var.*)', self.res).group()
-        func_ub9 = re.sub(r'eval.*;}', 'strc;}', result)
-        js = execjs.compile(func_ub9)
-        res = js.call('ub98484234')
-
-        v = re.search(r'v=(\d+)', res).group(1)
-        rb = DouYu.md5(self.rid + self.did + self.t10 + v)
-
-        func_sign = re.sub(r'return rt;}\);?', 'return rt;}', res)
-        func_sign = func_sign.replace('(function (', 'function sign(')
-        func_sign = func_sign.replace(
-            'CryptoJS.MD5(cb).toString()', '"' + rb + '"')
-
-        js = execjs.compile(func_sign)
-        params = js.call('sign', self.rid, self.did, self.t10)
-        params += '&ver=219032101&rid={}&rate=-1'.format(self.rid)
-
-        url = 'https://m.douyu.com/api/room/ratestream'
-        res = self.s.post(url, params=params, timeout=2).text
-        json_ = json.loads(res)
-        try:
-            for i in json_['data']['settings']:
-                self.rate_list.append(i)
-        except:
-            pass
-        key = re.search(
-            r'(\d{1,8}[0-9a-zA-Z]+)_?\d{0,4}(.m3u8|/playlist)', res).group(1)
-        return key
+        resp = client.get(url, headers=headers)
+        resp.encoding = 'utf-8'
+        body = resp.text
+        match = re.findall(r'axiosJsonpCallback1\((.*)\)', body)
+        result = json.loads(match[0])
+        return result["data"]["did"]
 
     def get_real_url(self):
-        self.res = self.s.get('https://m.douyu.com/' + str(self.rid)).text
-        result = re.search(r'rid":(\d{1,8}),"vipId', self.res)
-        try:
-            name = re.findall('"nickname":"(.*?)"', self.res)[0]
-        except:
-            name = self.rid
-        if result:
-            self.rid = result.group(1)
+        did = self.get_did()
+        timestamp = int(time.time())
+        liveurl = f"https://m.douyu.com/{self.rid}"
+        client = requests.session()
+        headers = {
+            "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_3 like Mac OS X) \
+                            AppleWebKit/605.1.15 (KHTML, like Gecko) \
+                            Version/16.3 Mobile/15E148 Safari/604.1",
+            "upgrade-insecure-requests": "1",
+        }
+        resp = client.get(liveurl, headers=headers)
+        resp.encoding = 'utf-8'
+        body = resp.text
+        roomidreg = re.findall(r'(?i)rid":(\d{1,8}),"vipId', body)
+        if not roomidreg:
+            return None
+        realroomid = roomidreg[0]
+        reg = re.findall(r'(?i)(function ub98484234.*)\s(var.*)', body)
+        nreg = re.compile(r'(?i)eval.*;}')
+        strfn = nreg.sub("strc;}", reg[0][0])
+        vm = js2py.EvalJs()
+        input_arr_str = reg[0][1]
+        name = input_arr_str.split('=')[0].split('var ')[1]
+        # 创建 EvalJs 对象并执行 JavaScript 代码
+        vm3 = js2py.EvalJs()
+        vm3.execute(input_arr_str)
+        # 获取数组对象
+        js_array = vm3.eval(name)
+        setattr(vm, name, js_array)
+        vm.execute(strfn)
+        jsfn = vm.eval('ub98484234')
+        # 调用 ub98484234 函数并传入参数
+        result = jsfn(realroomid, did, timestamp)
+        nres = str(result)
+        # nnreg = re.compile(r'(?i)v=(\d+)')
+        nnreg = re.compile(r'v=(\d+)')
+        nnres = nnreg.findall(nres)
+        unrb = f"{realroomid}{did}{timestamp}{nnres[0]}"
+        rb = self.md5V3(unrb)
+        nnnreg = re.compile(r'(?i)return rt;}\);?')
+        strfn2 = nnnreg.sub("return rt;}", nres)
+        strfn3 = strfn2.replace("(function (", "function sign(")
+        strfn4 = strfn3.replace('CryptoJS.MD5(cb).toString()', f'"{rb}"')
+        vm2 = js2py.EvalJs()
+        vm2.execute(strfn4)
+        jsfn2 = vm2.eval('sign')
+        param = jsfn2(realroomid, did, timestamp)
+        realparam = f"{param}&ver=22107261&rid={realroomid}&rate=-1"
+        headers = {
+            "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_3 like Mac OS X) \
+                            AppleWebKit/605.1.15 (KHTML, like Gecko) \
+                            Version/16.3 Mobile/15E148 Safari/604.1",
+        }
+        r1 = client.post("https://m.douyu.com/api/room/ratestream", headers=headers, data=realparam)
+        body1 = r1.content
+        s1 = json.loads(body1)
+        hls_url = ""
+        for k, v in s1.items():
+            if k == "code":
+                if s1[k] != 0:
+                    return None
+            if isinstance(v, dict):
+                for k1, v1 in v.items():
+                    if k1 == "url":
+                        hls_url = v1
+        n4reg = re.compile(r'(?i)(\d{1,8}[0-9a-zA-Z]+)_?\d{0,4}(.m3u8|/playlist)')
+        houzhui = n4reg.findall(hls_url)[0]
+        flv_url = f"http://{self.cdn_type}.douyucdn2.cn/dyliveflv1/{houzhui[0]}.flv?uuid="
+        xs_url = f"http://{self.cdn_type}.douyucdn2.cn/dyliveflv1/{houzhui[0]}.xs?uuid="
+        if self.stream_type == "hls":
+            real_url = hls_url
+        elif self.stream_type == "flv":
+            real_url = flv_url
+        elif self.stream_type == "xs":
+            real_url = xs_url
         else:
-            return {}
-        error, key = self.get_pre()
-        if error == 0:
-            pass
-        elif error == 102:
-            return False
-        elif error == 104:
-            return False
-        else:
-            key = self.get_js()
+            return None
+        return real_url
 
-        real_lists = []
-        real_list = []
-        thread_list = []
-        real_dict = {}
-        if not self.rate_list:
-            self.rate_list = [{'name': '蓝光', 'rate': 0, 'high_bit': 1}, {'name': '超清', 'rate': 3, 'high_bit': 0},
-                              {'name': '高清', 'rate': 2, 'high_bit': 0}]
-        for rate in self.rate_list:
-            if rate['rate'] != 0:
-                flv = {"{}_flv".format(rate['name']): "http://hdltctwk.douyucdn2.cn/live/{}_{}.flv?uuid=".format(key, rate[
-                    'rate'] * 1000)}
-                m3u8 = {"{}_m3u8".format(rate['name']): "http://hdltctwk.douyucdn2.cn/live/{}_{}.m3u8?uuid=".format(key, rate[
-                    'rate'] * 1000)}
-                x_p2p = {"{}_x_p2p".format(rate['name']): "http://hdltctwk.douyucdn2.cn/live/{}_{}.xs?uuid=".format(key,
-                                                                                                                 rate[
-                                                                                                                     'rate'] * 1000)}
-                aliyun = {
-                    "{}_aliyun".format(rate['name']): "http://dyscdnali1.douyucdn.cn/live/{}_{}.flv?uuid=".format(key,
-                                                                                                                  rate[
-                                                                                                                      'rate'] * 1000)}
-                real_lists.append(flv)
-                real_lists.append(m3u8)
-                real_lists.append(x_p2p)
-                real_lists.append(aliyun)
-            else:
-                flv = {"{}_flv".format(rate['name']): "http://hdltctwk.douyucdn2.cn/live/{}.flv?uuid=".format(key)}
-                m3u8 = {"{}_m3u8".format(rate['name']): "http://hdltctwk.douyucdn2.cn/live/{}.m3u8?uuid=".format(key)}
-                x_p2p = {"{}_x_p2p".format(rate['name']): "http://hdltctwk.douyucdn2.cn/live/{}.xs?uuid=".format(key)}
-                aliyun = {
-                    "{}_aliyun".format(rate['name']): "http://dyscdnali1.douyucdn.cn/live/{}.flv?uuid=".format(key)}
-                real_lists.append(flv)
-                real_lists.append(m3u8)
-                real_lists.append(x_p2p)
-                real_lists.append(aliyun)
-        if real_lists:
-            pool = ThreadPool(processes=int(len(real_lists)))
-            for real_ in real_lists:
-                thread_list.append(pool.apply_async(requests_get_code, args=(real_,)))
-            for thread in thread_list:
-                return_dict = thread.get()
-                if return_dict:
-                    real_list.append(return_dict)
-            if real_list:
-                real_list.append({'name': name})
-                real_list.append({'rid': self.rid})
-                real_dict['douyu'] = real_list
-                return real_dict
-        return {}
 
 if __name__ == '__main__':
-    r = '206858'
+    r = '56666'
     # r = input('输入斗鱼直播间号：\n')
-    s = DouYu(r)
+    s = Douyu(r, 'flv', 'vplay1a')
     print(s.get_real_url())

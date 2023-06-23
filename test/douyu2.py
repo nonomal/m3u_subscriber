@@ -132,6 +132,6 @@ class DouYu:
         return real_url
 
 if __name__ == '__main__':
-    r = '6484910'
+    r = '9769563'
     s = DouYu(r)
     print(s.get_real_url())

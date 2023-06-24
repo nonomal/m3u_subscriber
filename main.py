@@ -5597,9 +5597,7 @@ async def download_files_normal_single(ids, mintimeout, maxTimeout):
     guizhou_ids = {}
     cetv_ids = {}
     setv_ids = []
-    qiumihui_ids = []
     ipanda_ids = {}
-    longzhu_ids = []
     for key in ids:
         id_arr = key.split(',')
         if id_arr[0] == 'cq':
@@ -5615,13 +5613,9 @@ async def download_files_normal_single(ids, mintimeout, maxTimeout):
             cetv_ids[id_arr[1]] = id_arr[2]
         elif id_arr[0] == 'setv':
             setv_ids.append(id_arr[1])
-        elif id_arr[0] == 'qiumihui':
-            qiumihui_ids.append(id_arr[1])
         elif id_arr[0] == 'ipanda':
             # channel,channel_id
             ipanda_ids[id_arr[1]] = id_arr[2]
-        elif id_arr[0] == 'longzhu':
-            longzhu_ids.append(id_arr[1])
     async with aiohttp.ClientSession() as session:
         try:
             tasks = []
@@ -5676,12 +5670,23 @@ async def download_files_normal_single(ids, mintimeout, maxTimeout):
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             print(f"setv Failed to fetch files. Error: {e}")
         try:
-            tasks = []
-            for id in qiumihui_ids:
-                task = asyncio.ensure_future(
-                    grab_normal_qiumihui(session, id, m3u_dict, mintimeout, maxTimeout, 'qiumihui'))
+            check_url = f'https://aapi.qmh01.com/api/room/page?roomType=&navId=&roomId=&word=&page=1&pageSize=30&channelId=3&platform=1'
+            try:
+                async with session.get(check_url, timeout=mintimeout) as response:
+                    data = await response.read()
+                    m3u8_dict = json.loads(data.decode('utf-8'))['data']['list']
+
+            except asyncio.TimeoutError:
+                async with session.get(check_url, timeout=maxTimeout) as response:
+                    data = await response.read()
+                    m3u8_dict = json.loads(data.decode('utf-8'))['data']['list']
+            if m3u8_dict:
+                tasks = []
+                for dict_single in m3u8_dict:
+                    task = asyncio.ensure_future(
+                        grab_normal_qiumihui(session, m3u_dict, mintimeout, maxTimeout, 'qiumihui', dict_single))
                 tasks.append(task)
-            await asyncio.gather(*tasks)
+                await asyncio.gather(*tasks)
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             print(f"qiumihui Failed to fetch files. Error: {e}")
         try:
@@ -5695,10 +5700,9 @@ async def download_files_normal_single(ids, mintimeout, maxTimeout):
             print(f"cetv Failed to fetch files. Error: {e}")
         try:
             tasks = []
-            for id in longzhu_ids:
-                task = asyncio.ensure_future(
-                    grab_normal_longzhu(session, id, m3u_dict, mintimeout, maxTimeout, 'longzhu'))
-                tasks.append(task)
+            task = asyncio.ensure_future(
+                grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, 'longzhu'))
+            tasks.append(task)
             await asyncio.gather(*tasks)
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             print(f"longzhu Failed to fetch files. Error: {e}")
@@ -6162,69 +6166,109 @@ async def grab_normal_setv(session, rid, m3u_dict, mintimeout, maxTimeout, sourc
         print(f"setv An error occurred while processing {rid}. Error: {e}")
 
 
-async def grab_normal_qiumihui(session, rid, m3u_dict, mintimeout, maxTimeout, source_type):
+async def grab_normal_qiumihui(session, m3u_dict, mintimeout, maxTimeout, source_type, dict_single):
+    global redisKeyNormal
+    rid = dict_single['roomId']
+    title = dict_single['title']
+    cover = dict_single['cover']
+    redisKeyNormal1 = {key: value for key, value in redisKeyNormal.items() if
+                       not key.startswith('qiumihui,')}
+    redisKeyNormal.clear()
+    redisKeyNormal.update(redisKeyNormal1)
     m3u8_url = f'https://aapi.qmh01.com/api/room/detail?roomId={rid}&channelId=3&platform=1'
     try:
-        async with session.get(m3u8_url,headers=bili_header, timeout=mintimeout) as response:
+        async with session.get(m3u8_url, headers=bili_header, timeout=mintimeout) as response:
             data = await response.read()
             m3u8 = json.loads(data.decode('utf-8'))['data']['pushUrl']
             m3u_dict[f'{source_type},{rid}'] = m3u8
+            redisKeyNormal[f'{source_type},{rid}'] = f'{title},{cover}'
     except asyncio.TimeoutError:
-        async with session.get(m3u8_url,headers=bili_header, timeout=maxTimeout) as response:
+        async with session.get(m3u8_url, headers=bili_header, timeout=maxTimeout) as response:
             data = await response.read()
             m3u8 = json.loads(data.decode('utf-8'))['data']['pushUrl']
             m3u_dict[f'{source_type},{rid}'] = m3u8
+            redisKeyNormal[f'{source_type},{rid}'] = f'{title},{cover}'
     except Exception as e:
         print(f"qiumihui An error occurred while processing {rid}. Error: {e}")
 
 
-def update_longzhu(dict_url, m3u_dict, rid, source_type):
+def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name):
+    global redisKeyNormal
+    update_dict = {}
     if dict_url:
-        if 'ud' in dict_url.keys():
+        data_dict = None
+        url = None
+        if 'hd' in dict_url.keys():
             data_dict = dict_url['hd']
             url = data_dict['m3u8']
-            if url is None or url == '':
-                url = data_dict['fly']
-            if url is None or url == '':
-                data_dict = dict_url['sd']
-                url = data_dict['m3u8']
-            if url is None or url == '':
-                url = data_dict['fly']
-            if url is None or url == '':
-                data_dict = dict_url['ld']
-                url = data_dict['m3u8']
-            if url is None or url == '':
-                url = data_dict['fly']
-            if url is None or url == '':
-                data_dict = dict_url['ud']
-                url = data_dict['m3u8']
-            if url is None or url == '':
-                url = data_dict['fly']
-            if url is None or url == '':
-                data_dict = dict_url['playStreamInfo']
-                url = data_dict['m3u8']
-            if url is None or url == '':
-                url = data_dict['fly']
-            if url is not None and url != '':
-                m3u_dict[f'{source_type},{rid}'] = url
+        if url is None or url == '':
+            url = data_dict['fly']
+        if url is None or url == '':
+            data_dict = dict_url['sd']
+            url = data_dict['m3u8']
+        if url is None or url == '':
+            url = data_dict['fly']
+        if url is None or url == '':
+            data_dict = dict_url['ld']
+            url = data_dict['m3u8']
+        if url is None or url == '':
+            url = data_dict['fly']
+        if url is None or url == '':
+            data_dict = dict_url['ud']
+            url = data_dict['m3u8']
+        if url is None or url == '':
+            url = data_dict['fly']
+        if url is None or url == '':
+            data_dict = dict_url['stream']
+            url = data_dict['m3u8']
+        if url is None or url == '':
+            url = data_dict['fly']
+        if url is not None and url != '':
+            m3u_dict[f'{source_type},{rid}'] = url
+            update_dict[f'{source_type},{rid}'] = f'{name},{pic}'
+    if len(update_dict) > 0:
+        redisKeyNormal.update(update_dict)
 
 
-async def grab_normal_longzhu(session, rid, m3u_dict, mintimeout, maxTimeout, source_type):
-    m3u8_url = f'https://api.ansongqiubo.com/v2/common/room/info?uid={rid}&versionCode=111&virtualId=_'
+async def grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, source_type):
+    global redisKeyNormal
+    m3u8_url = f'https://api.ansongqiubo.com/v3/list/streams/total?pcatId=1&pageIndex=0&dataLength=50'
     try:
         async with session.get(m3u8_url, headers=bili_header, timeout=mintimeout) as response:
             data = await response.read()
             try:
-                dict_url = json.loads(data.decode('utf-8'))['data']['source'][0]
-                update_longzhu(dict_url, m3u_dict, rid, source_type)
+                dict_urls = json.loads(data.decode('utf-8'))['data']['list']
+                redisKeyNormal1 = {key: value for key, value in redisKeyNormal.items() if
+                                   not key.startswith('longzhu,')}
+                redisKeyNormal.clear()
+                redisKeyNormal.update(redisKeyNormal1)
+                for dict_item in dict_urls:
+                    item = dict_item['item']
+                    pic = item['cover']
+                    name = item['title']
+                    live_dict = dict_item['live']
+                    rid = live_dict['roomId']
+                    source = live_dict['source'][0]
+                    update_longzhu(source, m3u_dict, rid, source_type, pic, name)
             except Exception as e:
                 pass
     except asyncio.TimeoutError:
         async with session.get(m3u8_url, headers=bili_header, timeout=maxTimeout) as response:
             data = await response.read()
             try:
-                dict_url = json.loads(data.decode('utf-8'))['data']['source'][0]
-                update_longzhu(dict_url, m3u_dict, rid, source_type)
+                dict_urls = json.loads(data.decode('utf-8'))['data']['list']
+                redisKeyNormal1 = {key: value for key, value in redisKeyNormal.items() if
+                                   not key.startswith('longzhu,')}
+                redisKeyNormal.clear()
+                redisKeyNormal.update(redisKeyNormal1)
+                for dict_item in dict_urls:
+                    item = dict_item['item']
+                    pic = item['cover']
+                    name = item['title']
+                    live_dict = dict_item['live']
+                    rid = live_dict['roomId']
+                    source = live_dict['source'][0]
+                    update_longzhu(source, m3u_dict, rid, source_type, pic, name)
             except Exception as e:
                 pass
     except Exception as e:
@@ -7341,7 +7385,7 @@ def chaoronghe31():
         redisKeyM3uFake = {}
         redisKeyNormalM3U.clear()
         redis_del_map(REDIS_KEY_NORMAL_M3U)
-        #fakeurl = f"http://127.0.0.1:5000/normal/"
+        # fakeurl = f"http://127.0.0.1:5000/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
         for id, url in m3u_dict.items():
             try:
@@ -7425,7 +7469,8 @@ def chaoronghe24():
             try:
                 redisKeyYoutubeM3u[id] = url
                 name = redisKeyYoutube[id]
-                link = f'#EXTINF:-1 group-title="Youtube Live"  tvg-name="{name}",{name}\n'
+                pic = f'https://i.ytimg.com/vi/{id}/hqdefault.jpg'
+                link = f'#EXTINF:-1 group-title="Youtube Live" tvg-logo="{pic}"  tvg-name="{name}",{name}\n'
                 redisKeyYoutubeM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except:
                 pass

@@ -6192,37 +6192,149 @@ async def grab_normal_qiumihui(session, m3u_dict, mintimeout, maxTimeout, source
         print(f"qiumihui An error occurred while processing {rid}. Error: {e}")
 
 
-def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name):
+async def pingM3u2(session, value, real_dict, key, mintimeout, maxTimeout):
+    try:
+        async with  session.get(value, timeout=mintimeout) as response:
+            if response.status == 200:
+                real_dict[key] = value
+                return value
+    except asyncio.TimeoutError:
+        try:
+            async with  session.get(value, timeout=maxTimeout) as response:
+                if response.status == 200:
+                    real_dict[key] = value
+                    return value
+                return None
+        except Exception as e:
+            return None
+    except Exception as e:
+        return None
+
+
+async def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, mintimeout, maxTimeout):
     global redisKeyNormal
     update_dict = {}
     if dict_url:
-        data_dict = None
         url = None
-        if 'playStreamInfo' in dict_url.keys():
-            data_dict = dict_url['playStreamInfo']
-            url = data_dict['m3u8']
+        if 'stream' in dict_url.keys():
+            data_dict = dict_url['stream']
+            try:
+                url = data_dict['rtmp']
+                url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+            except:
+                pass
+            if url is None or url == '':
+                try:
+                    url = data_dict['m3u8']
+                    url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                except:
+                    pass
+            if url is None or url == '':
+                try:
+                    url = data_dict['fly']
+                    url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                except:
+                    pass
         if url is None or url == '':
-            url = data_dict['fly']
+            if 'playStreamInfo' in dict_url.keys():
+                data_dict = dict_url['playStreamInfo']
+                try:
+                    url = data_dict['rtmp']
+                    url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                except:
+                    pass
+                if url is None or url == '':
+                    try:
+                        url = data_dict['m3u8']
+                        url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    except:
+                        pass
+                if url is None or url == '':
+                    try:
+                        url = data_dict['fly']
+                        url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    except:
+                        pass
         if url is None or url == '':
-            data_dict = dict_url['hd']
-            url = data_dict['m3u8']
+            if 'hd' in dict_url.keys():
+                data_dict = dict_url['hd']
+                try:
+                    url = data_dict['rtmp']
+                    url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                except:
+                    pass
+                if url is None or url == '':
+                    try:
+                        url = data_dict['m3u8']
+                        url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    except:
+                        pass
+                if url is None or url == '':
+                    try:
+                        url = data_dict['fly']
+                        url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    except:
+                        pass
         if url is None or url == '':
-            url = data_dict['fly']
+            if 'sd' in dict_url.keys():
+                data_dict = dict_url['sd']
+                try:
+                    url = data_dict['rtmp']
+                    url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                except:
+                    pass
+                if url is None or url == '':
+                    try:
+                        url = data_dict['m3u8']
+                        url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    except:
+                        pass
+                if url is None or url == '':
+                    try:
+                        url = data_dict['fly']
+                        url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    except:
+                        pass
         if url is None or url == '':
-            data_dict = dict_url['sd']
-            url = data_dict['m3u8']
+            if 'ld' in dict_url.keys():
+                data_dict = dict_url['ld']
+                try:
+                    url = data_dict['rtmp']
+                    url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                except:
+                    pass
+                if url is None or url == '':
+                    try:
+                        url = data_dict['m3u8']
+                        url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    except:
+                        pass
+                if url is None or url == '':
+                    try:
+                        url = data_dict['fly']
+                        url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    except:
+                        pass
         if url is None or url == '':
-            url = data_dict['fly']
-        if url is None or url == '':
-            data_dict = dict_url['ld']
-            url = data_dict['m3u8']
-        if url is None or url == '':
-            url = data_dict['fly']
-        if url is None or url == '':
-            data_dict = dict_url['ud']
-            url = data_dict['m3u8']
-        if url is None or url == '':
-            url = data_dict['fly']
+            if 'ud' in dict_url.keys():
+                data_dict = dict_url['ud']
+                try:
+                    url = data_dict['rtmp']
+                    url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                except:
+                    pass
+                if url is None or url == '':
+                    try:
+                        url = data_dict['m3u8']
+                        url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    except:
+                        pass
+                if url is None or url == '':
+                    try:
+                        url = data_dict['fly']
+                        url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    except:
+                        pass
         if url is not None and url != '':
             m3u_dict[f'{source_type},{rid}'] = url
             update_dict[f'{source_type},{rid}'] = f'{name},{pic}'
@@ -6232,7 +6344,7 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name):
 
 async def grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, source_type):
     global redisKeyNormal
-    m3u8_url = f'https://api.ansongqiubo.com/v3/list/streams/total?pcatId=1&pageIndex=0&dataLength=50'
+    m3u8_url = f'https://api.ansongqiubo.com/v3/list/streams/total?pcatId=1&pageIndex=0&dataLength=5000'
     try:
         async with session.get(m3u8_url, headers=bili_header, timeout=mintimeout) as response:
             data = await response.read()
@@ -6248,8 +6360,11 @@ async def grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, source_
                     name = item['title']
                     live_dict = dict_item['live']
                     rid = live_dict['roomId']
-                    source = live_dict['source'][0]
-                    update_longzhu(source, m3u_dict, rid, source_type, pic, name)
+                    try:
+                        source = live_dict['source'][0]
+                    except:
+                        source = live_dict['source']
+                    await update_longzhu(source, m3u_dict, rid, source_type, pic, name, session, mintimeout, maxTimeout)
             except Exception as e:
                 pass
     except asyncio.TimeoutError:
@@ -6267,8 +6382,11 @@ async def grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, source_
                     name = item['title']
                     live_dict = dict_item['live']
                     rid = live_dict['roomId']
-                    source = live_dict['source'][0]
-                    update_longzhu(source, m3u_dict, rid, source_type, pic, name)
+                    try:
+                        source = live_dict['source'][0]
+                    except:
+                        source = live_dict['source']
+                    update_longzhu(source, m3u_dict, rid, source_type, pic, name, session, mintimeout, maxTimeout)
             except Exception as e:
                 pass
     except Exception as e:
@@ -7385,7 +7503,7 @@ def chaoronghe31():
         redisKeyM3uFake = {}
         redisKeyNormalM3U.clear()
         redis_del_map(REDIS_KEY_NORMAL_M3U)
-        # fakeurl = f"http://127.0.0.1:5000/normal/"
+        #fakeurl = f"http://127.0.0.1:5000/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
         for id, url in m3u_dict.items():
             try:

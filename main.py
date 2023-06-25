@@ -6198,7 +6198,12 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name):
     if dict_url:
         data_dict = None
         url = None
-        if 'hd' in dict_url.keys():
+        if 'playStreamInfo' in dict_url.keys():
+            data_dict = dict_url['playStreamInfo']
+            url = data_dict['m3u8']
+        if url is None or url == '':
+            url = data_dict['fly']
+        if url is None or url == '':
             data_dict = dict_url['hd']
             url = data_dict['m3u8']
         if url is None or url == '':
@@ -6215,11 +6220,6 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name):
             url = data_dict['fly']
         if url is None or url == '':
             data_dict = dict_url['ud']
-            url = data_dict['m3u8']
-        if url is None or url == '':
-            url = data_dict['fly']
-        if url is None or url == '':
-            data_dict = dict_url['stream']
             url = data_dict['m3u8']
         if url is None or url == '':
             url = data_dict['fly']
@@ -6726,7 +6726,7 @@ def chaoronghe25():
             try:
                 redisKeyBililiM3u[id] = url
                 name = redisKeyBilili[id]
-                link = f'#EXTINF:-1 group-title="Bilibili"  tvg-name="{name}",{name}\n'
+                link = f'#EXTINF:-1 group-title="哔哩哔哩"  tvg-name="{name}",{name}\n'
                 redisKeyBililiM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except:
                 pass
@@ -6767,7 +6767,7 @@ def chaoronghe26():
             try:
                 redisKeyHuyaM3u[id] = url
                 name = redisKeyHuya[id]
-                link = f'#EXTINF:-1 group-title="Huya"  tvg-name="{name}",{name}\n'
+                link = f'#EXTINF:-1 group-title="虎牙"  tvg-name="{name}",{name}\n'
                 redisKeyHuyaM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except:
                 pass
@@ -6849,7 +6849,7 @@ def chaoronghe29():
             try:
                 redisKeyDOUYINM3u[id] = url
                 name = redisKeyDOUYIN[id]
-                link = f'#EXTINF:-1 group-title="Douyin"  tvg-name="{name}",{name}\n'
+                link = f'#EXTINF:-1 group-title="抖音"  tvg-name="{name}",{name}\n'
                 redisKeyDOUYINM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except:
                 pass
@@ -7470,7 +7470,7 @@ def chaoronghe24():
                 redisKeyYoutubeM3u[id] = url
                 name = redisKeyYoutube[id]
                 pic = f'https://i.ytimg.com/vi/{id}/hqdefault.jpg'
-                link = f'#EXTINF:-1 group-title="Youtube Live" tvg-logo="{pic}"  tvg-name="{name}",{name}\n'
+                link = f'#EXTINF:-1 group-title="Youtube" tvg-logo="{pic}"  tvg-name="{name}",{name}\n'
                 redisKeyYoutubeM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except:
                 pass

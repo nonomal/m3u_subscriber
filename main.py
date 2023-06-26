@@ -543,6 +543,12 @@ tv_dict_normal = {}
 @app.route('/normal/<path:filename>')
 def serve_files_normal(filename):
     id = filename.split('.')[0]
+    if id == 'qiumihui,':
+        chaoronghe31_single('qiumihui,')
+        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
+    elif id == 'longzhu,':
+        chaoronghe31_single('longzhu,')
+        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
     url = tv_dict_normal.get(id)
     if not url:
         url = redisKeyNormalM3U.get(id)
@@ -619,6 +625,24 @@ def redis_get_map_keys(key):
 def redis_del_map(key):
     try:
         r.delete(key)
+    except Exception as e:
+        pass
+
+
+# redis删除字典单个键值对
+def redis_del_map_key(key, map_key):
+    try:
+        r.hdel(key, map_key)
+    except Exception as e:
+        pass
+
+
+# redis删除字典多个键值对
+def redis_del_map_keys(key, map_keys):
+    try:
+        if len(map_keys) == 0:
+            return
+        r.hdel(key, *map_keys)
     except Exception as e:
         pass
 
@@ -5589,7 +5613,11 @@ async def download_files8_single(ids, mintimeout, maxTimeout):
     return m3u_dict
 
 
-async def download_files_normal_single(ids, mintimeout, maxTimeout):
+async def download_files_normal_single():
+    global redisKeyNormal
+    ids = redisKeyNormal.keys()
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
     m3u_dict = {}
     chongqing_ids = []
     migu_ids = {}
@@ -5736,15 +5764,6 @@ async def download_files8():
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
     m3u_dict = await download_files8_single(ids, mintimeout, maxTimeout)
-    return m3u_dict
-
-
-async def download_files_normal():
-    global redisKeyNormal
-    ids = redisKeyNormal.keys()
-    mintimeout = int(getFileNameByTagName('minTimeout'))
-    maxTimeout = int(getFileNameByTagName('maxTimeout'))
-    m3u_dict = await download_files_normal_single(ids, mintimeout, maxTimeout)
     return m3u_dict
 
 
@@ -7491,12 +7510,174 @@ def chaoronghe_normal():
     return chaoronghe31()
 
 
+def map_remove_keys(map, keys):
+    if len(keys) == 0:
+        return
+    mapb = {}
+    for key, value in map.items():
+        if key not in keys:
+            mapb[key] = value
+    if len(mapb) == 0:
+        return
+    map.clear()
+    map.update(mapb)
+
+
+def update_by_type_normal(type):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    if type == 'qiumihui,':
+        # 有效直播源,名字/id
+        m3u_dict = loop.run_until_complete(download_files_normal_single_qiumihui())
+    elif type == 'longzhu,':
+        # 有效直播源,名字/id
+        m3u_dict = loop.run_until_complete(download_files_normal_single_longzhu())
+    return m3u_dict
+
+
+async def download_files_normal_single_qiumihui():
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
+    m3u_dict = {}
+    async with aiohttp.ClientSession() as session:
+        try:
+            await deal_qiumihui(session, m3u_dict, mintimeout, maxTimeout)
+
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f"qiumihui Failed to fetch files. Error: {e}")
+    return m3u_dict
+
+
+async def download_files_normal_single_longzhu():
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
+    m3u_dict = {}
+    async with aiohttp.ClientSession() as session:
+        try:
+            await  grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, 'longzhu')
+        except Exception as e:
+            print(f"longzhu Failed to fetch files. Error: {e}")
+    return m3u_dict
+
+
+def chaoronghe31_single(type):
+    try:
+        global redisKeyNormalM3U
+        global redisKeyNormal
+        removeKeys = []
+        for key in redisKeyNormalM3U.keys():
+            if key.startswith(type):
+                removeKeys.append(key)
+        map_remove_keys(redisKeyNormalM3U, removeKeys)
+        redis_del_map_keys(REDIS_KEY_NORMAL_M3U, removeKeys)
+        removeredisKeyNormalKeys = []
+        for key in redisKeyNormal.keys():
+            if key.startswith(type):
+                removeredisKeyNormalKeys.append(key)
+        map_remove_keys(redisKeyNormal, removeredisKeyNormalKeys)
+        redis_del_map_keys(REDIS_KEY_NORMAL, removeredisKeyNormalKeys)
+        m3u_dict = update_by_type_normal(type)
+        length = len(m3u_dict)
+        if length == 0:
+            return "empty"
+        ip = init_IP()
+        redisKeyM3uFake = {}
+        fakeurl = f"http://127.0.0.1:5000/normal/"
+        #fakeurl = f"http://{ip}:{port_live}/normal/"
+        for id, url in redisKeyNormalM3U.items():
+            try:
+                if id in m3u_dict.keys():
+                    continue
+                name = redisKeyNormal[id]
+                try:
+                    name, logo = name.split(',')
+                except Exception as e:
+                    logo = None
+                if id.startswith('cq,'):
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="重庆源"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="重庆源" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                elif id.startswith('migu,'):
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="咪咕源"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="咪咕源" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                elif id.startswith('gzstv,'):
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="贵州源"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="贵州源" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                elif id.startswith('qiumihui,'):
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="球迷汇体育"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="球迷汇体育" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                elif id.startswith('ipanda,'):
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="iPanda熊猫频道"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="iPanda熊猫频道" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                elif id.startswith('longzhu,'):
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="龙珠直播"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="龙珠直播" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                else:
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="国内"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="国内" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                redisKeyM3uFake[f'{fakeurl}{id}.m3u8'] = link
+            except Exception as e:
+                pass
+        for id, url in m3u_dict.items():
+            try:
+                redisKeyNormalM3U[id] = url
+                name = redisKeyNormal[id]
+                try:
+                    name, logo = name.split(',')
+                except Exception as e:
+                    logo = None
+                link = None
+                if id.startswith('qiumihui,'):
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="球迷汇体育"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="球迷汇体育" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                elif id.startswith('longzhu,'):
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="龙珠直播"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="龙珠直播" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                if link:
+                    redisKeyM3uFake[f'{fakeurl}{id}.m3u8'] = link
+            except Exception as e:
+                pass
+        redisKeyNormal['qiumihui,'] = '更新球迷汇'
+        redis_add_map(REDIS_KEY_NORMAL, {'qiumihui,': '更新球迷汇'})
+        link1 = f'#EXTINF:-1 group-title="球迷汇体育" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新球迷汇",更新球迷汇\n'
+        redisKeyM3uFake[f'{fakeurl}qiumihui,.m3u8'] = link1
+        redisKeyNormal['longzhu,'] = '更新龙珠直播'
+        redis_add_map(REDIS_KEY_NORMAL, {'longzhu,': '更新龙珠直播'})
+        link2 = f'#EXTINF:-1 group-title="龙珠直播" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新龙珠直播",更新龙珠直播\n'
+        redisKeyM3uFake[f'{fakeurl}longzhu,.m3u8'] = link2
+        # 同步方法写出全部配置
+        distribute_data(redisKeyM3uFake, f"{secret_path}normal.m3u", 10)
+        fuck_m3u_to_txt(f"{secret_path}normal.m3u", f"{secret_path}normal.txt")
+        chaoronghe()
+        update_clock('normalM3uClock')
+        return "result"
+    except Exception as e:
+        return "empty"
+
+
 def chaoronghe31():
     try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         # 有效直播源,名字/id
-        m3u_dict = loop.run_until_complete(download_files_normal())
+        m3u_dict = loop.run_until_complete(download_files_normal_single())
         length = len(m3u_dict)
         if length == 0:
             return "empty"
@@ -7554,6 +7735,14 @@ def chaoronghe31():
                 redisKeyM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except Exception as e:
                 pass
+        redisKeyNormal['qiumihui,'] = '更新球迷汇'
+        redis_add_map(REDIS_KEY_NORMAL, {'qiumihui,': '更新球迷汇'})
+        link1 = f'#EXTINF:-1 group-title="球迷汇体育" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新球迷汇",更新球迷汇\n'
+        redisKeyM3uFake[f'{fakeurl}qiumihui,.m3u8'] = link1
+        redisKeyNormal['longzhu,'] = '更新龙珠直播'
+        redis_add_map(REDIS_KEY_NORMAL, {'longzhu,': '更新龙珠直播'})
+        link2 = f'#EXTINF:-1 group-title="龙珠直播" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新龙珠直播",更新龙珠直播\n'
+        redisKeyM3uFake[f'{fakeurl}longzhu,.m3u8'] = link2
         # 同步方法写出全部配置
         distribute_data(redisKeyM3uFake, f"{secret_path}normal.m3u", 10)
         redis_add_map(REDIS_KEY_NORMAL_M3U, redisKeyNormalM3U)

@@ -333,11 +333,11 @@
     </div>
     <div class="grid-item">
         <input type="radio" name="page" id="page5">
-        <span>域名白名单</span>
+        <span>分流dns1域名</span>
     </div>
     <div class="grid-item">
         <input type="radio" name="page" id="page6">
-        <span>域名黑名单</span>
+        <span>分流dns2域名</span>
     </div>
     <div class="grid-item">
         <input type="radio" name="page" id="page7">
@@ -386,11 +386,11 @@
     </div>
     <div class="grid-item">
         <input type="radio" name="page" id="page18">
-        <span>简易DNS分流白名单</span>
+        <span>简易分流dns1域名</span>
     </div>
     <div class="grid-item">
         <input type="radio" name="page" id="page19">
-        <span>简易DNS分流黑名单</span>
+        <span>简易分流dns2域名</span>
     </div>
     <div class="grid-item">
         <input type="radio" name="page" id="page20">
@@ -651,7 +651,7 @@
         </div>
     </div>
     <div id="page5" style="display: none;">
-        <h1>域名白名单订阅:从网络下载白名单</h1>
+        <h1>分流dns1域名订阅:从网络下载分流域名</h1>
         <div style="float: left;width: 70%">
             <h3>订阅地址:</h3>
             <h3 class="urllink">dnsmasq-无加密:http://192.168.5.1:22771/secret/whiteListDnsmasq.conf</h3>
@@ -660,22 +660,22 @@
             <h3 class="urllink">whitelist-加密:http://192.168.5.1:22771/url/whiteListDomianSecret.txt</h3>
             <h3 class="urllink">
                 whitelist-openclash第三方直连规则-无加密:http://192.168.5.1:22771/secret/whitelistDirectRule.txt</h3>
-            <h3>导入合并白名单订阅</h3>
+            <h3>导入合并订阅</h3>
         </div>
         <div style="width:100%">
             <div>
                 <input type="file" id="upload-json-btn2" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row2" class="grid-item addNewSubscriber" style="width:100%">新增白名单域名订阅</button>
+                <button id="add-row2" class="grid-item addNewSubscriber" style="width:100%">新增域名订阅</button>
             </div>
             <div>
-                <button class="grid-item button stepflag" onclick="execute2()" style="width: 100%">生成白名单超融合订阅
+                <button class="grid-item button stepflag" onclick="execute2()" style="width: 100%">生成订阅
                 </button>
             </div>
             <div>
                 <button id="download-json-btn2" class="grid-item button download-json-btn" style="width: 100%">
-                    导出白名单订阅备份
+                    导出订阅备份
                 </button>
             </div>
             <div style="width: 98.3%;">
@@ -685,7 +685,7 @@
                     onclick="removelinksBase('/api/removem3ulinks2')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">订阅来源:白名单订阅地址+加密订阅源的密码(没有加密就不填写)
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:订阅地址+加密订阅源的密码(没有加密就不填写)
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
@@ -696,30 +696,30 @@
         </div>
     </div>
     <div id="page6" style="display: none;">
-        <h1>域名黑名单订阅:从网络下载黑名单</h1>
+        <h1>分流dns2域名订阅:从网络下载分流域名</h1>
         <div style="float: left;width: 70%">
             <h3>订阅地址:</h3>
-            <h3 class="urllink">黑名单-OP-无加密:http://192.168.5.1:22771/secret/openclashFallbackFilterDomain.conf</h3>
-            <h3 class="urllink">黑名单-OP-加密:http://192.168.5.1:22771/url/openclashFallbackFilterDomainSecret.txt</h3>
-            <h3 class="urllink">黑名单-无加密:http://192.168.5.1:22771/secret/blackListDomain.txt</h3>
-            <h3 class="urllink">黑名单-加密:http://192.168.5.1:22771/url/blackListDomainSecret.txt</h3>
-            <h3 class="urllink">黑名单-openclash代理规则:http://192.168.5.1:22771/secret/blacklistProxyRule.txt</h3>
-            <h3>导入合并黑名单订阅</h3>
+            <h3 class="urllink">分流dns2-OP-无加密:http://192.168.5.1:22771/secret/openclashFallbackFilterDomain.conf</h3>
+            <h3 class="urllink">分流dns2-OP-加密:http://192.168.5.1:22771/url/openclashFallbackFilterDomainSecret.txt</h3>
+            <h3 class="urllink">分流dns2-无加密:http://192.168.5.1:22771/secret/blackListDomain.txt</h3>
+            <h3 class="urllink">分流dns2-加密:http://192.168.5.1:22771/url/blackListDomainSecret.txt</h3>
+            <h3 class="urllink">分流dns2-openclash代理规则:http://192.168.5.1:22771/secret/blacklistProxyRule.txt</h3>
+            <h3>导入合并分流dns2订阅</h3>
         </div>
         <div style="width:100%">
             <div>
                 <input type="file" id="upload-json-btn3" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row3" class="grid-item addNewSubscriber" style="width:100%">新增黑名单域名订阅</button>
+                <button id="add-row3" class="grid-item addNewSubscriber" style="width:100%">新增分流dns2域名订阅</button>
             </div>
             <div>
-                <button class="grid-item button stepflag" onclick="execute3()" style="width: 100%">生成黑名单超融合订阅
+                <button class="grid-item button stepflag" onclick="execute3()" style="width: 100%">生成分流dns2订阅
                 </button>
             </div>
             <div>
                 <button id="download-json-btn3" class="grid-item button download-json-btn" style="width: 100%">
-                    导出黑名单订阅备份
+                    导出分流dns2订阅备份
                 </button>
             </div>
             <div style="width: 98.3%;">
@@ -729,7 +729,7 @@
                     onclick="removelinksBase('/api/removem3ulinks3')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">订阅来源:黑名单订阅地址+加密订阅源的密码(没有加密就不填写)
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:分流dns2订阅地址+加密订阅源的密码(没有加密就不填写)
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
@@ -978,42 +978,42 @@
             <button id="timeoutButton" onclick="saveTimeout()" class="grid-item button stubbonsave">保存</button>
         </div>
         <div style="display: flex;width: 100%;">
-            DNS分流单个查询并发检测黑白名单数据线程数(上限1000)
+            DNS分流单个查询并发检测数据线程数(上限1000)
         </div>
         <div style="width:100%">
             <input type="text" id="threads" class="stubboninput"/>
             <button id="threadsButton" onclick="saveData()" class="grid-item button stubbonsave">保存</button>
         </div>
         <div style="display: flex;width: 100%;">
-            国内DNS服务器地址
+            分流DNS服务器地址1(ex:china)
         </div>
         <div style="width:100%">
             <input type="text" id="chinaDnsServer" class="stubboninput"/>
             <button id="chinaDnsServerBtn" onclick="saveChinaDnsServer()" class="grid-item button stubbonsave">保存</button>
         </div>
         <div style="display: flex;width: 100%;">
-            国内DNS服务器端口
+            分流DNS服务器端口1(ex:china)
         </div>
         <div style="width:100%">
             <input type="text" id="chinaDnsPort" class="stubboninput"/>
             <button id="chinaDnsPortBtn" onclick="saveChinaDnsPort()" class="grid-item button stubbonsave">保存</button>
         </div>
         <div style="display: flex;width: 100%;">
-            国外DNS服务器地址
+            分流DNS服务器地址2(ex:usa)
         </div>
         <div style="width:100%">
             <input type="text" id="extraDnsServer" class="stubboninput"/>
             <button id="extraDnsServerBtn" onclick="saveExtraDnsServer()" class="grid-item button stubbonsave">保存</button>
         </div>
         <div style="display: flex;width: 100%;">
-            国外DNS服务器端口
+            分流DNS服务器端口2(ex:usa)
         </div>
         <div style="width:100%">
             <input type="text" id="extraDnsPort" class="stubboninput"/>
             <button id="extraDnsPortBtn" onclick="saveExtraDnsPort()" class="grid-item button stubbonsave">保存</button>
         </div>
         <div style="display: flex;width: 100%;">
-            假设这部分顶级域名全部走国内DNS,使用,分隔
+            假设这部分顶级域名全部走分流DNS1,使用,分隔
         </div>
         <div style="width:100%">
             <input type="text" id="chinaTopDomain" class="stubboninput" placeholder="cn,中国"/>
@@ -1022,7 +1022,7 @@
             </button>
         </div>
         <div style="display: flex;width: 100%;">
-            假设这部分顶级域名全部走国外DNS,使用,分隔
+            假设这部分顶级域名全部走分流DNS2,使用,分隔
         </div>
         <div style="width:100%">
             <input type="text" id="foreignTopDomain" class="stubboninput" placeholder="xyz,club,online,site,top,win"/>
@@ -1063,7 +1063,7 @@
             <button onclick="changePasswordByHand('m3u','threads2',threadNum2)" class="grid-item button stubbonsave">手动修改</button>
         </div>
         <div style="display: flex;width: 100%;">
-            域名白名单订阅
+            分流dns1订阅
         </div>
         <div style="width:100%">
             <input type="text" id="chinaDnsServer2" class="stubboninput"/>
@@ -1074,7 +1074,7 @@
             </button>
         </div>
         <div style="display: flex;width: 100%;">
-            域名黑名单订阅
+            分流dns2订阅
         </div>
         <div style="width:100%">
             <input type="text" id="chinaDnsPort2" class="stubboninput"/>
@@ -1388,7 +1388,7 @@
             </button>
         </div>
         <div style="display: flex;width: 100%;">
-            通用订阅下载定时器执行周期(域名黑/白名单、ipv4/6、下载加密/解密)(秒)
+            通用订阅下载定时器执行周期(dns1/2分流域名、ipv4/6、下载加密/解密)(秒)
         </div>
         <div style="width:100%">
             <input type="text" id="normalSubscriberClock" class="stubboninput" placeholder="10800"/>
@@ -1487,11 +1487,11 @@
             </div>
             <div class="grid-item">
                 <button id="switch9" class="switchfunctionbutton" onclick="toggleSwitch('switch9')">已关闭</button>
-                <span>域名白名单dnsmasq加密文件</span>
+                <span>分流dns1-dnsmasq加密文件</span>
             </div>
             <div class="grid-item">
                 <button id="switch10" class="switchfunctionbutton" onclick="toggleSwitch('switch10')">已关闭</button>
-                 <span>域名白名单dnsmasq文件上传</span>
+                 <span>分流dns1-dnsmasq文件上传</span>
             </div>
             <div class="grid-item">
                 <button id="switch11" class="switchfunctionbutton" onclick="toggleSwitch('switch11')">已关闭</button>
@@ -1503,23 +1503,23 @@
             </div>
             <div class="grid-item">
                 <button id="switch13" class="switchfunctionbutton" onclick="toggleSwitch('switch13')">已关闭</button>
-                <span>域名黑名单-定时器</span>
+                <span>分流dns2-定时器</span>
             </div>
             <div class="grid-item">
                 <button id="switch14" class="switchfunctionbutton" onclick="toggleSwitch('switch14')">已关闭</button>
-                <span>域名黑名单OP-加密</span>
+                <span>分流dns2-OP-加密</span>
             </div>
             <div class="grid-item">
                 <button id="switch15" class="switchfunctionbutton" onclick="toggleSwitch('switch15')">已关闭</button>
-                <span>域名黑名单OP-加密-上传</span>
+                <span>分流dns2-OP-加密-上传</span>
             </div>
             <div class="grid-item">
                 <button id="switch16" class="switchfunctionbutton" onclick="toggleSwitch('switch16')">已关闭</button>
-                <span>域名黑名单-加密</span>
+                <span>分流dns2-加密</span>
             </div>
             <div class="grid-item">
                 <button id="switch17" class="switchfunctionbutton" onclick="toggleSwitch('switch17')">已关闭</button>
-                <span>域名黑名单-加密-上传</span>
+                <span>分流dns2-加密-上传</span>
             </div>
             <div class="grid-item">
                 <button id="switch18" class="switchfunctionbutton" onclick="toggleSwitch('switch18')">已关闭</button>
@@ -1547,7 +1547,7 @@
             </div>
             <div class="grid-item">
                 <button id="switch24" class="switchfunctionbutton" onclick="toggleSwitch('switch24')">已关闭</button>
-                <span>自动生成简易DNS黑白名单</span>
+                <span>自动维护简易DNS1、2域名</span>
             </div>
             <div class="grid-item">
                 <button id="switch25" class="switchfunctionbutton" onclick="toggleSwitch('switch25')">已关闭</button>
@@ -1555,7 +1555,7 @@
             </div>
             <div class="grid-item">
                 <button id="switch26" class="switchfunctionbutton" onclick="toggleSwitch('switch26')">已关闭</button>
-                <span>域名白名单-定时器</span>
+                <span>分流dns1-定时器</span>
             </div>
             <div class="grid-item">
                 <button id="switch27" class="switchfunctionbutton" onclick="toggleSwitch('switch27')">已关闭</button>
@@ -1592,12 +1592,12 @@
         </div>
     </div>
     <div id="page18" style="display: none;">
-        <h1>简易DNS分流白名单</h1>
+        <h1>简易分流dns1域名</h1>
         <div style="float: left;width: 70%">
-            <h3 class="urllink">个人白名单浏览记录-dnsmasq: http://192.168.5.1:22771/secret/simpleDnsmasq.conf</h3>
-            <h3 class="urllink">个人白名单分流规则-openclash:
+            <h3 class="urllink">个人dns1浏览记录-dnsmasq: http://192.168.5.1:22771/secret/simpleDnsmasq.conf</h3>
+            <h3 class="urllink">个人dns1分流规则-openclash:
                 http://192.168.5.1:22771/secret/simplewhitelistProxyRule.txt</h3>
-            <h3>上传文件导入合并简易DNS分流白名单</h3>
+            <h3>上传文件导入合并域名</h3>
         </div>
         <div style="width:100%">
             <div>
@@ -1622,7 +1622,7 @@
                     onclick="removelinksBase('/api/removem3ulinks12')">删除全部域名
             </button>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">简易白名单域名:一级域名
+                <div class="notice" style="display: flex;width: 80%;">简易dns1域名:一/二级域名
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
@@ -1633,13 +1633,13 @@
         </div>
     </div>
     <div id="page19" style="display: none;">
-        <h1>简易DNS分流黑名单</h1>
+        <h1>简易分流dns2域名</h1>
         <div style="float: left;width: 70%">
-            <h3 class="urllink">个人黑名单浏览记录-openclash:
+            <h3 class="urllink">个人dns2浏览记录-openclash:
                 http://192.168.5.1:22771/secret/simpleOpenclashFallBackFilterDomain.txt</h3>
-            <h3 class="urllink">个人黑名单分流规则-openclash:
+            <h3 class="urllink">个人dns2分流规则-openclash:
                 http://192.168.5.1:22771/secret/simpleblacklistProxyRule.txt</h3>
-            <h3>上传文件导入合并简易DNS分流黑名单</h3>
+            <h3>上传文件导入合并域名</h3>
         </div>
         <div style="width:100%">
             <div>
@@ -1664,7 +1664,7 @@
                     onclick="removelinksBase('/api/removem3ulinks13')">删除全部域名
             </button>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">简易黑名单域名:一级域名
+                <div class="notice" style="display: flex;width: 80%;">简易dns2域名:一级域名
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
@@ -1746,7 +1746,7 @@
             </button>
         </div>
         <div style="display: flex;width: 100%;">
-            域名白名单-dnsmasq-无加密:whiteListDnsmasq
+            分流dns1-dnsmasq-无加密:whiteListDnsmasq
         </div>
         <div style="width:100%">
             <input type="text" id="whiteListDnsmasq" class="stubboninput" placeholder="whiteListDnsmasq"/>
@@ -1755,7 +1755,7 @@
             </button>
         </div>
         <div style="display: flex;width: 100%;">
-            域名白名单-dnsmasq-加密:whiteListDnsmasqSecret
+            分流dns1-dnsmasq-加密:whiteListDnsmasqSecret
         </div>
         <div style="width:100%">
             <input type="text" id="whiteListDnsmasqSecret" class="stubboninput" placeholder="whiteListDnsmasqSecret"/>
@@ -1764,7 +1764,7 @@
             </button>
         </div>
         <div style="display: flex;width: 100%;">
-            域名白名单-whitelist-无加密:whiteListDomian
+            分流dns1-whitelist-无加密:whiteListDomian
         </div>
         <div style="width:100%">
             <input type="text" id="whiteListDomian" class="stubboninput" placeholder="whiteListDomian"/>
@@ -1773,7 +1773,7 @@
             </button>
         </div>
         <div style="display: flex;width: 100%;">
-            域名白名单-whitelist-加密:whiteListDomianSecret
+            分流dns1-whitelist-加密:whiteListDomianSecret
         </div>
         <div style="width:100%">
             <input type="text" id="whiteListDomianSecret" class="stubboninput" placeholder="whiteListDomianSecret"/>
@@ -1782,7 +1782,7 @@
             </button>
         </div>
         <div style="display: flex;width: 100%;">
-            域名白名单-openclash直连规则:whitelistDirectRule
+            分流dns1-openclash直连规则:whitelistDirectRule
         </div>
         <div style="width:100%">
             <input type="text" id="whitelistDirectRule" class="stubboninput" placeholder="whitelistDirectRule"/>
@@ -1791,7 +1791,7 @@
             </button>
         </div>
         <div style="display: flex;width: 100%;">
-            域名黑名单-OP-无加密:openclashFallbackFilterDomain
+            分流dns2-OP-无加密:openclashFallbackFilterDomain
         </div>
         <div style="width:100%">
             <input type="text" id="openclashFallbackFilterDomain" class="stubboninput"
@@ -1801,7 +1801,7 @@
             </button>
         </div>
         <div style="display: flex;width: 100%;">
-            域名黑名单-OP-加密:openclashFallbackFilterDomainSecret
+            分流dns2-OP-加密:openclashFallbackFilterDomainSecret
         </div>
         <div style="width:100%">
             <input type="text" id="openclashFallbackFilterDomainSecret" class="stubboninput"
@@ -1811,7 +1811,7 @@
             </button>
         </div>
         <div style="display: flex;width: 100%;">
-            域名黑名单-无加密:blackListDomain
+            分流dns2-无加密:blackListDomain
         </div>
         <div style="width:100%">
             <input type="text" id="blackListDomain" class="stubboninput" placeholder="blackListDomain"/>
@@ -1820,7 +1820,7 @@
             </button>
         </div>
         <div style="display: flex;width: 100%;">
-            域名黑名单-加密:blackListDomainSecret
+            分流dns2-加密:blackListDomainSecret
         </div>
         <div style="width:100%">
             <input type="text" id="blackListDomainSecret" class="stubboninput" placeholder="blackListDomainSecret"/>
@@ -1829,7 +1829,7 @@
             </button>
         </div>
         <div style="display: flex;width: 100%;">
-            域名黑名单-openclash代理规则:blacklistProxyRule
+            分流dns2-openclash代理规则:blacklistProxyRule
         </div>
         <div style="width:100%">
             <input type="text" id="blacklistProxyRule" class="stubboninput" placeholder="blacklistProxyRule"/>

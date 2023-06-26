@@ -10,10 +10,8 @@
             background-color: #057748;
             color: aliceblue;
         }
-
         .button, .addNewSubscriber, .saveButtonClassName, .deleteButtonClassName,
-        .save-m3u-button, .delete-m3u-button, .changePasswordButtonClassName, .saveButtonClassName2, .deleteButtonClassName2,
-        #simply, #proxy-model-switch, .toggletext, #proxy-model-switch2 {
+        .save-m3u-button, .delete-m3u-button, .changePasswordButtonClassName, .saveButtonClassName2, .deleteButtonClassName2{
             padding: 10px 20px;
             background-color: #4CAF50;
             color: white;
@@ -30,7 +28,7 @@
         }
 
         .saveButtonClassName, .deleteButtonClassName,
-        .save-m3u-button, .delete-m3u-button, #simply {
+        .save-m3u-button, .delete-m3u-button{
             margin-right: 5px;
             width: 45%
         }
@@ -40,6 +38,13 @@
             width: 29%
         }
 
+
+        #switchbutton{
+            width: 100%;
+            font-size: x-large;
+            text-align: center;
+            color: white;
+        }
         .changePasswordButtonClassName {
             margin-right: 3px;
             width: 38%
@@ -95,7 +100,7 @@
             margin-left: 15px;
         }
 
-        .subnameClassName,.submit-m3u-group {
+        .subnameClassName, .submit-m3u-group {
             width: 20%;
             background-color: #758a99;
             color: aliceblue;
@@ -110,17 +115,17 @@
         }
 
         .suburlclassname, .subnameClassName, .saveButtonClassName, .deleteButtonClassName, .stepflag,
-        .notice, #upload-m3u, .changePasswordButtonClassName, .suburlclassname2, .subnameClassName2,
+        .notice,  .changePasswordButtonClassName, .suburlclassname2, .subnameClassName2,
         .passwordClassName2, .saveButtonClassName2, .deleteButtonClassName2,
-        #sub-m3u, #generatepass, #savem3uareas, .save-m3u-button, .delete-m3u-button, #upload-m3u-btn,
-        #download-m3u-btn, #remove-m3u-btn, #remove-m3u-btn,.submit-m3u-file,
-        .uploadjsonbtn,.submit-m3u-group-sub,
-        #simply, .download-json-btn, .dropdown, #proxy-model-switch, #proxy-model-switch2, .dropdown2, .stubbonsave, .removeallSubscriber, .addNewSubscriber {
+        .save-m3u-button, .delete-m3u-button,
+        #remove-m3u-btn, #remove-m3u-btn,
+        .uploadjsonbtn,
+        .download-json-btn, .dropdown,  .dropdown2, .stubbonsave, .removeallSubscriber, .addNewSubscriber {
             font-size: x-large;
         }
 
-        #upload-m3u, #sub-m3u, #generatepass, #savem3uareas, #upload-m3u-btn, #download-m3u-btn, #remove-m3u-btn, #remove-m3u-btn,
-        #simply, .uploadjsonbtn, .removeallSubscriber ,.submit-m3u-group,.submit-m3u-file,.submit-m3u-group-sub{
+        #remove-m3u-btn, #remove-m3u-btn,
+         .uploadjsonbtn, .removeallSubscriber, .submit-m3u-group {
             float: right;
             background-color: #4CAF50;
             color: white;
@@ -150,7 +155,7 @@
 
         }
 
-        .buttonChooseProxies, .toggletext {
+        .buttonChooseProxies{
             float: left;
             background-color: #4CAF50;
             border: none;
@@ -200,7 +205,7 @@
             cursor: pointer;
         }
 
-        .m3u-upload-sp{
+        .m3u-upload-sp {
             float: right;
             width: 100%;
             border-radius: 15px;
@@ -220,7 +225,7 @@
         }
 
 
-        .grid-container {
+        .grid-container,#switchbox {
             display: grid;
             grid-template-columns: repeat(4, 24%);
             grid-gap: 10px;
@@ -228,13 +233,48 @@
         }
 
         .grid-item {
+            background: linear-gradient(to bottom,#057748, #4CAF50);
+            position: relative;
             display: flex;
             flex-direction: column;
             justify-content: center;
             text-align: center;
             border: 1px solid #ccc; /* 网格边框 */
             padding: 10px; /* 网格内边距 */
+            box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            transition: box-shadow 0.3s ease-in-out;
+            border-radius: 10px; /* 圆角半径 */
         }
+
+        .grid-item:hover {
+            box-shadow: 4px 4px 6px rgba(0, 0, 0, 0.5);
+        }
+
+        .grid-item input[type="radio"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+        }
+
+        .grid-item label {
+            display: block;
+            position: relative;
+            z-index: 1;
+        }
+
+        .grid-item label span {
+            display: inline-block;
+            padding: 10px;
+        }
+
+        .grid-item input[type="radio"]:checked + label span {
+            background-color: #007bff;
+            color: #fff;
+        }
+
 
         .buttongrid {
             margin-bottom: 10px; /* 按钮下方留白 */
@@ -264,147 +304,156 @@
 </head>
 <body onload="init()">
 <div style="width:100%;display:flex; justify-content:space-between;">
-    <h1 style="width: 20%">M3U 超融合</h1>
-    <button id="download-json-btn7" class="button download-json-btn" style="width: 30%">一键导出全部配置</button>
-    <div id="upload-json-btn7" class="uploadjsonbtn"
+    <h1 style="width: 20%;font-size: 2em;color: white;text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.5);">M3U 超融合</h1>
+    <button id="download-json-btn7" class="grid-item button download-json-btn" style="width: 30%">一键导出全部配置</button>
+    <div id="upload-json-btn7" class="grid-item  uploadjsonbtn"
          style="position: relative; width: 30%; display: flex; justify-content: center; align-items: center;">
         <label for="file-upload">一键导入全部配置</label>
         <input type="file" name="file-upload"
                style="position: absolute; top: 0; left: 0; height: 100%; width: 100%; opacity: 0;"></input>
     </div>
 </div>
+<button class="grid-item" id="switchbutton" >点击打开选项卡</button>
 <div id="switchbox" style="font-size: x-large">
-    <label>
-        <input type="radio" name="page" id="page1" checked>
+    <div class="grid-item">
+        <input  type="radio" name="page" id="page1" checked>
         <span>直播源订阅</span>
-    </label>
-    <label>
+    </div>
+    <div class="grid-item">
         <input type="radio" name="page" id="page2">
         <span>直播源管理</span>
-    </label>
-    <label>
+    </div>
+    <div class="grid-item">
         <input type="radio" name="page" id="page3">
-        <span>密码本</span>
-    </label>
-    <label>
+        <span>记事本</span>
+    </div>
+    <div class="grid-item">
         <input type="radio" name="page" id="page4">
         <span>离线工具</span>
-    </label>
-    <label>
+    </div>
+    <div class="grid-item">
         <input type="radio" name="page" id="page5">
-        <span>域名白名单订阅</span>
-    </label>
-    <label>
+        <span>域名白名单</span>
+    </div>
+    <div class="grid-item">
         <input type="radio" name="page" id="page6">
-        <span>域名黑名单订阅</span>
-    </label>
-    <label>
+        <span>域名黑名单</span>
+    </div>
+    <div class="grid-item">
         <input type="radio" name="page" id="page7">
-        <span>ipv4订阅</span>
-    </label>
-    <label>
+        <span>ipv4</span>
+    </div>
+    <div class="grid-item">
         <input type="radio" name="page" id="page8">
-        <span>ipv6订阅</span>
-    </label>
-    <label>
+        <span>ipv6</span>
+    </div>
+
+    <div class="grid-item">
         <input type="radio" name="page" id="page9">
-        <span>文本行去重复</span>
-    </label>
-    <label>
+        <span>节点-订阅链接</span>
+    </div>
+    <div class="grid-item">
         <input type="radio" name="page" id="page10">
-        <span>节点订阅-节点订阅链接</span>
-    </label>
-    <label>
+        <span>节点-远程配置</span>
+    </div>
+    <div class="grid-item">
         <input type="radio" name="page" id="page11">
-        <span>节点订阅-远程配置订阅</span>
-    </label>
-    <label>
+        <span>节点-后端地址</span>
+    </div>
+    <div class="grid-item">
         <input type="radio" name="page" id="page12">
-        <span>节点订阅-后端地址</span>
-    </label>
-    <label>
-        <input type="radio" name="page" id="page13">
         <span>DNS分流器</span>
-    </label>
-    <label>
-        <input type="radio" name="page" id="page14">
+    </div>
+   <div class="grid-item">
+        <input type="radio" name="page" id="page13">
         <span>订阅密码锁</span>
-    </label>
-    <label>
-        <input type="radio" name="page" id="page15">
+    </div>
+    <div class="grid-item">
+        <input type="radio" name="page" id="page14">
         <span>同步账号</span>
-    </label>
-    <label>
-        <input type="radio" name="page" id="page16">
+    </div>
+    <div class="grid-item">
+        <input type="radio" name="page" id="page15">
         <span>M3U白名单</span>
-    </label>
-    <label>
-        <input type="radio" name="page" id="page17">
+    </div>
+    <div class="grid-item">
+        <input type="radio" name="page" id="page16">
         <span>系统配置</span>
-    </label>
-    <label>
-        <input type="radio" name="page" id="page18">
+    </div>
+    <div class="grid-item">
+        <input type="radio" name="page" id="page17">
         <span>功能开关</span>
-    </label>
-    <label>
-        <input type="radio" name="page" id="page19">
+    </div>
+    <div class="grid-item">
+        <input type="radio" name="page" id="page18">
         <span>简易DNS分流白名单</span>
-    </label>
-    <label>
-        <input type="radio" name="page" id="page20">
+    </div>
+    <div class="grid-item">
+        <input type="radio" name="page" id="page19">
         <span>简易DNS分流黑名单</span>
-    </label>
-    <label>
-        <input type="radio" name="page" id="page21">
+    </div>
+    <div class="grid-item">
+        <input type="radio" name="page" id="page20">
         <span>打赏频道</span>
-    </label>
-    <label>
+    </div>
+    <div class="grid-item">
+        <input type="radio" name="page" id="page21">
+        <span>重命名</span>
+    </div>
+    <div class="grid-item">
         <input type="radio" name="page" id="page22">
-        <span>订阅文件重命名</span>
-    </label>
-    <label>
+        <span>M3U拦截</span>
+    </div>
+    <div class="grid-item">
         <input type="radio" name="page" id="page23">
-        <span>M3U垃圾过滤</span>
-    </label>
-    <label>
+        <span>分组</span>
+    </div>
+    <div class="grid-item">
         <input type="radio" name="page" id="page24">
-        <span>M3U白名单分组优先级</span>
-    </label>
-    <label>
+        <span>下载加密上传</span>
+    </div>
+    <div class="grid-item">
         <input type="radio" name="page" id="page25">
-        <span>网络配置文件下载加密上传</span>
-    </label>
-    <label>
+        <span>下载解密</span>
+    </div>
+    <div class="grid-item">
         <input type="radio" name="page" id="page26">
-        <span>网络配置文件下载解密</span>
-    </label>
-    <label>
+        <span>Youtube</span>
+    </div>
+    <div class="grid-item">
         <input type="radio" name="page" id="page27">
-        <span>Youtube直播源</span>
-    </label>
-    <label>
+        <span>哔哩哔哩</span>
+    </div>
+    <div class="grid-item">
         <input type="radio" name="page" id="page28">
-        <span>BiliBili直播源</span>
-    </label>
-    <label>
+        <span>虎牙</span>
+    </div>
+    <div class="grid-item">
         <input type="radio" name="page" id="page29">
-        <span>Huya直播源</span>
-    </label>
-    <label>
+        <span>YY</span>
+    </div>
+    <div class="grid-item">
         <input type="radio" name="page" id="page30">
-        <span>YY直播源</span>
-    </label>
-    <label>
+        <span>Twitch</span>
+    </div>
+    <div class="grid-item">
         <input type="radio" name="page" id="page31">
-        <span>Twitch直播源</span>
-    </label>
+        <span>抖音</span>
+    </div>
+    <div class="grid-item">
+        <input type="radio" name="page" id="page32">
+        <span>alist</span>
+    </div>
+    <div class="grid-item">
+        <input type="radio" name="page" id="page33">
+        <span>LIVE</span>
+    </div>
 </div>
 <div id="choice">
     <div id="page1" style="display: block;">
         <h1>直播源订阅:从网络下载直播源</h1>
         <div style="float: left;width: 70%">
-            <h3>后台默认24小时自动执行生成操作,同时触发有效直播源在后台缓慢检测</h3>
-            <h3>M3U超融合直播源订阅地址:docker主机地址:端口/url/allM3u.m3u</h3>
+            <h3>订阅地址:</h3>
             <h3 class="urllink">全部直播源-无加密: http://192.168.5.1:22771/secret/allM3u.m3u</h3>
             <h3 class="urllink">全部直播源-无加密-txt: http://192.168.5.1:22771/secret/allM3u.txt</h3>
             <h3 class="urllink">全部直播源-加密: http://192.168.5.1:22771/url/allM3uSecret.txt</h3>
@@ -415,34 +464,34 @@
                 http://192.168.5.1:22771/secret/tvDomainForAdguardhome.txt</h3>
             <h3 class="urllink">adguardhome放行直播源域名-加密:
                 http://192.168.5.1:22771/url/tvDomainForAdguardhomeSecret.txt</h3>
-            <h3>上传文件导入合并M3U超融合备份</h3>
+            <h3>导入合并备份</h3>
         </div>
         <div style="float: right;width: 30%">
             <h2>txt转m3u直播源文件+格式规范</h2>
             <form enctype="multipart/form-data" method="post">
-                <input id="upload-m3u" type="file" name="file" style="float: left;width: 80%">
+                <input class="grid-item  uploadjsonbtn" type="file" name="file" style="float: left;width: 80%">
                 <br>
-                <input id="sub-m3u" type="submit" value="上传你的m3u文件" style="float: left">
+                <input class="grid-item  uploadjsonbtn" type="submit" value="上传你的m3u文件" style="float: left">
             </form>
             <br>
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row" class="addNewSubscriber" style="width:100%">新增网络直播源订阅</button>
+                <button id="add-row" class="grid-item addNewSubscriber" style="width:100%">新增网络直播源订阅</button>
             </div>
             <div>
-                <button class="button stepflag" onclick="execute()" style="width: 100%">生成M3U超融合直播源订阅
+                <button class="grid-item button stepflag" onclick="execute()" style="width: 100%">生成M3U超融合直播源订阅
                 </button>
             </div>
             <div>
-                <button id="download-json-btn" class="button download-json-btn" style="width: 100%">导出M3U订阅备份
+                <button id="download-json-btn" class="grid-item button download-json-btn" style="width: 100%">导出M3U订阅备份
                 </button>
             </div>
-            <div style="width: 97%;">
-                <input type="text" id="searchInput6" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            <div style="width: 98.3%;">
+                <input type="text" id="searchInput6" placeholder="搜索框" class="grid-item button searchbox" style="width: 94.3%"></input>
             </div>
             <button id="removem3ulinks" class="button removeallSubscriber"
                     onclick="removelinksBase('/api/removem3ulinks')">删除全部订阅
@@ -461,16 +510,15 @@
     <div id="page2" style="display: none;">
         <h1>直播源粘贴板:永久保存直播源到本地</h1>
         <h3>点击超融合链接，则会合并这里的直播源到全部直播源</h3>
-        <h3>这部分的直播源只能通过手动删除</h3>
         <h3>没有在功能开关开启有效直播源和白名单直播源则无法使用该功能</h3>
         <h3>上传m3u文件自动/复制直播源到文本框手动合并直播源</h3>
-        <input type="file" id="upload-m3u-btn" style="width: 100%"></input>
+        <input type="file" id="upload-m3u-btn" class="grid-item  uploadjsonbtn"  style="width: 98.3%"></input>
         <textarea id="m3uarea" rows="10" style="width: 100%;background-color: #758a99;color: aliceblue"></textarea>
         <br>
-        <button id="savem3uareas" style="width: 100%" class="button" type="button" onclick="savem3uarea()">
+        <button  style="width: 100%" class="grid-item button delete-m3u-button" type="button" onclick="savem3uarea()">
             合并文本框直播源
         </button>
-        <button id="download-m3u-btn" class="button" style="width: 100%">导出全部本地直播源</button>
+        <button id="download-m3u-btn" class="grid-item button delete-m3u-button" style="width: 100%">导出全部本地直播源</button>
         <button id="remove-m3u-btn" onclick="removem3u()" class="button removeallSubscriber">
             删除全部本地直播源
         </button>
@@ -485,29 +533,24 @@
         </table>
     </div>
     <div id="page3" style="display: none;">
-        <h1>密码记录本</h1>
+        <h1>记事本</h1>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn6" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn6" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row6" class="addNewSubscriber" style="width:100%">新增密码</button>
+                <button id="add-row6" class="grid-item addNewSubscriber" style="width:100%">新增记录</button>
             </div>
             <div>
-                <button id="download-json-btn6" class="button download-json-btn" style="width: 100%">导出密码备份
+                <button id="download-json-btn6" class="grid-item button download-json-btn" style="width: 100%">导出记录备份
                 </button>
             </div>
-            <div style="width: 97%;">
-                <input type="text" id="searchInput" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            <div style="width: 98.3%;">
+                <input type="text" id="searchInput" placeholder="搜索框" class="grid-item button searchbox" style="width: 94.3%"></input>
             </div>
             <button id="removem3ulinks6" class="button removeallSubscriber"
-                    onclick="removelinksBase('/api/removem3ulinks6')">删除全部密码
+                    onclick="removelinksBase('/api/removem3ulinks6')">删除全部记录
             </button>
-            <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">订阅来源:密码来源+密码内容
-                </div>
-                <div class="notice" style="display: flex;width: 20%;">操作</div>
-            </div>
             <table id="input-table6" style="width:100%">
                 <tbody style="width:100%">
                 </tbody>
@@ -515,46 +558,56 @@
         </div>
     </div>
     <div id="page4" style="display: none;">
-        <h1>批量生成随机密码</h1>
-        <form style="float: right">
-            <label for="password-length">密码长度（必填）：</label>
-            <input type="number" id="password-length" name="password-length" value="10" required min="1">
+        <div class="m3u-upload-sp">
+            <h1>批量生成随机密码</h1>
+            <form style="float: right">
+                <label for="password-length">密码长度（必填）：</label>
+                <input type="number" id="password-length" name="password-length" value="10" required min="1">
+                <br>
+                <label for="num-of-passwords">生成个数（默认10个）：</label>
+                <input type="number" id="num-of-passwords" name="num-of-passwords" value="10" min="1">
+                <br>
+                <label>字符集：</label>
+                <input type="checkbox" id="numbers" name="numbers" value="numbers" checked>
+                <label for="numbers">0-9</label>
+                <input type="checkbox" id="upper-case" name="upper-case" value="upper-case" checked>
+                <label for="upper-case">A-Z</label>
+                <input type="checkbox" id="lower-case" name="lower-case" value="lower-case" checked>
+                <label for="lower-case">a-z</label>
+                <input type="checkbox" id="special-chars" name="special-chars" value="special-chars" checked>
+                <label for="special-chars">特殊符号</label>
+                <br>
+                <button id="generatepass" class="grid-item  uploadjsonbtn" type="button" onclick="generatePasswords()">生成</button>
+            </form>
             <br>
-            <label for="num-of-passwords">生成个数（默认10个）：</label>
-            <input type="number" id="num-of-passwords" name="num-of-passwords" value="10" min="1">
+            <textarea id="password-list" rows="10" readonly
+                      style="width: 100%;background-color: #758a99;color: aliceblue"></textarea>
             <br>
-            <label>字符集：</label>
-            <input type="checkbox" id="numbers" name="numbers" value="numbers" checked>
-            <label for="numbers">0-9</label>
-            <input type="checkbox" id="upper-case" name="upper-case" value="upper-case" checked>
-            <label for="upper-case">A-Z</label>
-            <input type="checkbox" id="lower-case" name="lower-case" value="lower-case" checked>
-            <label for="lower-case">a-z</label>
-            <input type="checkbox" id="special-chars" name="special-chars" value="special-chars" checked>
-            <label for="special-chars">特殊符号</label>
-            <br>
-            <button id="generatepass" type="button" onclick="generatePasswords()">生成</button>
-        </form>
-        <br>
-        <textarea id="password-list" rows="10" readonly
-                  style="width: 100%;background-color: #758a99;color: aliceblue"></textarea>
-        <br>
-        <h1>base64加密</h1>
-        <div>
-            <textarea id="input" rows="5" cols="50"></textarea><br/>
-            <button onclick="encode()">Encode</button>
-            <button onclick="decode()">Decode</button>
-            <br/>
-            <textarea id="output" rows="5" cols="50"></textarea>
+        </div>
+        <div class="m3u-upload-sp">
+            <h1>base64加密</h1>
+            <div>
+                <textarea id="input" rows="5" cols="50" placeholder="输入/input"></textarea><br/>
+                <button class="grid-item  uploadjsonbtn" onclick="encode()">加密/Encode</button>
+                <br>
+                <br>
+                <br>
+                <br>
+                <button class="grid-item  uploadjsonbtn" onclick="decode()">解密/Decode</button>
+                <br/>
+                <textarea id="output" rows="5" cols="50" placeholder="输出/output"></textarea>
+            </div>
         </div>
         <div class="m3u-upload-sp">
             <h2>单个直播源文件数据(tvg_name)提取和分组(group-title)重命名,可以用来喂养m3u白名单和分组语言库</h2>
             <h2>比如m3u文件里直播源确定都是央视，那么设置分组名字为央视，里面直播源的名字全部归类为央视</h2>
             <h2>你可以把导出的group.json文件导入m3u白名单补充这个分组的词库</h2>
             <form enctype="multipart/form-data" method="post">
-                <input class="submit-m3u-file" id="upload-m3u-data" type="file" name="file" style="float: left;width: 60%">
-                <input class="submit-m3u-group" id="upload-m3u-group" type="text"  style="float: left;width: 15%;margin-left: 30px" placeholder="新分组名字">
-                <input class="submit-m3u-group-sub"  type="submit" value="点击上传">
+                <input class="grid-item  uploadjsonbtn" id="upload-m3u-data" type="file" name="file"
+                       style="float: left;width: 60%">
+                <input class="submit-m3u-group" id="upload-m3u-group" type="text"
+                       style="float: left;width: 15%;margin-left: 30px" placeholder="新分组名字">
+                <input class="grid-item  uploadjsonbtn" type="submit" value="点击上传">
             </form>
             <br>
         </div>
@@ -563,54 +616,70 @@
             <h2> 比如txt文件里直播源确定都是央视，那么设置分组名字为央视，里面直播源的名字全部归类为央视</h2>
             <h2>你可以把导出的group.json文件导入m3u白名单补充这个分组的词库</h2>
             <form enctype="multipart/form-data" method="post">
-                <input class="submit-m3u-file" id="upload-m3u-data-txt" type="file" name="file" style="float: left;width: 60%">
-                <input class="submit-m3u-group" id="upload-m3u-group-txt" type="text" style="float: left;width: 15%;margin-left: 30px"
+                <input class="grid-item  uploadjsonbtn" id="upload-m3u-data-txt" type="file" name="file"
+                       style="float: left;width: 60%">
+                <input class="submit-m3u-group" id="upload-m3u-group-txt" type="text"
+                       style="float: left;width: 15%;margin-left: 30px"
                        placeholder="新分组名字">
-                <input class="submit-m3u-group-sub"  type="submit" value="点击上传">
+                <input class="grid-item  uploadjsonbtn" type="submit" value="点击上传">
             </form>
             <br>
         </div>
         <div class="m3u-upload-sp">
             <h2>m3u文件转txt文件</h2>
             <form enctype="multipart/form-data" method="post">
-                <input class="submit-m3u-file" id="upload-m3u-to-txt" type="file" name="file"
+                <input class="grid-item  uploadjsonbtn" id="upload-m3u-to-txt" type="file" name="file"
                        style="float: left;width: 60%">
-                <input class="submit-m3u-group-sub" type="submit" value="点击上传">
+                <input class="grid-item  uploadjsonbtn" type="submit" value="点击上传">
             </form>
             <br>
+        </div>
+        <div class="m3u-upload-sp">
+            <h2>文本行去重复</h2>
+            <button  class='grid-item button delete-m3u-button' style="float: right;width: 100%" onclick="removeDuplicates()">去重复</button>
+            <div style="width:100%;display:flex; justify-content:space-between;">
+                <div style="width: 50%">
+                    <p>在左边输入要去重复的文本，每行一个条目。</p>
+                    <textarea id="input2" rows="30" cols="50"></textarea>
+                </div>
+                <div style="width: 50%">
+                    <p>去重复结果如下：</p>
+                    <textarea id="output2" rows="30" cols="50" readonly></textarea>
+                    <br>
+                </div>
+            </div>
         </div>
     </div>
     <div id="page5" style="display: none;">
         <h1>域名白名单订阅:从网络下载白名单</h1>
         <div style="float: left;width: 70%">
-            <h3>后台默认24小时自动执行生成操作</h3>
-            <h3>超融合白名单订阅地址:参考M3U格式</h3>
+            <h3>订阅地址:</h3>
             <h3 class="urllink">dnsmasq-无加密:http://192.168.5.1:22771/secret/whiteListDnsmasq.conf</h3>
             <h3 class="urllink">dnsmasq-加密:http://192.168.5.1:22771/url/whiteListDnsmasqSecret.txt</h3>
             <h3 class="urllink">whitelist-无加密:http://192.168.5.1:22771/secret/whiteListDomian.txt</h3>
             <h3 class="urllink">whitelist-加密:http://192.168.5.1:22771/url/whiteListDomianSecret.txt</h3>
             <h3 class="urllink">
                 whitelist-openclash第三方直连规则-无加密:http://192.168.5.1:22771/secret/whitelistDirectRule.txt</h3>
-            <h3>上传文件导入合并白名单订阅</h3>
+            <h3>导入合并白名单订阅</h3>
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn2" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn2" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row2" class="addNewSubscriber" style="width:100%">新增白名单域名订阅</button>
+                <button id="add-row2" class="grid-item addNewSubscriber" style="width:100%">新增白名单域名订阅</button>
             </div>
             <div>
-                <button class="button stepflag" onclick="execute2()" style="width: 100%">生成白名单超融合订阅
+                <button class="grid-item button stepflag" onclick="execute2()" style="width: 100%">生成白名单超融合订阅
                 </button>
             </div>
             <div>
-                <button id="download-json-btn2" class="button download-json-btn" style="width: 100%">
+                <button id="download-json-btn2" class="grid-item button download-json-btn" style="width: 100%">
                     导出白名单订阅备份
                 </button>
             </div>
-            <div style="width: 97%;">
-                <input type="text" id="searchInput7" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            <div style="width: 98.3%;">
+                <input type="text" id="searchInput7" placeholder="搜索框" class="grid-item button searchbox" style="width: 94.3%"></input>
             </div>
             <button id="removem3ulinks2" class="button removeallSubscriber"
                     onclick="removelinksBase('/api/removem3ulinks2')">删除全部订阅
@@ -629,33 +698,32 @@
     <div id="page6" style="display: none;">
         <h1>域名黑名单订阅:从网络下载黑名单</h1>
         <div style="float: left;width: 70%">
-            <h3>后台默认24小时自动执行生成操作</h3>
-            <h3>超融合Adguardhome黑名单订阅地址:</h3>
+            <h3>订阅地址:</h3>
             <h3 class="urllink">黑名单-OP-无加密:http://192.168.5.1:22771/secret/openclashFallbackFilterDomain.conf</h3>
             <h3 class="urllink">黑名单-OP-加密:http://192.168.5.1:22771/url/openclashFallbackFilterDomainSecret.txt</h3>
             <h3 class="urllink">黑名单-无加密:http://192.168.5.1:22771/secret/blackListDomain.txt</h3>
             <h3 class="urllink">黑名单-加密:http://192.168.5.1:22771/url/blackListDomainSecret.txt</h3>
             <h3 class="urllink">黑名单-openclash代理规则:http://192.168.5.1:22771/secret/blacklistProxyRule.txt</h3>
-            <h3>上传文件导入合并黑名单订阅</h3>
+            <h3>导入合并黑名单订阅</h3>
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn3" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn3" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row3" class="addNewSubscriber" style="width:100%">新增黑名单域名订阅</button>
+                <button id="add-row3" class="grid-item addNewSubscriber" style="width:100%">新增黑名单域名订阅</button>
             </div>
             <div>
-                <button class="button stepflag" onclick="execute3()" style="width: 100%">生成黑名单超融合订阅
+                <button class="grid-item button stepflag" onclick="execute3()" style="width: 100%">生成黑名单超融合订阅
                 </button>
             </div>
             <div>
-                <button id="download-json-btn3" class="button download-json-btn" style="width: 100%">
+                <button id="download-json-btn3" class="grid-item button download-json-btn" style="width: 100%">
                     导出黑名单订阅备份
                 </button>
             </div>
-            <div style="width: 97%;">
-                <input type="text" id="searchInput8" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            <div style="width: 98.3%;">
+                <input type="text" id="searchInput8" placeholder="搜索框" class="grid-item button searchbox" style="width: 94.3%"></input>
             </div>
             <button id="removem3ulinks3" class="button removeallSubscriber"
                     onclick="removelinksBase('/api/removem3ulinks3')">删除全部订阅
@@ -674,29 +742,28 @@
     <div id="page7" style="display: none;">
         <h1>ipv4订阅:从网络下载ipv4</h1>
         <div style="float: left;width: 70%">
-            <h3>后台默认24小时自动执行生成操作</h3>
-            <h3>超融合ipv4订阅地址:参考m3u格式</h3>
+            <h3>订阅地址:</h3>
             <h3 class="urllink">ipv4-无加密:http://192.168.5.1:22771/secret/ipv4.txt</h3>
             <h3 class="urllink">ipv4-加密:http://192.168.5.1:22771/url/ipv4Secret.txt</h3>
-            <h3>上传文件导入合并ipv4订阅</h3>
+            <h3>导入合并ipv4订阅</h3>
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn4" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn4" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row4" class="addNewSubscriber" style="width:100%">新增ipv4订阅</button>
+                <button id="add-row4" class="grid-item addNewSubscriber" style="width:100%">新增ipv4订阅</button>
             </div>
             <div>
-                <button class="button stepflag" onclick="execute4()" style="width: 100%">生成ipv4超融合订阅
+                <button class="grid-item button stepflag" onclick="execute4()" style="width: 100%">生成ipv4超融合订阅
                 </button>
             </div>
             <div>
-                <button id="download-json-btn4" class="button download-json-btn" style="width: 100%">导出ipv4订阅备份
+                <button id="download-json-btn4" class="grid-item button download-json-btn" style="width: 100%">导出ipv4订阅备份
                 </button>
             </div>
-            <div style="width: 97%;">
-                <input type="text" id="searchInput9" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            <div style="width: 98.3%;">
+                <input type="text" id="searchInput9" placeholder="搜索框" class="grid-item button searchbox" style="width: 94.3%"></input>
             </div>
             <button id="removem3ulinks4" class="button removeallSubscriber"
                     onclick="removelinksBase('/api/removem3ulinks4')">删除全部订阅
@@ -715,28 +782,27 @@
     <div id="page8" style="display: none;">
         <h1>ipv6订阅:从网络下载ipv6</h1>
         <div style="float: left;width: 70%">
-            <h3>后台默认24小时自动执行生成操作</h3>
-            <h3>超融合ipv6订阅地址:参考m3u格式</h3>
+            <h3>订阅地址:</h3>
             <h3 class="urllink">IPV6-无加密:http://192.168.5.1:22771/secret/ipv6.txt</h3>
             <h3 class="urllink">IPV6-加密:http://192.168.5.1:22771/url/ipv6Secret.txt</h3>
-            <h3>上传文件导入合并ipv6订阅</h3>
+            <h3>导入合并ipv6订阅</h3>
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn5" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn5" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row5" class="addNewSubscriber" style="width:100%">新增ipv6订阅</button>
+                <button id="add-row5" class="grid-item addNewSubscriber" style="width:100%">新增ipv6订阅</button>
             </div>
             <div>
-                <button class="button stepflag" onclick="execute5()" style="width: 100%">生成ipv6超融合订阅
+                <button class="grid-item button stepflag" onclick="execute5()" style="width: 100%">生成ipv6超融合订阅
                 </button>
             </div>
             <div>
-                <button id="download-json-btn5" class="button download-json-btn" style="width: 100%">导出ipv6订阅备份
+                <button id="download-json-btn5" class="grid-item button download-json-btn" style="width: 100%">导出ipv6订阅备份
                 </button>
             </div>
-            <div style="width: 97%;">
+            <div style="width: 98.3%;">
                 <input type="text" id="searchInput10" placeholder="搜索框" class="searchbox"
                        style="width: 100%"></input>
             </div>
@@ -754,22 +820,7 @@
             </table>
         </div>
     </div>
-    <div id="page9" style="display: none;">
-        <h1>文本行去重复</h1>
-        <button id="simply" style="float: right;width: 100%" onclick="removeDuplicates()">去重复</button>
-        <div style="width:100%;display:flex; justify-content:space-between;">
-            <div style="width: 50%">
-                <p>在左边输入要去重复的文本，每行一个条目。</p>
-                <textarea id="input2" rows="30" cols="50"></textarea>
-            </div>
-            <div style="width: 50%">
-                <p>去重复结果如下：</p>
-                <textarea id="output2" rows="30" cols="50" readonly></textarea>
-                <br>
-            </div>
-        </div>
-    </div>
-    <div id="page10" style="display: none;width: 100%">
+    <div id="page9" style="display: none;width: 100%">
         <h1>节点订阅:从网络下载节点</h1>
         <div style="width: 100%">
             <button id="button-1" class="buttonChooseProxies">Clash新参数</button>
@@ -791,40 +842,38 @@
         </div>
         <div style="float: left;width: 100%;display: flex;">
             <div style="float: left;width: 50%">
-                <h3>后台默认24小时自动执行生成操作</h3>
-                <h3>超融合节点订阅地址:参考m3u格式</h3>
-                <h3>当出现网络问题但是可以下载远程加密订阅文件,直接取第一个加密订阅文件作为代理文件</h3>
+                <h3>订阅地址:</h3>
                 <h3 class="urllink">无加密代理:http://192.168.5.1:22771/secret/proxyConfig.yaml</h3>
                 <h3 class="urllink">加密代理:http://192.168.5.1:22771/url/proxyConfigSecret.txt</h3>
-                <h3>上传文件导入合并节点订阅</h3>
+                <h3>导入合并节点订阅</h3>
             </div>
             <div style="width: 100%;display: flex;flex-direction: column;height: 100%">
                 <div class="dropdown" style="height: 30%">
-                    <button id="proxy-model-switch" style="float: left;width: 90%">选择服务器配置</button>
+                    <button id="proxy-model-switch" class="grid-item addNewSubscriber" style="float: left;width: 90%">选择服务器配置</button>
                     <ul class="dropdown-content"></ul>
                 </div>
                 <div class="dropdown2" style="height: 30%">
-                    <button id="proxy-model-switch2" style="float: left;width: 90%">选择远程配置</button>
+                    <button id="proxy-model-switch2" class="grid-item addNewSubscriber" style="float: left;width: 90%">选择远程配置</button>
                     <ul class="dropdown-content2"></ul>
                 </div>
             </div>
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn8" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn8" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row8" class="addNewSubscriber" style="width:100%">新增节点订阅</button>
+                <button id="add-row8" class="grid-item addNewSubscriber" style="width:100%">新增节点订阅</button>
             </div>
             <div>
-                <button class="button stepflag" onclick="execute6()" style="width: 100%">生成节点超融合订阅
+                <button class="grid-item button stepflag" onclick="execute6()" style="width: 100%">生成节点超融合订阅
                 </button>
             </div>
             <div>
-                <button id="download-json-btn8" class="button download-json-btn" style="width: 100%">导出节点订阅备份
+                <button id="download-json-btn8" class="grid-item button download-json-btn" style="width: 100%">导出节点订阅备份
                 </button>
             </div>
-            <div style="width: 97%;">
+            <div style="width: 98.3%;">
                 <input type="text" id="searchInput11" placeholder="搜索框" class="searchbox"
                        style="width: 100%"></input>
             </div>
@@ -832,7 +881,7 @@
                     onclick="removelinksBase('/api/removem3ulinks8')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">订阅来源:节点订阅地址+加密订阅源的密码
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:节点订阅地址+加密订阅源的密码(没有加密就不填写)
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
@@ -842,23 +891,23 @@
             </table>
         </div>
     </div>
-    <div id="page11" style="display: none;">
+    <div id="page10" style="display: none;">
         <h1>节点订阅:远程配置订阅</h1>
         <div style="float: left;width: 70%">
             <h3>上传文件导入合并远程配置订阅</h3>
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn9" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn9" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row9" class="addNewSubscriber" style="width:100%">新增远程配置订阅</button>
+                <button id="add-row9" class="grid-item addNewSubscriber" style="width:100%">新增远程配置订阅</button>
             </div>
             <div>
-                <button id="download-json-btn9" class="button download-json-btn" style="width: 100%">导出远程配置备份
+                <button id="download-json-btn9" class="grid-item button download-json-btn" style="width: 100%">导出远程配置备份
                 </button>
             </div>
-            <div style="width: 97%;">
+            <div style="width: 98.3%;">
                 <input type="text" id="searchInput12" placeholder="搜索框" class="searchbox"
                        style="width: 100%"></input>
             </div>
@@ -876,24 +925,24 @@
             </table>
         </div>
     </div>
-    <div id="page12" style="display: none;">
+    <div id="page11" style="display: none;">
         <h1>节点订阅:后端地址</h1>
         <div style="float: left;width: 70%">
             <h3>上传文件导入合并后端地址</h3>
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn10" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn10" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row10" class="addNewSubscriber" style="width:100%">新增后端地址</button>
+                <button id="add-row10" class="grid-item addNewSubscriber" style="width:100%">新增后端地址</button>
             </div>
             <div>
-                <button id="download-json-btn10" class="button download-json-btn" style="width: 100%">
+                <button id="download-json-btn10" class="grid-item button download-json-btn" style="width: 100%">
                     导出后端地址配置备份
                 </button>
             </div>
-            <div style="width: 97%;">
+            <div style="width: 98.3%;">
                 <input type="text" id="searchInput13" placeholder="搜索框" class="searchbox"
                        style="width: 100%"></input>
             </div>
@@ -911,63 +960,87 @@
             </table>
         </div>
     </div>
-    <div id="page13" style="display: none;">
+    <div id="page12" style="display: none;">
         <h1>DNS分流器,监听22770端口</h1>
         <h3>修改了下面参数需要重启容器使其配置生效</h3>
-        <div style="float: left;width: 70%">
-            <h3>设置分流并发线程,分流服务器,端口,超时</h3>
-        </div>
         <div style="display: flex;width: 100%;">
             DNS分流并发查询数(上限1000)
         </div>
         <div style="width:100%">
             <input type="text" id="queryThreadNum" class="stubboninput"/>
-            <button id="queryThreadNumButton" onclick="saveQueryThreadNum()" class="stubbonsave">保存</button>
+            <button id="queryThreadNumButton" onclick="saveQueryThreadNum()"  class="grid-item button stubbonsave" >保存</button>
         </div>
         <div style="display: flex;width: 100%;">
             通信超时时间(单位:秒)
         </div>
         <div style="width:100%">
             <input type="text" id="timeout" class="stubboninput"/>
-            <button id="timeoutButton" onclick="saveTimeout()" class="stubbonsave">保存</button>
+            <button id="timeoutButton" onclick="saveTimeout()" class="grid-item button stubbonsave">保存</button>
         </div>
         <div style="display: flex;width: 100%;">
             DNS分流单个查询并发检测黑白名单数据线程数(上限1000)
         </div>
         <div style="width:100%">
             <input type="text" id="threads" class="stubboninput"/>
-            <button id="threadsButton" onclick="saveData()" class="stubbonsave">保存</button>
+            <button id="threadsButton" onclick="saveData()" class="grid-item button stubbonsave">保存</button>
         </div>
         <div style="display: flex;width: 100%;">
             国内DNS服务器地址
         </div>
         <div style="width:100%">
             <input type="text" id="chinaDnsServer" class="stubboninput"/>
-            <button id="chinaDnsServerBtn" onclick="saveChinaDnsServer()" class="stubbonsave">保存</button>
+            <button id="chinaDnsServerBtn" onclick="saveChinaDnsServer()" class="grid-item button stubbonsave">保存</button>
         </div>
         <div style="display: flex;width: 100%;">
             国内DNS服务器端口
         </div>
         <div style="width:100%">
             <input type="text" id="chinaDnsPort" class="stubboninput"/>
-            <button id="chinaDnsPortBtn" onclick="saveChinaDnsPort()" class="stubbonsave">保存</button>
+            <button id="chinaDnsPortBtn" onclick="saveChinaDnsPort()" class="grid-item button stubbonsave">保存</button>
         </div>
         <div style="display: flex;width: 100%;">
             国外DNS服务器地址
         </div>
         <div style="width:100%">
             <input type="text" id="extraDnsServer" class="stubboninput"/>
-            <button id="extraDnsServerBtn" onclick="saveExtraDnsServer()" class="stubbonsave">保存</button>
+            <button id="extraDnsServerBtn" onclick="saveExtraDnsServer()" class="grid-item button stubbonsave">保存</button>
         </div>
         <div style="display: flex;width: 100%;">
             国外DNS服务器端口
         </div>
         <div style="width:100%">
             <input type="text" id="extraDnsPort" class="stubboninput"/>
-            <button id="extraDnsPortBtn" onclick="saveExtraDnsPort()" class="stubbonsave">保存</button>
+            <button id="extraDnsPortBtn" onclick="saveExtraDnsPort()" class="grid-item button stubbonsave">保存</button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            假设这部分顶级域名全部走国内DNS,使用,分隔
+        </div>
+        <div style="width:100%">
+            <input type="text" id="chinaTopDomain" class="stubboninput" placeholder="cn,中国"/>
+            <button onclick="changeFileName('chinaTopDomain', 'chinaTopDomain', chinaTopDomain)"
+                    class="grid-item button stubbonsave">保存
+            </button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            假设这部分顶级域名全部走国外DNS,使用,分隔
+        </div>
+        <div style="width:100%">
+            <input type="text" id="foreignTopDomain" class="stubboninput" placeholder="xyz,club,online,site,top,win"/>
+            <button onclick="changeFileName('foreignTopDomain', 'foreignTopDomain', foreignTopDomain)"
+                    class="grid-item button stubbonsave">保存
+            </button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            dns查询模式(0-并发查询;1-顺序查询)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="dnsMode" class="stubboninput" placeholder="0"/>
+            <button onclick="changeFileName('dnsMode', 'dnsMode', dnsMode)"
+                    class="grid-item button stubbonsave">保存
+            </button>
         </div>
     </div>
-    <div id="page14" style="display: none;">
+    <div id="page13" style="display: none;">
         <h1>订阅密码锁</h1>
         <div style="float: left;width: 70%">
             <h3>设置私有订阅的密码</h3>
@@ -975,10 +1048,10 @@
             <h3>上传文件导入个人配置</h3>
         </div>
         <div>
-            <input type="file" id="upload-json-btn20" class="uploadjsonbtn" style="width: 100%"></input>
+            <input type="file" id="upload-json-btn20" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
         </div>
         <div>
-            <button id="download-json-btn20" class="button download-json-btn" style="width: 100%">导出个人配置备份
+            <button id="download-json-btn20" class="grid-item button download-json-btn" style="width: 100%">导出个人配置备份
             </button>
         </div>
         <div style="display: flex;width: 100%;">
@@ -986,17 +1059,17 @@
         </div>
         <div style="width:100%">
             <input type="text" id="threads2" class="stubboninput"/>
-            <button onclick="changePassword('m3u','threads2',threadNum2)" class="stubbonsave">随机</button>
-            <button onclick="changePasswordByHand('m3u','threads2',threadNum2)" class="stubbonsave">手动修改</button>
+            <button onclick="changePassword('m3u','threads2',threadNum2)" class="grid-item button stubbonsave">随机</button>
+            <button onclick="changePasswordByHand('m3u','threads2',threadNum2)" class="grid-item button stubbonsave">手动修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             域名白名单订阅
         </div>
         <div style="width:100%">
             <input type="text" id="chinaDnsServer2" class="stubboninput"/>
-            <button onclick="changePassword('whitelist','chinaDnsServer2',chinaDnsServer2)" class="stubbonsave">随机
+            <button onclick="changePassword('whitelist','chinaDnsServer2',chinaDnsServer2)" class="grid-item button stubbonsave">随机
             </button>
-            <button onclick="changePasswordByHand('whitelist','chinaDnsServer2',chinaDnsServer2)" class="stubbonsave">
+            <button onclick="changePasswordByHand('whitelist','chinaDnsServer2',chinaDnsServer2)" class="grid-item button stubbonsave">
                 手动修改
             </button>
         </div>
@@ -1005,9 +1078,9 @@
         </div>
         <div style="width:100%">
             <input type="text" id="chinaDnsPort2" class="stubboninput"/>
-            <button onclick="changePassword('blacklist','chinaDnsPort2',chinaDnsPort2)" class="stubbonsave">随机
+            <button onclick="changePassword('blacklist','chinaDnsPort2',chinaDnsPort2)" class="grid-item button stubbonsave">随机
             </button>
-            <button onclick="changePasswordByHand('blacklist','chinaDnsPort2',chinaDnsPort2)" class="stubbonsave">
+            <button onclick="changePasswordByHand('blacklist','chinaDnsPort2',chinaDnsPort2)" class="grid-item button stubbonsave">
                 手动修改
             </button>
         </div>
@@ -1016,8 +1089,8 @@
         </div>
         <div style="width:100%">
             <input type="text" id="extraDnsServer2" class="stubboninput"/>
-            <button onclick="changePassword('ipv4','extraDnsServer2',extraDnsServer2)" class="stubbonsave">随机</button>
-            <button onclick="changePasswordByHand('ipv4','extraDnsServer2',extraDnsServer2)" class="stubbonsave">
+            <button onclick="changePassword('ipv4','extraDnsServer2',extraDnsServer2)" class="grid-item button stubbonsave">随机</button>
+            <button onclick="changePasswordByHand('ipv4','extraDnsServer2',extraDnsServer2)" class="grid-item button stubbonsave">
                 手动修改
             </button>
         </div>
@@ -1026,8 +1099,8 @@
         </div>
         <div style="width:100%">
             <input type="text" id="extraDnsPort2" class="stubboninput"/>
-            <button onclick="changePassword('ipv6','extraDnsPort2',extraDnsPort2)" class="stubbonsave">随机</button>
-            <button onclick="changePasswordByHand('ipv6','extraDnsPort2',extraDnsPort2)" class="stubbonsave">手动修改
+            <button onclick="changePassword('ipv6','extraDnsPort2',extraDnsPort2)" class="grid-item button stubbonsave">随机</button>
+            <button onclick="changePasswordByHand('ipv6','extraDnsPort2',extraDnsPort2)" class="grid-item button stubbonsave">手动修改
             </button>
         </div>
         <div style="display: flex;width: 100%;">
@@ -1035,8 +1108,8 @@
         </div>
         <div style="width:100%">
             <input type="text" id="extraDnsPort3" class="stubboninput"/>
-            <button onclick="changePassword('proxy','extraDnsPort3',extraDnsPort3)" class="stubbonsave">随机</button>
-            <button onclick="changePasswordByHand('proxy','extraDnsPort3',extraDnsPort3)" class="stubbonsave">手动修改
+            <button onclick="changePassword('proxy','extraDnsPort3',extraDnsPort3)" class="grid-item button stubbonsave">随机</button>
+            <button onclick="changePasswordByHand('proxy','extraDnsPort3',extraDnsPort3)" class="grid-item button stubbonsave">手动修改
             </button>
         </div>
         <br>
@@ -1046,15 +1119,15 @@
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn14" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn14" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="download-json-btn14" class="button download-json-btn" style="width: 100%">
+                <button id="download-json-btn14" class="grid-item button download-json-btn" style="width: 100%">
                     导出历史订阅密码备份
                 </button>
             </div>
-            <div style="width: 97%;">
-                <input type="text" id="searchInput2" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            <div style="width: 98.3%;">
+                <input type="text" id="searchInput2" placeholder="搜索框" class="grid-item button searchbox" style="width: 94.3%"></input>
             </div>
             <button id="removem3ulinks14" class="button removeallSubscriber"
                     onclick="removelinksBase('/api/removem3ulinks14')">删除全部历史订阅密码
@@ -1070,7 +1143,7 @@
             </table>
         </div>
     </div>
-    <div id="page15" style="display: none;">
+    <div id="page14" style="display: none;">
         <h1>gitee同步账号</h1>
         <div style="float: left;width: 70%">
             <h3>设置gitee账号、仓库、路径</h3>
@@ -1078,10 +1151,10 @@
             <h3>上传文件导入个人配置</h3>
         </div>
         <div>
-            <input type="file" id="upload-json-btn21" class="uploadjsonbtn" style="width: 100%"></input>
+            <input type="file" id="upload-json-btn21" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
         </div>
         <div>
-            <button id="download-json-btn21" class="button download-json-btn" style="width: 100%">导出个人配置备份
+            <button id="download-json-btn21" class="grid-item button download-json-btn" style="width: 100%">导出个人配置备份
             </button>
         </div>
         <div style="display: flex;width: 100%;">
@@ -1089,7 +1162,7 @@
         </div>
         <div style="width:100%">
             <input type="text" id="giteeUsername" class="stubboninput" placeholder="ppap"/>
-            <button onclick="changeSyncData('username', 'bbs', 'giteeUsername', giteeUsername)" class="stubbonsave">
+            <button onclick="changeSyncData('username', 'bbs', 'giteeUsername', giteeUsername)" class="grid-item button stubbonsave">
                 修改
             </button>
         </div>
@@ -1098,7 +1171,7 @@
         </div>
         <div style="width:100%">
             <input type="text" id="giteeRePoname" class="stubboninput" placeholder="test"/>
-            <button onclick="changeSyncData('reponame', 'bbs', 'giteeRePoname', giteeRePoname)" class="stubbonsave">
+            <button onclick="changeSyncData('reponame', 'bbs', 'giteeRePoname', giteeRePoname)" class="grid-item button stubbonsave">
                 修改
             </button>
         </div>
@@ -1107,7 +1180,7 @@
         </div>
         <div style="width:100%">
             <input type="text" id="giteePath" class="stubboninput" placeholder="/"/>
-            <button onclick="changeSyncData('path', 'bbs', 'giteePath', giteePath)" class="stubbonsave">修改</button>
+            <button onclick="changeSyncData('path', 'bbs', 'giteePath', giteePath)" class="grid-item button stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             gitee访问令牌:access_token
@@ -1115,7 +1188,7 @@
         <div style="width:100%">
             <input type="text" id="giteeAcessToken" class="stubboninput" placeholder="dsfdgshgrhergwrgsdeg"/>
             <button onclick="changeSyncData('accesstoken', 'bbs', 'giteeAcessToken', giteeAcessToken)"
-                    class="stubbonsave">修改
+                    class="grid-item button stubbonsave">修改
             </button>
         </div>
 
@@ -1126,10 +1199,10 @@
             <h3>上传文件导入个人配置</h3>
         </div>
         <div>
-            <input type="file" id="upload-json-btn22" class="uploadjsonbtn" style="width: 100%"></input>
+            <input type="file" id="upload-json-btn22" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
         </div>
         <div>
-            <button id="download-json-btn22" class="button download-json-btn" style="width: 100%">导出个人配置备份
+            <button id="download-json-btn22" class="grid-item button download-json-btn" style="width: 100%">导出个人配置备份
             </button>
         </div>
         <div style="display: flex;width: 100%;">
@@ -1137,7 +1210,7 @@
         </div>
         <div style="width:100%">
             <input type="text" id="githubUsername" class="stubboninput" placeholder="ppap"/>
-            <button onclick="changeSyncData('username', 'pps', 'githubUsername', githubUsername)" class="stubbonsave">
+            <button onclick="changeSyncData('username', 'pps', 'githubUsername', githubUsername)" class="grid-item button stubbonsave">
                 修改
             </button>
         </div>
@@ -1146,7 +1219,7 @@
         </div>
         <div style="width:100%">
             <input type="text" id="githubRePoname" class="stubboninput" placeholder="test"/>
-            <button onclick="changeSyncData('reponame', 'pps', 'githubRePoname', githubRePoname)" class="stubbonsave">
+            <button onclick="changeSyncData('reponame', 'pps', 'githubRePoname', githubRePoname)" class="grid-item button stubbonsave">
                 修改
             </button>
         </div>
@@ -1155,7 +1228,7 @@
         </div>
         <div style="width:100%">
             <input type="text" id="githubPath" class="stubboninput" placeholder="/"/>
-            <button onclick="changeSyncData('path', 'pps', 'githubPath', githubPath)" class="stubbonsave">修改</button>
+            <button onclick="changeSyncData('path', 'pps', 'githubPath', githubPath)" class="grid-item button stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             github访问令牌:access_token
@@ -1163,7 +1236,7 @@
         <div style="width:100%">
             <input type="text" id="githubAcessToken" class="stubboninput" placeholder="rewretwertrt34twr"/>
             <button onclick="changeSyncData('accesstoken', 'pps', 'githubAcessToken', githubAcessToken)"
-                    class="stubbonsave">修改
+                    class="grid-item button stubbonsave">修改
             </button>
         </div>
 
@@ -1174,10 +1247,10 @@
             <h3>上传文件导入个人配置</h3>
         </div>
         <div>
-            <input type="file" id="upload-json-btn23" class="uploadjsonbtn" style="width: 100%"></input>
+            <input type="file" id="upload-json-btn23" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
         </div>
         <div>
-            <button id="download-json-btn23" class="button download-json-btn" style="width: 100%">导出个人配置备份
+            <button id="download-json-btn23" class="grid-item button download-json-btn" style="width: 100%">导出个人配置备份
             </button>
         </div>
         <div style="display: flex;width: 100%;">
@@ -1185,7 +1258,7 @@
         </div>
         <div style="width:100%">
             <input type="text" id="webdavUsername" class="stubboninput" placeholder="ppap"/>
-            <button onclick="changeSyncData('username', 'lls', 'webdavUsername', webdavUsername)" class="stubbonsave">
+            <button onclick="changeSyncData('username', 'lls', 'webdavUsername', webdavUsername)" class="grid-item button stubbonsave">
                 修改
             </button>
         </div>
@@ -1194,7 +1267,7 @@
         </div>
         <div style="width:100%">
             <input type="text" id="webdavPassword" class="stubboninput" placeholder="123456"/>
-            <button onclick="changeSyncData('password', 'lls', 'webdavPassword', webdavPassword)" class="stubbonsave">
+            <button onclick="changeSyncData('password', 'lls', 'webdavPassword', webdavPassword)" class="grid-item button stubbonsave">
                 修改
             </button>
         </div>
@@ -1203,7 +1276,7 @@
         </div>
         <div style="width:100%">
             <input type="text" id="webdavPath" class="stubboninput" placeholder="/dav/"/>
-            <button onclick="changeSyncData('path', 'lls', 'webdavPath', webdavPath)" class="stubbonsave">修改</button>
+            <button onclick="changeSyncData('path', 'lls', 'webdavPath', webdavPath)" class="grid-item button stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             webdav协议:agreement（http/https）
@@ -1211,7 +1284,7 @@
         <div style="width:100%">
             <input type="text" id="webdavAgreement" class="stubboninput" placeholder="http"/>
             <button onclick="changeSyncData('agreement', 'lls', 'webdavAgreement', webdavAgreement)"
-                    class="stubbonsave">修改
+                    class="grid-item button stubbonsave">修改
             </button>
         </div>
         <div style="display: flex;width: 100%;">
@@ -1219,35 +1292,35 @@
         </div>
         <div style="width:100%">
             <input type="text" id="webdavIp" class="stubboninput" placeholder="192.168.5.1"/>
-            <button onclick="changeSyncData('ip', 'lls', 'webdavIp', webdavIp)" class="stubbonsave">修改</button>
+            <button onclick="changeSyncData('ip', 'lls', 'webdavIp', webdavIp)" class="grid-item button stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             webdav端口:port (比如5244/80/8080....)
         </div>
         <div style="width:100%">
             <input type="text" id="webdavPort" class="stubboninput" placeholder="5244"/>
-            <button onclick="changeSyncData('port', 'lls', 'webdavPort', webdavPort)" class="stubbonsave">修改</button>
+            <button onclick="changeSyncData('port', 'lls', 'webdavPort', webdavPort)" class="grid-item button stubbonsave">修改</button>
         </div>
     </div>
-    <div id="page16" style="display: none;">
+    <div id="page15" style="display: none;">
         <h1>M3U白名单</h1>
         <div style="float: left;width: 70%">
             <h3>上传文件导入合并M3U白名单</h3>
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn11" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn11" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row11" class="addNewSubscriber" style="width:100%">新增关键字</button>
+                <button id="add-row11" class="grid-item addNewSubscriber" style="width:100%">新增关键字</button>
             </div>
             <div>
-                <button id="download-json-btn11" class="button download-json-btn" style="width: 100%">
+                <button id="download-json-btn11" class="grid-item button download-json-btn" style="width: 100%">
                     导出关键字配置备份
                 </button>
             </div>
-            <div style="width: 97%;">
-                <input type="text" id="searchInput3" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            <div style="width: 98.3%;">
+                <input type="text" id="searchInput3" placeholder="搜索框" class="grid-item button searchbox" style="width: 94.3%"></input>
             </div>
             <button id="removem3ulinks11" class="button removeallSubscriber"
                     onclick="removelinksBase('/api/removem3ulinks11')">删除全部关键字
@@ -1263,14 +1336,14 @@
             </table>
         </div>
     </div>
-    <div id="page17" style="display: none;">
+    <div id="page16" style="display: none;">
         <h1>系统配置</h1>
         <div style="float: left;width: 70%">
             <h3>设置主机ip，动态改变下载链接,ip如果不对可以自己调整</h3>
         </div>
         <div style="width:100%">
             <input type="text" id="iptext" class="stubboninput"/>
-            <button id="changeip" onclick="changeIP()" class="stubbonsave">修改</button>
+            <button id="changeip" onclick="changeIP()" class="grid-item button stubbonsave">修改</button>
         </div>
 
         <div style="display: flex;width: 100%;">
@@ -1278,14 +1351,14 @@
         </div>
         <div style="width:100%">
             <input type="text" id="minTimeout" class="stubboninput" placeholder="minTimeout"/>
-            <button onclick="changeFileName('minTimeout', 'minTimeout', minTimeout)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('minTimeout', 'minTimeout', minTimeout)" class="grid-item button stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             斗鱼、哔哩哔哩、虎牙、YY、Youtube直播源超时最大值(秒)
         </div>
         <div style="width:100%">
             <input type="text" id="maxTimeout" class="stubboninput" placeholder="maxTimeout"/>
-            <button onclick="changeFileName('maxTimeout', 'maxTimeout', maxTimeout)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('maxTimeout', 'maxTimeout', maxTimeout)" class="grid-item button stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             系统用户名
@@ -1293,7 +1366,7 @@
         <div style="width:100%">
             <input type="text" id="usernameSys" class="stubboninput" placeholder="admin"/>
             <button onclick="changeFileName('usernameSys', 'usernameSys', usernameSys)"
-                    class="stubbonsave">修改
+                    class="grid-item button stubbonsave">修改
             </button>
         </div>
         <div style="display: flex;width: 100%;">
@@ -1302,169 +1375,225 @@
         <div style="width:100%">
             <input type="text" id="passwordSys" class="stubboninput" placeholder="password"/>
             <button onclick="changeFileName('passwordSys', 'passwordSys', passwordSys)"
-                    class="stubbonsave">修改
+                    class="grid-item button stubbonsave">修改
+            </button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            通用直播源定时器执行周期(秒)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="normalM3uClock" class="stubboninput" placeholder="7200"/>
+            <button onclick="changeFileName('normalM3uClock', 'normalM3uClock', normalM3uClock)"
+                    class="grid-item button stubbonsave">修改
+            </button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            通用订阅下载定时器执行周期(域名黑/白名单、ipv4/6、下载加密/解密)(秒)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="normalSubscriberClock" class="stubboninput" placeholder="10800"/>
+            <button onclick="changeFileName('normalSubscriberClock', 'normalSubscriberClock', normalSubscriberClock)"
+                    class="grid-item button stubbonsave">修改
+            </button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            节点订阅文件下载周期(秒)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="proxySubscriberClock" class="stubboninput" placeholder="3600"/>
+            <button onclick="changeFileName('proxySubscriberClock', 'proxySubscriberClock', proxySubscriberClock)"
+                    class="grid-item button stubbonsave">修改
+            </button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            youtube/bilibili/huya/yy/twitch直播源刷新周期(秒)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="spM3uClock" class="stubboninput" placeholder="3600"/>
+            <button onclick="changeFileName('spM3uClock', 'spM3uClock', spM3uClock)"
+                    class="grid-item button stubbonsave">修改
+            </button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            自动简易dns订阅文件生成周期(秒)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="autoDnsSwitchClock" class="stubboninput" placeholder="600"/>
+            <button onclick="changeFileName('autoDnsSwitchClock', 'autoDnsSwitchClock', autoDnsSwitchClock)"
+                    class="grid-item button stubbonsave">修改
+            </button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            同步账号检查上传数据线程周期(秒)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="syncClock" class="stubboninput" placeholder="10"/>
+            <button onclick="changeFileName('syncClock', 'syncClock', syncClock)"
+                    class="grid-item button stubbonsave">修改
+            </button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            最大失败尝试恢复推流alist直播源时长(秒)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="reliveAlistTsTime" class="stubboninput" placeholder="600"/>
+            <button onclick="changeFileName('reliveAlistTsTime', 'reliveAlistTsTime', reliveAlistTsTime)"
+                    class="grid-item button stubbonsave">修改
             </button>
         </div>
     </div>
-    <div id="page18" style="display: none;">
+    <div id="page17" style="display: none;">
         <h1>功能开关</h1>
         <div style="padding-right: 60px">
-            <button onclick="serverMode()" class="stubbonsave">服务器模式</button>
-            <button onclick="clientMode()" class="stubbonsave">客户机模式</button>
+            <button onclick="serverMode()" class="grid-item button stubbonsave">服务器模式</button>
+            <button onclick="clientMode()" class="grid-item button stubbonsave">客户机模式</button>
             <br>
             <br>
             <br>
             <br>
         </div>
         <div class="grid-container">
-            <div class="grid-item">
-                <button id="switch" class="switchfunctionbutton" onclick="toggleSwitch('switch')">已关闭</button>
-                <input class="toggletext" type="text" value="生成有效M3U">
+            <div class="grid-item ">
+                <button id="switch" class="switchfunctionbutton button" onclick="toggleSwitch('switch')">已关闭</button>
+                <span>生成有效M3U</span>
             </div>
             <div class="grid-item">
                 <button id="switch2" class="switchfunctionbutton" onclick="toggleSwitch('switch2')">已关闭</button>
-                <input class="toggletext" type="text" value="M3U加密">
+                <span>M3U加密</span>
             </div>
             <div class="grid-item">
                 <button id="switch3" class="switchfunctionbutton" onclick="toggleSwitch('switch3')">已关闭</button>
-                <input class="toggletext" type="text" value="全部M3U加密上传">
+                <span>全部M3U加密上传</span>
             </div>
             <div class="grid-item">
                 <button id="switch4" class="switchfunctionbutton" onclick="toggleSwitch('switch4')">已关闭</button>
-                <input class="toggletext" type="text" value="生成全部M3U">
+                <span>生成全部M3U</span>
             </div>
             <div class="grid-item">
                 <button id="switch5" class="switchfunctionbutton" onclick="toggleSwitch('switch5')">已关闭</button>
-                <input class="toggletext" type="text" value="生成白名单M3U">
+                <span>生成白名单M3U</span>
             </div>
             <div class="grid-item">
                 <button id="switch6" class="switchfunctionbutton" onclick="toggleSwitch('switch6')">已关闭</button>
-                <input class="toggletext" type="text" value="M3U域名-无加密">
+                <span>M3U域名-无加密</span>
             </div>
             <div class="grid-item">
                 <button id="switch7" class="switchfunctionbutton" onclick="toggleSwitch('switch7')">已关闭</button>
-                <input class="toggletext" type="text" value="m3u域名加密文件上传">
+                <span>m3u域名加密文件上传</span>
             </div>
             <div class="grid-item">
                 <button id="switch8" class="switchfunctionbutton" onclick="toggleSwitch('switch8')">已关闭</button>
-                <input class="toggletext" type="text" value="m3u域名加密文件生成">
+                <span>m3u域名加密文件生成</span>
             </div>
             <div class="grid-item">
                 <button id="switch9" class="switchfunctionbutton" onclick="toggleSwitch('switch9')">已关闭</button>
-                <input class="toggletext" type="text" value="域名白名单生成dnsmasq加密文件">
+                <span>域名白名单dnsmasq加密文件</span>
             </div>
             <div class="grid-item">
                 <button id="switch10" class="switchfunctionbutton" onclick="toggleSwitch('switch10')">已关闭</button>
-                <input class="toggletext" type="text" value="域名白名单加密dnsmasq文件上传">
+                 <span>域名白名单dnsmasq文件上传</span>
             </div>
             <div class="grid-item">
                 <button id="switch11" class="switchfunctionbutton" onclick="toggleSwitch('switch11')">已关闭</button>
-                <input class="toggletext" type="text" value="whitelist-加密上传">
+                <span>whitelist-加密上传</span>
             </div>
             <div class="grid-item">
                 <button id="switch12" class="switchfunctionbutton" onclick="toggleSwitch('switch12')">已关闭</button>
-                <input class="toggletext" type="text" value="whitelist-加密">
+                <span>whitelist-加密</span>
             </div>
             <div class="grid-item">
                 <button id="switch13" class="switchfunctionbutton" onclick="toggleSwitch('switch13')">已关闭</button>
-                <input class="toggletext" type="text" value="域名黑名单-定时器">
+                <span>域名黑名单-定时器</span>
             </div>
             <div class="grid-item">
                 <button id="switch14" class="switchfunctionbutton" onclick="toggleSwitch('switch14')">已关闭</button>
-                <input class="toggletext" type="text" value="域名黑名单OP-加密">
+                <span>域名黑名单OP-加密</span>
             </div>
             <div class="grid-item">
                 <button id="switch15" class="switchfunctionbutton" onclick="toggleSwitch('switch15')">已关闭</button>
-                <input class="toggletext" type="text" value="域名黑名单OP-加密-上传">
+                <span>域名黑名单OP-加密-上传</span>
             </div>
             <div class="grid-item">
                 <button id="switch16" class="switchfunctionbutton" onclick="toggleSwitch('switch16')">已关闭</button>
-                <input class="toggletext" type="text" value="域名黑名单-加密">
+                <span>域名黑名单-加密</span>
             </div>
             <div class="grid-item">
                 <button id="switch17" class="switchfunctionbutton" onclick="toggleSwitch('switch17')">已关闭</button>
-                <input class="toggletext" type="text" value="域名黑名单-加密-上传">
+                <span>域名黑名单-加密-上传</span>
             </div>
             <div class="grid-item">
                 <button id="switch18" class="switchfunctionbutton" onclick="toggleSwitch('switch18')">已关闭</button>
-                <input class="toggletext" type="text" value="ipv4-加密">
+                <span>ipv4-加密</span>
             </div>
             <div class="grid-item">
                 <button id="switch19" class="switchfunctionbutton" onclick="toggleSwitch('switch19')">已关闭</button>
-                <input class="toggletext" type="text" value="ipv4-加密-上传">
+                <span>ipv4-加密-上传</span>
             </div>
             <div class="grid-item">
                 <button id="switch20" class="switchfunctionbutton" onclick="toggleSwitch('switch20')">已关闭</button>
-                <input class="toggletext" type="text" value="ipv6-加密">
+                <span>ipv6-加密</span>
             </div>
             <div class="grid-item">
                 <button id="switch21" class="switchfunctionbutton" onclick="toggleSwitch('switch21')">已关闭</button>
-                <input class="toggletext" type="text" value="ipv6-加密-上传">
+                <span>ipv6-加密-上传</span>
             </div>
             <div class="grid-item">
                 <button id="switch22" class="switchfunctionbutton" onclick="toggleSwitch('switch22')">已关闭</button>
-                <input class="toggletext" type="text" value="节点订阅-加密">
+                <span>节点订阅-加密</span>
             </div>
             <div class="grid-item">
                 <button id="switch23" class="switchfunctionbutton" onclick="toggleSwitch('switch23')">已关闭</button>
-                <input class="toggletext" type="text" value="节点订阅-加密-上传">
+                <span>节点订阅-加密-上传</span>
             </div>
             <div class="grid-item">
                 <button id="switch24" class="switchfunctionbutton" onclick="toggleSwitch('switch24')">已关闭</button>
-                <input class="toggletext" type="text" value="自动生成简易DNS黑白名单">
+                <span>自动生成简易DNS黑白名单</span>
             </div>
             <div class="grid-item">
                 <button id="switch25" class="switchfunctionbutton" onclick="toggleSwitch('switch25')">已关闭</button>
-                <input class="toggletext" type="text" value="m3u-定时器">
+                <span>m3u-定时器</span>
             </div>
             <div class="grid-item">
                 <button id="switch26" class="switchfunctionbutton" onclick="toggleSwitch('switch26')">已关闭</button>
-                <input class="toggletext" type="text" value="域名白名单-定时器">
+                <span>域名白名单-定时器</span>
             </div>
             <div class="grid-item">
                 <button id="switch27" class="switchfunctionbutton" onclick="toggleSwitch('switch27')">已关闭</button>
-                <input class="toggletext" type="text" value="ipv4-定时器">
+                 <span>ipv4-定时器</span>
             </div>
             <div class="grid-item">
                 <button id="switch28" class="switchfunctionbutton" onclick="toggleSwitch('switch28')">已关闭</button>
-                <input class="toggletext" type="text" value="ipv6-定时器">
+                <span>ipv6-定时器</span>
             </div>
             <div class="grid-item">
                 <button id="switch30" class="switchfunctionbutton" onclick="toggleSwitch('switch30')">已关闭</button>
-                <input class="toggletext" type="text" value="上传至Gitee">
+                <span>上传至Gitee</span>
             </div>
             <div class="grid-item">
                 <button id="switch31" class="switchfunctionbutton" onclick="toggleSwitch('switch31')">已关闭</button>
-                <input class="toggletext" type="text" value="上传至Github">
+                <span>上传至Github</span>
             </div>
             <div class="grid-item">
                 <button id="switch32" class="switchfunctionbutton" onclick="toggleSwitch('switch32')">已关闭</button>
-                <input class="toggletext" type="text" value="上传至Webdav">
+                <span>上传至Webdav</span>
             </div>
             <div class="grid-item">
                 <button id="switch33" class="switchfunctionbutton" onclick="toggleSwitch('switch33')">已关闭</button>
-                <input class="toggletext" type="text" value="下载加密上传-定时器">
+                <span>下载加密上传-定时器</span>
             </div>
             <div class="grid-item">
                 <button id="switch34" class="switchfunctionbutton" onclick="toggleSwitch('switch34')">已关闭</button>
-                <input class="toggletext" type="text" value="下载解密-定时器">
+                <span>下载解密-定时器</span>
             </div>
             <div class="grid-item">
                 <button id="switch35" class="switchfunctionbutton" onclick="toggleSwitch('switch35')">已关闭</button>
-                <input class="toggletext" type="text" value="项目直播源-定时器">
+                <span>项目直播源刷新模式-定时器刷新</span>
             </div>
         </div>
     </div>
-    <div id="page19" style="display: none;">
+    <div id="page18" style="display: none;">
         <h1>简易DNS分流白名单</h1>
         <div style="float: left;width: 70%">
-            <h3>填写个人日常使用的白名单域名一\二级域名，比如:bilibili.com，bilivideo.com</h3>
-            <h3>这里的数据不建议特别多,根据个人网络冲浪习惯设置</h3>
-            <h3>该规则优先于DNS白名单订阅的全部域名规则</h3>
-            <h3>当这里出现外国域名就代表泄露翻墙的可能性已经成立,要尽可能避免,速度删除该域名,如果你是隐私狂魔的话</h3>
-            <h3 style="color: crimson">默认自动开启自主生成白名单数据,如果不可靠可以在功能开关关闭该功能</h3>
-            <h3>数据最终模板来源于白名单订阅里全部数据,如果那边的数据不可靠,这个功能是无效的</h3>
-            <h3>每隔24小时自动清除数据</h3>
             <h3 class="urllink">个人白名单浏览记录-dnsmasq: http://192.168.5.1:22771/secret/simpleDnsmasq.conf</h3>
             <h3 class="urllink">个人白名单分流规则-openclash:
                 http://192.168.5.1:22771/secret/simplewhitelistProxyRule.txt</h3>
@@ -1472,22 +1601,22 @@
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn12" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn12" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row12" class="addNewSubscriber" style="width:100%">新增关键字</button>
+                <button id="add-row12" class="grid-item addNewSubscriber" style="width:100%">新增关键字</button>
             </div>
             <div>
-                <button class="button stepflag" onclick="execute8()" style="width: 100%">
+                <button class="grid-item button stepflag" onclick="execute8()" style="width: 100%">
                     刷新本栏的两个链接数据
                 </button>
             </div>
             <div>
-                <button id="download-json-btn12" class="button download-json-btn" style="width: 100%">导出配置备份
+                <button id="download-json-btn12" class="grid-item button download-json-btn" style="width: 100%">导出配置备份
                 </button>
             </div>
-            <div style="width: 97%;">
-                <input type="text" id="searchInput4" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            <div style="width: 98.3%;">
+                <input type="text" id="searchInput4" placeholder="搜索框" class="grid-item button searchbox" style="width: 94.3%"></input>
             </div>
             <button id="removem3ulinks12" class="button removeallSubscriber"
                     onclick="removelinksBase('/api/removem3ulinks12')">删除全部域名
@@ -1503,18 +1632,9 @@
             </table>
         </div>
     </div>
-    <div id="page20" style="display: none;">
+    <div id="page19" style="display: none;">
         <h1>简易DNS分流黑名单</h1>
         <div style="float: left;width: 70%">
-            <h3>填写个人日常使用的黑名单域名一\二级域名，比如:youtube.com，twitter.com,m.youtube.com</h3>
-            <h3>这里的数据不建议特别多,根据个人网络冲浪习惯设置</h3>
-            <h3>该规则优先于DNS黑名单订阅的全部域名规则</h3>
-            <h3>当这里出现大陆域名不一定泄露,如果是openclash作为上游还有保底的余地</h3>
-            <h3>根据互相逃离主义,把大陆域名泄露给外国dns服务商可以不算泄露,毕竟FBI没办法来大陆抓你</h3>
-            <h3>当然如果你的外网dns供应商使用了大陆系dns供应商的海外版本,那祝你好运</h3>
-            <h3 style="color: crimson">默认自动开启自主生成黑名单数据,如果不可靠可以在功能开关关闭该功能</h3>
-            <h3>数据最终模板来源于黑名单订阅里全部数据,如果那边的数据不可靠,这个功能是无效的</h3>
-            <h3>每隔24小时自动清除数据</h3>
             <h3 class="urllink">个人黑名单浏览记录-openclash:
                 http://192.168.5.1:22771/secret/simpleOpenclashFallBackFilterDomain.txt</h3>
             <h3 class="urllink">个人黑名单分流规则-openclash:
@@ -1523,22 +1643,22 @@
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn13" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn13" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row13" class="addNewSubscriber" style="width:100%">新增关键字</button>
+                <button id="add-row13" class="grid-item addNewSubscriber" style="width:100%">新增关键字</button>
             </div>
             <div>
-                <button class="button stepflag" onclick="execute7()" style="width: 100%">
+                <button class="grid-item button stepflag" onclick="execute7()" style="width: 100%">
                     刷新本栏的两个链接数据
                 </button>
             </div>
             <div>
-                <button id="download-json-btn13" class="button download-json-btn" style="width: 100%">导出配置备份
+                <button id="download-json-btn13" class="grid-item button download-json-btn" style="width: 100%">导出配置备份
                 </button>
             </div>
-            <div style="width: 97%;">
-                <input type="text" id="searchInput5" placeholder="搜索框" class="searchbox" style="width: 100%"></input>
+            <div style="width: 98.3%;">
+                <input type="text" id="searchInput5" placeholder="搜索框" class="grid-item button searchbox" style="width: 94.3%"></input>
             </div>
             <button id="removem3ulinks13" class="button removeallSubscriber"
                     onclick="removelinksBase('/api/removem3ulinks13')">删除全部域名
@@ -1554,26 +1674,27 @@
             </table>
         </div>
     </div>
-    <div id="page21" style="display: none;">
+    <div id="page20" style="display: none;">
         <h1>打赏专栏</h1>
         <h3>作者:paperbluster</h3>
-        <a href="https://t.me/+stAaKNYl3mtmN2Zl">https://t.me/+stAaKNYl3mtmN2Zl</a>
+        <a href="https://t.me/+stAaKNYl3mtmN2Zl" target="_blank">https://t.me/+stAaKNYl3mtmN2Zl</a>
+        <h3>项目地址</h3>
+        <a href="https://github.com/paperbluster/m3u_subscriber" target="_blank">https://github.com/paperbluster/m3u_subscriber</a>
         <h3>各位路人朋友可以请我喝一杯咖啡吗^_^,您的支持将给予我更多动力迭代这个项目</h3>
         <h4>比特币(bitcoin)</h4>
         <li id="bitcoin"><img id="bitcoin-image" src="#" alt="Bitcoin"></li>
     </div>
-    <div id="page22" style="display: none;">
+    <div id="page21" style="display: none;">
         <h1>订阅文件重命名</h1>
         <div style="float: left;width: 70%">
-            <h3>不要使用默认名称，尽可能勤快的换名字</h3>
             <h3>不可以命名文件格式</h3>
             <h3>上传文件导入个人配置</h3>
         </div>
         <div>
-            <input type="file" id="upload-json-btn19" class="uploadjsonbtn" style="width: 100%"></input>
+            <input type="file" id="upload-json-btn19" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
         </div>
         <div>
-            <button id="download-json-btn19" class="button download-json-btn" style="width: 100%">导出个人配置备份
+            <button id="download-json-btn19" class="grid-item button download-json-btn" style="width: 100%">导出个人配置备份
             </button>
         </div>
         <div style="display: flex;width: 100%;">
@@ -1581,14 +1702,14 @@
         </div>
         <div style="width:100%">
             <input type="text" id="allM3u" class="stubboninput" placeholder="allM3u"/>
-            <button onclick="changeFileName('allM3u', 'allM3u', allM3u)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('allM3u', 'allM3u', allM3u)" class="grid-item button stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             全部直播源-加密:allM3uSecret
         </div>
         <div style="width:100%">
             <input type="text" id="allM3uSecret" class="stubboninput" placeholder="allM3uSecret"/>
-            <button onclick="changeFileName('allM3uSecret', 'allM3uSecret', allM3uSecret)" class="stubbonsave">修改
+            <button onclick="changeFileName('allM3uSecret', 'allM3uSecret', allM3uSecret)" class="grid-item button stubbonsave">修改
             </button>
         </div>
         <div style="display: flex;width: 100%;">
@@ -1596,14 +1717,14 @@
         </div>
         <div style="width:100%">
             <input type="text" id="aliveM3u" class="stubboninput" placeholder="aliveM3u"/>
-            <button onclick="changeFileName('aliveM3u', 'aliveM3u', aliveM3u)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('aliveM3u', 'aliveM3u', aliveM3u)" class="grid-item button stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             电视盒子专用-华语电视台-有效直播源-无加密:healthM3u
         </div>
         <div style="width:100%">
             <input type="text" id="healthM3u" class="stubboninput" placeholder="healthM3u"/>
-            <button onclick="changeFileName('healthM3u', 'healthM3u', healthM3u)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('healthM3u', 'healthM3u', healthM3u)" class="grid-item button stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             adguardhome放行TV域名-无加密:tvDomainForAdguardhome
@@ -1611,7 +1732,7 @@
         <div style="width:100%">
             <input type="text" id="tvDomainForAdguardhome" class="stubboninput" placeholder="tvDomainForAdguardhome"/>
             <button onclick="changeFileName('tvDomainForAdguardhome', 'tvDomainForAdguardhome', tvDomainForAdguardhome)"
-                    class="stubbonsave">修改
+                    class="grid-item button stubbonsave">修改
             </button>
         </div>
         <div style="display: flex;width: 100%;">
@@ -1621,7 +1742,7 @@
             <input type="text" id="tvDomainForAdguardhomeSecret" class="stubboninput"
                    placeholder="tvDomainForAdguardhomeSecret"/>
             <button onclick="changeFileName('tvDomainForAdguardhomeSecret', 'tvDomainForAdguardhomeSecret', tvDomainForAdguardhomeSecret)"
-                    class="stubbonsave">修改
+                    class="grid-item button stubbonsave">修改
             </button>
         </div>
         <div style="display: flex;width: 100%;">
@@ -1630,7 +1751,7 @@
         <div style="width:100%">
             <input type="text" id="whiteListDnsmasq" class="stubboninput" placeholder="whiteListDnsmasq"/>
             <button onclick="changeFileName('whiteListDnsmasq', 'whiteListDnsmasq', whiteListDnsmasq)"
-                    class="stubbonsave">修改
+                    class="grid-item button stubbonsave">修改
             </button>
         </div>
         <div style="display: flex;width: 100%;">
@@ -1639,7 +1760,7 @@
         <div style="width:100%">
             <input type="text" id="whiteListDnsmasqSecret" class="stubboninput" placeholder="whiteListDnsmasqSecret"/>
             <button onclick="changeFileName('whiteListDnsmasqSecret', 'whiteListDnsmasqSecret', whiteListDnsmasqSecret)"
-                    class="stubbonsave">修改
+                    class="grid-item button stubbonsave">修改
             </button>
         </div>
         <div style="display: flex;width: 100%;">
@@ -1647,7 +1768,7 @@
         </div>
         <div style="width:100%">
             <input type="text" id="whiteListDomian" class="stubboninput" placeholder="whiteListDomian"/>
-            <button onclick="changeFileName('whiteListDomian', 'whiteListDomian', whiteListDomian)" class="stubbonsave">
+            <button onclick="changeFileName('whiteListDomian', 'whiteListDomian', whiteListDomian)" class="grid-item button stubbonsave">
                 修改
             </button>
         </div>
@@ -1657,7 +1778,7 @@
         <div style="width:100%">
             <input type="text" id="whiteListDomianSecret" class="stubboninput" placeholder="whiteListDomianSecret"/>
             <button onclick="changeFileName('whiteListDomianSecret', 'whiteListDomianSecret', whiteListDomianSecret)"
-                    class="stubbonsave">修改
+                    class="grid-item button stubbonsave">修改
             </button>
         </div>
         <div style="display: flex;width: 100%;">
@@ -1666,7 +1787,7 @@
         <div style="width:100%">
             <input type="text" id="whitelistDirectRule" class="stubboninput" placeholder="whitelistDirectRule"/>
             <button onclick="changeFileName('whitelistDirectRule', 'whitelistDirectRule', whitelistDirectRule)"
-                    class="stubbonsave">修改
+                    class="grid-item button stubbonsave">修改
             </button>
         </div>
         <div style="display: flex;width: 100%;">
@@ -1676,7 +1797,7 @@
             <input type="text" id="openclashFallbackFilterDomain" class="stubboninput"
                    placeholder="openclashFallbackFilterDomain"/>
             <button onclick="changeFileName('openclashFallbackFilterDomain', 'openclashFallbackFilterDomain', openclashFallbackFilterDomain)"
-                    class="stubbonsave">修改
+                    class="grid-item button stubbonsave">修改
             </button>
         </div>
         <div style="display: flex;width: 100%;">
@@ -1686,7 +1807,7 @@
             <input type="text" id="openclashFallbackFilterDomainSecret" class="stubboninput"
                    placeholder="openclashFallbackFilterDomainSecret"/>
             <button onclick="changeFileName('openclashFallbackFilterDomainSecret', 'openclashFallbackFilterDomainSecret', openclashFallbackFilterDomainSecret)"
-                    class="stubbonsave">修改
+                    class="grid-item button stubbonsave">修改
             </button>
         </div>
         <div style="display: flex;width: 100%;">
@@ -1694,7 +1815,7 @@
         </div>
         <div style="width:100%">
             <input type="text" id="blackListDomain" class="stubboninput" placeholder="blackListDomain"/>
-            <button onclick="changeFileName('blackListDomain', 'blackListDomain', blackListDomain)" class="stubbonsave">
+            <button onclick="changeFileName('blackListDomain', 'blackListDomain', blackListDomain)" class="grid-item button stubbonsave">
                 修改
             </button>
         </div>
@@ -1704,7 +1825,7 @@
         <div style="width:100%">
             <input type="text" id="blackListDomainSecret" class="stubboninput" placeholder="blackListDomainSecret"/>
             <button onclick="changeFileName('blackListDomainSecret', 'blackListDomainSecret', blackListDomainSecret)"
-                    class="stubbonsave">修改
+                    class="grid-item button stubbonsave">修改
             </button>
         </div>
         <div style="display: flex;width: 100%;">
@@ -1713,7 +1834,7 @@
         <div style="width:100%">
             <input type="text" id="blacklistProxyRule" class="stubboninput" placeholder="blacklistProxyRule"/>
             <button onclick="changeFileName('blacklistProxyRule', 'blacklistProxyRule', blacklistProxyRule)"
-                    class="stubbonsave">修改
+                    class="grid-item button stubbonsave">修改
             </button>
         </div>
         <div style="display: flex;width: 100%;">
@@ -1721,35 +1842,35 @@
         </div>
         <div style="width:100%">
             <input type="text" id="ipv4" class="stubboninput" placeholder="ipv4"/>
-            <button onclick="changeFileName('ipv4', 'ipv4', ipv4)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('ipv4', 'ipv4', ipv4)" class="grid-item button stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             ipv4-加密:ipv4Secret
         </div>
         <div style="width:100%">
             <input type="text" id="ipv4Secret" class="stubboninput" placeholder="ipv4Secret"/>
-            <button onclick="changeFileName('ipv4Secret', 'ipv4Secret', ipv4Secret)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('ipv4Secret', 'ipv4Secret', ipv4Secret)" class="grid-item button stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             ipv6-无加密:ipv6
         </div>
         <div style="width:100%">
             <input type="text" id="ipv6" class="stubboninput" placeholder="ipv6"/>
-            <button onclick="changeFileName('ipv6', 'ipv6', ipv6)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('ipv6', 'ipv6', ipv6)" class="grid-item button stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             ipv6-加密:ipv6Secret
         </div>
         <div style="width:100%">
             <input type="text" id="ipv6Secret" class="stubboninput" placeholder="ipv6Secret"/>
-            <button onclick="changeFileName('ipv6Secret', 'ipv6Secret', ipv6Secret)" class="stubbonsave">修改</button>
+            <button onclick="changeFileName('ipv6Secret', 'ipv6Secret', ipv6Secret)" class="grid-item button stubbonsave">修改</button>
         </div>
         <div style="display: flex;width: 100%;">
             节点订阅-无加密:proxyConfig
         </div>
         <div style="width:100%">
             <input type="text" id="proxyConfig" class="stubboninput" placeholder="proxyConfig"/>
-            <button onclick="changeFileName('proxyConfig', 'proxyConfig', proxyConfig)" class="stubbonsave">修改
+            <button onclick="changeFileName('proxyConfig', 'proxyConfig', proxyConfig)" class="grid-item button stubbonsave">修改
             </button>
         </div>
         <div style="display: flex;width: 100%;">
@@ -1758,12 +1879,11 @@
         <div style="width:100%">
             <input type="text" id="proxyConfigSecret" class="stubboninput" placeholder="proxyConfigSecret"/>
             <button onclick="changeFileName('proxyConfigSecret', 'proxyConfigSecret', proxyConfigSecret)"
-                    class="stubbonsave">修改
+                    class="grid-item button stubbonsave">修改
             </button>
         </div>
     </div>
-
-    <div id="page23" style="display: none;">
+    <div id="page22" style="display: none;">
         <h1>M3U垃圾过滤</h1>
         <div style="float: left;width: 70%">
             <h3>上传文件导入合并M3U</h3>
@@ -1771,17 +1891,17 @@
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn15" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn15" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row15" class="addNewSubscriber" style="width:100%">新增关键字</button>
+                <button id="add-row15" class="grid-item addNewSubscriber" style="width:100%">新增关键字</button>
             </div>
             <div>
-                <button id="download-json-btn15" class="button download-json-btn" style="width: 100%">
+                <button id="download-json-btn15" class="grid-item button download-json-btn" style="width: 100%">
                     导出关键字配置备份
                 </button>
             </div>
-            <div style="width: 97%;">
+            <div style="width: 98.3%;">
                 <input type="text" id="searchInput14" placeholder="搜索框" class="searchbox"
                        style="width: 100%"></input>
             </div>
@@ -1799,7 +1919,7 @@
             </table>
         </div>
     </div>
-    <div id="page24" style="display: none;">
+    <div id="page23" style="display: none;">
         <h1>M3U白名单分组优先级</h1>
         <h3>优先级数字越小,分组规则越优先执行</h3>
         <h3>分组没有在这里设置优先度的情况默认最后处理</h3>
@@ -1809,16 +1929,16 @@
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn16" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn16" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row16" class="addNewSubscriber" style="width:100%">新增分组配置</button>
+                <button id="add-row16" class="grid-item addNewSubscriber" style="width:100%">新增分组配置</button>
             </div>
             <div>
-                <button id="download-json-btn16" class="button download-json-btn" style="width: 100%">导出分组配置备份
+                <button id="download-json-btn16" class="grid-item button download-json-btn" style="width: 100%">导出分组配置备份
                 </button>
             </div>
-            <div style="width: 97%;">
+            <div style="width: 98.3%;">
                 <input type="text" id="searchInput16" placeholder="搜索框" class="searchbox"
                        style="width: 100%"></input>
             </div>
@@ -1836,30 +1956,28 @@
             </table>
         </div>
     </div>
-    <div id="page25" style="display: none;">
+    <div id="page24" style="display: none;">
         <h1>网络配置文件下载</h1>
         <div style="float: left;width: 70%">
-            <h3>每隔24小时自动执行,默认关闭,可以在功能开关切换</h3>
-            <h3>不建议滥用,只配置必要的配置文件链接即可</h3>
             <h3>上传文件导入合并网络配置文件下载配置</h3>
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn17" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn17" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row17" class="addNewSubscriber" style="width:100%">新增配置</button>
+                <button id="add-row17" class="grid-item addNewSubscriber" style="width:100%">新增配置</button>
             </div>
             <div>
-                <button id="download-json-btn17" class="button download-json-btn" style="width: 100%">导出配置备份
+                <button id="download-json-btn17" class="grid-item button download-json-btn" style="width: 100%">导出配置备份
                 </button>
             </div>
-            <div style="width: 97%;">
+            <div style="width: 98.3%;">
                 <input type="text" id="searchInput17" placeholder="搜索框" class="searchbox"
                        style="width: 100%"></input>
             </div>
             <div>
-                <button class="button stepflag" onclick="execute9()" style="width: 100%">
+                <button class="grid-item button stepflag" onclick="execute9()" style="width: 100%">
                     下载全部配置并且加密上传至同步账号
                 </button>
             </div>
@@ -1877,9 +1995,8 @@
             </table>
         </div>
     </div>
-    <div id="page26" style="display: none;">
+    <div id="page25" style="display: none;">
         <h1>网络配置文件下载解密</h1>
-        <h3>每隔24小时自动执行,默认关闭,可以在功能开关切换</h3>
         <h3>解密文件局域网访问路径格式举例子:http://192.168.5.1:22771/secret/11.txt</h3>
         <h3>内部访问:http://127.0.0.1:22771/secret/11.txt</h3>
         <div style="float: left;width: 70%">
@@ -1887,21 +2004,21 @@
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn18" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn18" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row18" class="addNewSubscriber" style="width:100%">新增配置</button>
+                <button id="add-row18" class="grid-item addNewSubscriber" style="width:100%">新增配置</button>
             </div>
             <div>
-                <button id="download-json-btn18" class="button download-json-btn" style="width: 100%">导出配置备份
+                <button id="download-json-btn18" class="grid-item button download-json-btn" style="width: 100%">导出配置备份
                 </button>
             </div>
-            <div style="width: 97%;">
+            <div style="width: 98.3%;">
                 <input type="text" id="searchInput18" placeholder="搜索框" class="searchbox"
                        style="width: 100%"></input>
             </div>
             <div>
-                <button class="button stepflag" onclick="execute10()" style="width: 100%">
+                <button class="grid-item button stepflag" onclick="execute10()" style="width: 100%">
                     下载全部配置并且解密还原
                 </button>
             </div>
@@ -1919,33 +2036,31 @@
             </table>
         </div>
     </div>
-
-    <div id="page27" style="display: none;">
+    <div id="page26" style="display: none;">
         <h1>Youtube直播源</h1>
         <div style="float: left;width: 70%">
-            <h3>后台默认1小时自动执行生成操作,需要在功能开关开启</h3>
-            <h3>超融合油管订阅地址:参考m3u格式</h3>
+            <h3>订阅地址:</h3>
             <h3 class="urllink">youtube-无加密:http://192.168.5.1:22771/secret/youtube.m3u</h3>
             <h3 class="urllink">youtube-无加密-txt:http://192.168.5.1:22771/secret/youtube.txt</h3>
             <h3>上传文件导入合并YouTube频道</h3>
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn24" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn24" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row24" class="addNewSubscriber" style="width:100%">新增YouTube直播频道</button>
+                <button id="add-row24" class="grid-item addNewSubscriber" style="width:100%">新增YouTube直播频道</button>
             </div>
             <div>
-                <button class="button stepflag" onclick="execute24()" style="width: 100%">生成youtube超融合订阅
+                <button class="grid-item button stepflag" onclick="execute24()" style="width: 100%">生成youtube超融合订阅
                 </button>
             </div>
             <div>
-                <button id="download-json-btn24" class="button download-json-btn" style="width: 100%">
+                <button id="download-json-btn24" class="grid-item button download-json-btn" style="width: 100%">
                     导出youtube直播频道备份
                 </button>
             </div>
-            <div style="width: 97%;">
+            <div style="width: 98.3%;">
                 <input type="text" id="searchInput24" placeholder="搜索框" class="searchbox"
                        style="width: 100%"></input>
             </div>
@@ -1963,33 +2078,31 @@
             </table>
         </div>
     </div>
-
-    <div id="page28" style="display: none;">
+    <div id="page27" style="display: none;">
         <h1>BiliBili直播源</h1>
         <div style="float: left;width: 70%">
-            <h3>后台默认1小时自动执行生成操作,需要在功能开关开启</h3>
-            <h3>超融合哔哩哔哩订阅地址:参考m3u格式</h3>
+            <h3>订阅地址:</h3>
             <h3 class="urllink">bilibili-无加密:http://192.168.5.1:22771/secret/bilibili.m3u</h3>
             <h3 class="urllink">bilibili-无加密-txt:http://192.168.5.1:22771/secret/bilibili.txt</h3>
             <h3>上传文件导入合并Bilibili频道</h3>
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn25" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn25" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row25" class="addNewSubscriber" style="width:100%">新增BiliBili直播频道</button>
+                <button id="add-row25" class="grid-item addNewSubscriber" style="width:100%">新增BiliBili直播频道</button>
             </div>
             <div>
-                <button class="button stepflag" onclick="execute25()" style="width: 100%">生成bilibili超融合订阅
+                <button class="grid-item button stepflag" onclick="execute25()" style="width: 100%">生成bilibili超融合订阅
                 </button>
             </div>
             <div>
-                <button id="download-json-btn25" class="button download-json-btn" style="width: 100%">
+                <button id="download-json-btn25" class="grid-item button download-json-btn" style="width: 100%">
                     导出bilibili直播频道备份
                 </button>
             </div>
-            <div style="width: 97%;">
+            <div style="width: 98.3%;">
                 <input type="text" id="searchInput25" placeholder="搜索框" class="searchbox"
                        style="width: 100%"></input>
             </div>
@@ -2007,33 +2120,31 @@
             </table>
         </div>
     </div>
-
-    <div id="page29" style="display: none;">
-        <h1>Huya直播源</h1>
+    <div id="page28" style="display: none;">
+        <h1>虎牙直播源</h1>
         <div style="float: left;width: 70%">
-            <h3>后台默认1小时自动执行生成操作,需要在功能开关开启</h3>
-            <h3>超融合虎牙订阅地址:参考m3u格式</h3>
+            <h3>订阅地址:</h3>
             <h3 class="urllink">huya-无加密:http://192.168.5.1:22771/secret/huya.m3u</h3>
             <h3 class="urllink">huya-无加密-txt:http://192.168.5.1:22771/secret/huya.txt</h3>
-            <h3>上传文件导入合并Huya频道</h3>
+            <h3>上传文件导入合并虎牙频道</h3>
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn26" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn26" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row26" class="addNewSubscriber" style="width:100%">新增Huya直播频道</button>
+                <button id="add-row26" class="grid-item addNewSubscriber" style="width:100%">新增虎牙直播频道</button>
             </div>
             <div>
-                <button class="button stepflag" onclick="execute26()" style="width: 100%">生成huya超融合订阅
+                <button class="grid-item button stepflag" onclick="execute26()" style="width: 100%">生成虎牙超融合订阅
                 </button>
             </div>
             <div>
-                <button id="download-json-btn26" class="button download-json-btn" style="width: 100%">
-                    导出huya直播频道备份
+                <button id="download-json-btn26" class="grid-item button download-json-btn" style="width: 100%">
+                    导出虎牙直播频道备份
                 </button>
             </div>
-            <div style="width: 97%;">
+            <div style="width: 98.3%;">
                 <input type="text" id="searchInput26" placeholder="搜索框" class="searchbox"
                        style="width: 100%"></input>
             </div>
@@ -2041,7 +2152,7 @@
                     onclick="removelinksBase('/api/removem3ulinks26')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">订阅来源:huya直播ID+频道名字
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:虎牙直播ID+频道名字
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
@@ -2051,33 +2162,31 @@
             </table>
         </div>
     </div>
-
-    <div id="page30" style="display: none;">
+    <div id="page29" style="display: none;">
         <h1>YY直播源</h1>
         <div style="float: left;width: 70%">
-            <h3>后台默认1小时自动执行生成操作,需要在功能开关开启</h3>
-            <h3>超融合YY订阅地址:参考m3u格式</h3>
+            <h3>订阅地址:</h3>
             <h3 class="urllink">YY-无加密:http://192.168.5.1:22771/secret/YY.m3u</h3>
             <h3 class="urllink">YY-无加密-txt:http://192.168.5.1:22771/secret/YY.txt</h3>
             <h3>上传文件导入合并YY频道</h3>
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn27" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn27" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row27" class="addNewSubscriber" style="width:100%">新增YY直播频道</button>
+                <button id="add-row27" class="grid-item addNewSubscriber" style="width:100%">新增YY直播频道</button>
             </div>
             <div>
-                <button class="button stepflag" onclick="execute27()" style="width: 100%">生成YY超融合订阅
+                <button class="grid-item button stepflag" onclick="execute27()" style="width: 100%">生成YY超融合订阅
                 </button>
             </div>
             <div>
-                <button id="download-json-btn27" class="button download-json-btn" style="width: 100%">
+                <button id="download-json-btn27" class="grid-item button download-json-btn" style="width: 100%">
                     导出YY直播频道备份
                 </button>
             </div>
-            <div style="width: 97%;">
+            <div style="width: 98.3%;">
                 <input type="text" id="searchInput27" placeholder="搜索框" class="searchbox"
                        style="width: 100%"></input>
             </div>
@@ -2095,32 +2204,31 @@
             </table>
         </div>
     </div>
-    <div id="page31" style="display: none;">
+    <div id="page30" style="display: none;">
         <h1>Twitch直播源</h1>
         <div style="float: left;width: 70%">
-            <h3>后台默认1小时自动执行生成操作,需要在功能开关开启</h3>
-            <h3>超融合Twitch订阅地址:参考m3u格式</h3>
+            <h3>订阅地址:</h3>
             <h3 class="urllink">TWITCH-无加密:http://192.168.5.1:22771/secret/TWITCH.m3u</h3>
             <h3 class="urllink">TWITCH-无加密-txt:http://192.168.5.1:22771/secret/TWITCH.txt</h3>
             <h3>上传文件导入合并YY频道</h3>
         </div>
         <div style="width:100%">
             <div>
-                <input type="file" id="upload-json-btn28" class="uploadjsonbtn" style="width: 100%"></input>
+                <input type="file" id="upload-json-btn28" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
             </div>
             <div>
-                <button id="add-row28" class="addNewSubscriber" style="width:100%">新增TWITCH直播频道</button>
+                <button id="add-row28" class="grid-item addNewSubscriber" style="width:100%">新增TWITCH直播频道</button>
             </div>
             <div>
-                <button class="button stepflag" onclick="execute28()" style="width: 100%">生成TWITCH超融合订阅
+                <button class="grid-item button stepflag" onclick="execute28()" style="width: 100%">生成TWITCH超融合订阅
                 </button>
             </div>
             <div>
-                <button id="download-json-btn28" class="button download-json-btn" style="width: 100%">
+                <button id="download-json-btn28" class="grid-item button download-json-btn" style="width: 100%">
                     导出TWITCH直播频道备份
                 </button>
             </div>
-            <div style="width: 97%;">
+            <div style="width: 98.3%;">
                 <input type="text" id="searchInput28" placeholder="搜索框" class="searchbox"
                        style="width: 100%"></input>
             </div>
@@ -2138,6 +2246,134 @@
             </table>
         </div>
     </div>
+    <div id="page31" style="display: none;">
+        <h1>抖音直播源</h1>
+        <div style="float: left;width: 70%">
+
+            <h3>订阅地址:</h3>
+            <h3 class="urllink">Douyin-无加密:http://192.168.5.1:22771/secret/Douyin.m3u</h3>
+            <h3 class="urllink">Douyin-无加密-txt:http://192.168.5.1:22771/secret/Douyin.txt</h3>
+            <h3>上传文件导入合并Douyin频道</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn29" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
+            </div>
+            <div>
+                <button id="add-row29" class="grid-item addNewSubscriber" style="width:100%">新增抖音直播频道</button>
+            </div>
+            <div>
+                <button class="grid-item button stepflag" onclick="execute29()" style="width: 100%">生成抖音超融合订阅
+                </button>
+            </div>
+            <div>
+                <button id="download-json-btn29" class="grid-item button download-json-btn" style="width: 100%">
+                    导出抖音直播频道备份
+                </button>
+            </div>
+            <div style="width: 98.3%;">
+                <input type="text" id="searchInput29" placeholder="搜索框" class="searchbox"
+                       style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks29" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks29')">删除全部订阅
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:抖音直播ID+频道名字
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table29" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="page32" style="display: none;">
+        <h1>alist加密直播源</h1>
+        <div style="float: left;width: 70%">
+            <h3>订阅地址:</h3>
+            <h3 class="urllink">alist-无加密:http://192.168.5.1:22771/secret/alist.m3u</h3>
+            <h3>上传文件导入合并alist频道</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn30" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
+            </div>
+            <div>
+                <button id="add-row30" class="grid-item addNewSubscriber" style="width:100%">新增alist直播视频通道</button>
+            </div>
+            <div>
+                <button class="grid-item button stepflag" onclick="execute30()" style="width: 100%">生成aist超融合订阅
+                </button>
+            </div>
+            <div>
+                <button id="download-json-btn30" class="grid-item button download-json-btn" style="width: 100%">
+                    导出alist直播通道备份
+                </button>
+            </div>
+            <div style="width: 98.3%;">
+                <input type="text" id="searchInput30" placeholder="搜索框" class="searchbox"
+                       style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks30" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks30')">删除全部订阅
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:alist直播通道父路径(测试40万个视频负载)+频道密码
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table30" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div id="page33" style="display: none;">
+        <h1>普通直播源</h1>
+        <div style="float: left;width: 70%">
+            <h3>订阅地址:</h3>
+            <h3 class="urllink">normal-无加密:http://192.168.5.1:22771/secret/normal.m3u</h3>
+            <h3 class="urllink">normal-无加密-txt:http://192.168.5.1:22771/secret/normal.txt</h3>
+            <h3>上传文件导入合并频道配置</h3>
+        </div>
+        <div style="width:100%">
+            <div>
+                <input type="file" id="upload-json-btn31" class="grid-item  uploadjsonbtn" style="width: 98.3%"></input>
+            </div>
+            <div>
+                <button id="add-row31" class="grid-item addNewSubscriber" style="width:100%">新增频道</button>
+            </div>
+            <div>
+                <button class="grid-item button stepflag" onclick="execute31()" style="width: 100%">生成普通直播源超融合订阅
+                </button>
+            </div>
+            <div>
+                <button id="download-json-btn31" class="grid-item button download-json-btn" style="width: 100%">
+                    导出频道备份
+                </button>
+            </div>
+            <div style="width: 98.3%;">
+                <input type="text" id="searchInput31" placeholder="搜索框" class="searchbox"
+                       style="width: 100%"></input>
+            </div>
+            <button id="removem3ulinks31" class="button removeallSubscriber"
+                    onclick="removelinksBase('/api/removem3ulinks31')">删除全部订阅
+            </button>
+            <div style="display: flex;width: 100%;">
+                <div class="notice" style="display: flex;width: 80%;">
+                    订阅来源:来源(cq/migu),频道id,channelId(migu),mediaId(migu)+频道名字,logo(可有可无)
+                </div>
+                <div class="notice" style="display: flex;width: 20%;">操作</div>
+            </div>
+            <table id="input-table31" style="width:100%">
+                <tbody style="width:100%">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 </div>
 
 <script>
@@ -2146,6 +2382,7 @@
     //const form = document.querySelector('form');
     const forms = document.querySelectorAll('form');
     const switchbox = document.getElementById("switchbox");
+    var switchbutton = document.getElementById('switchbutton');
     const choice = document.getElementById("choice");
     const pages = choice.children;
     const m3ufileInput = document.getElementById('upload-m3u-btn');
@@ -2264,7 +2501,16 @@
     const maxTimeout = document.getElementById('maxTimeout');
     const usernameSys = document.getElementById('usernameSys');
     const passwordSys = document.getElementById('passwordSys');
-
+    const normalM3uClock = document.getElementById('normalM3uClock');
+    const normalSubscriberClock = document.getElementById('normalSubscriberClock');
+    const proxySubscriberClock = document.getElementById('proxySubscriberClock');
+    const spM3uClock = document.getElementById('spM3uClock');
+    const autoDnsSwitchClock = document.getElementById('autoDnsSwitchClock');
+    const syncClock = document.getElementById('syncClock');
+    const reliveAlistTsTime = document.getElementById('reliveAlistTsTime');
+    const chinaTopDomain = document.getElementById('chinaTopDomain');
+    const foreignTopDomain = document.getElementById('foreignTopDomain');
+    const dnsMode = document.getElementById('dnsMode');
 
     const allM3u = document.getElementById('allM3u');
     const allM3uSecret = document.getElementById('allM3uSecret');
@@ -2337,6 +2583,18 @@
     const addRowButton28 = document.getElementById('add-row28');
     const inputTable28 = document.getElementById('input-table28');
     const downloadBtn28 = document.getElementById('download-json-btn28');
+
+    const addRowButton29 = document.getElementById('add-row29');
+    const inputTable29 = document.getElementById('input-table29');
+    const downloadBtn29 = document.getElementById('download-json-btn29');
+
+    const addRowButton30 = document.getElementById('add-row30');
+    const inputTable30 = document.getElementById('input-table30');
+    const downloadBtn30 = document.getElementById('download-json-btn30');
+
+    const addRowButton31 = document.getElementById('add-row31');
+    const inputTable31 = document.getElementById('input-table31');
+    const downloadBtn31 = document.getElementById('download-json-btn31');
 
     // 输入框显示中国DNS端口
     const chinaDnsPort = document.getElementById('chinaDnsPort');
@@ -2433,6 +2691,12 @@
     searchAddListener(searchInput27, inputTable27)
     // 给TWITCH直播源搜索框绑定'oninput'事件
     searchAddListener(searchInput28, inputTable28)
+    // 给DOUYIN直播源搜索框绑定'oninput'事件
+    searchAddListener(searchInput29, inputTable29)
+    // 给alist直播源搜索框绑定'oninput'事件
+    searchAddListener(searchInput30, inputTable30)
+    // 给normal直播源搜索框绑定'oninput'事件
+    searchAddListener(searchInput31, inputTable31)
     // 给简易dns白名单搜索框绑定'oninput'事件
     searchAddListener(searchInput4, inputTable12)
     // 给m3u白名单搜索框绑定'oninput'事件
@@ -2599,11 +2863,11 @@
             var tagnamefile = parts2[2]
             var parts3 = tagnamefile.split(".")
             var tagname = parts3[0]
-            if (tagname === 'youtube' || tagname === 'bilibili' || tagname === 'huya' || tagname === 'YY' || tagname==='TWITCH' ) {
+            if (tagname === 'youtube' || tagname === 'bilibili' || tagname === 'huya' || tagname === 'YY' || tagname === 'TWITCH' || tagname === 'Douyin' || tagname === 'alist' || tagname === 'normal') {
                 elements[i].innerHTML = prefix + "//" + newIp + suffix2 + "/" + tagname + "." + parts3[1];
                 continue
             }
-            if (tagname==='allM3u' && parts3[1]==='txt'){
+            if (tagname === 'allM3u' && parts3[1] === 'txt') {
                 elements[i].innerHTML = prefix + "//" + newIp + suffix2 + "/" + tagname + "." + parts3[1];
                 continue
             }
@@ -3124,6 +3388,21 @@
         reloadBase('/api/getall28', inputTable28)
     }
 
+    //DOUYIN直播源-从数据库拉取关键字列表数据
+    function reloadDOUYINM3U() {
+        reloadBase('/api/getall29', inputTable29)
+    }
+
+    //aist直播源-从数据库拉取关键字列表数据
+    function reloadAlistM3U() {
+        reloadBase('/api/getall30', inputTable30)
+    }
+
+    //normal直播源-从数据库拉取关键字列表数据
+    function reloadNormalM3U() {
+        reloadBase('/api/getall31', inputTable31)
+    }
+
     //加密订阅密码历史记录-从数据库拉取关键字列表数据
     function reloadHistorySubscribePassList() {
         reloadBase('/api/getall14', inputTable14)
@@ -3187,10 +3466,10 @@
                         const actionsCell = document.createElement('td');
                         const saveButton = document.createElement('button');
                         saveButton.textContent = '保存';
-                        saveButton.classList.add('saveButtonClassName');
+                        saveButton.classList.add('saveButtonClassName','button');
                         const deleteButton = document.createElement('button');
                         deleteButton.textContent = '删除';
-                        deleteButton.classList.add('deleteButtonClassName');
+                        deleteButton.classList.add('deleteButtonClassName','button');
                         actionsCell.appendChild(saveButton);
                         actionsCell.appendChild(deleteButton);
                         row.appendChild(valueCell);
@@ -3243,13 +3522,13 @@
                         const actionsCell = document.createElement('td');
                         const changePasswordButton = document.createElement('button');
                         changePasswordButton.textContent = '换密码';
-                        changePasswordButton.classList.add('changePasswordButtonClassName');
+                        changePasswordButton.classList.add('changePasswordButtonClassName','button');
                         const saveButton = document.createElement('button');
                         saveButton.textContent = '保存';
-                        saveButton.classList.add('saveButtonClassName2');
+                        saveButton.classList.add('saveButtonClassName2','button');
                         const deleteButton = document.createElement('button');
                         deleteButton.textContent = '删除';
-                        deleteButton.classList.add('deleteButtonClassName2');
+                        deleteButton.classList.add('deleteButtonClassName2','button');
                         actionsCell.appendChild(changePasswordButton);
                         actionsCell.appendChild(saveButton);
                         actionsCell.appendChild(deleteButton);
@@ -3367,6 +3646,21 @@
     //TWITCH配置
     function saveInputValue28(inputValue, name) {
         saveInputValuebase(inputValue, name, '/api/addnewm3u28')
+    }
+
+    //DOUYIN配置
+    function saveInputValue29(inputValue, name) {
+        saveInputValuebase(inputValue, name, '/api/addnewm3u29')
+    }
+
+    //alist配置
+    function saveInputValue30(inputValue, name) {
+        saveInputValuebase(inputValue, name, '/api/addnewm3u30')
+    }
+
+    //normal配置
+    function saveInputValue31(inputValue, name) {
+        saveInputValuebase(inputValue, name, '/api/addnewm3u31')
     }
 
     //永久列表-保留输入行数据
@@ -3512,6 +3806,21 @@
         deleteInputRowBase(row, inputValue, '/api/deletewm3u28')
     }
 
+    //删除DOUYIN直播源
+    function deleteInputRow29(row, inputValue) {
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u29')
+    }
+
+    //删除alist直播源
+    function deleteInputRow30(row, inputValue) {
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u30')
+    }
+
+    //删除normal直播源
+    function deleteInputRow31(row, inputValue) {
+        deleteInputRowBase(row, inputValue, '/api/deletewm3u31')
+    }
+
     //删除加密订阅密码历史记录
     function deleteInputRow14(row, inputValue) {
         deleteInputRowBase(row, inputValue, '/api/deletewm3u14')
@@ -3594,6 +3903,12 @@
     inputableAddEventListener(inputTable27, 'saveInputValue27', 'deleteInputRow27')
     //TWITCH直播源
     inputableAddEventListener(inputTable28, 'saveInputValue28', 'deleteInputRow28')
+    //DOUYIN直播源
+    inputableAddEventListener(inputTable29, 'saveInputValue29', 'deleteInputRow29')
+    //alist直播源
+    inputableAddEventListener(inputTable30, 'saveInputValue30', 'deleteInputRow30')
+    //normal直播源
+    inputableAddEventListener(inputTable31, 'saveInputValue31', 'deleteInputRow31')
     //简易DNS黑名单
     inputableAddEventListener(inputTable13, 'saveInputValue13', 'deleteInputRow13')
     //简易DNS白名单
@@ -3694,6 +4009,12 @@
     fileInputAddEventListenerBase('upload-json-btn27', 'redisKeyYY', '/api/upload_json')
     //TWITCH直播源-导入json配置
     fileInputAddEventListenerBase('upload-json-btn28', 'redisKeyTWITCH', '/api/upload_json')
+    //DOUYIN直播源-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn29', 'redisKeyDOUYIN', '/api/upload_json')
+    //alist直播源-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn30', 'redisKeyAlist', '/api/upload_json')
+    //normal直播源-导入json配置
+    fileInputAddEventListenerBase('upload-json-btn31', 'redisKeyNormal', '/api/upload_json')
     //网络下载配置加密上传-导入json配置
     fileInputAddEventListenerBase('upload-json-btn17', 'downloadAndSecretUploadUrlPasswordAndName', '/api/upload_json')
     //m3u白名单分组优先级-导入json配置
@@ -3890,10 +4211,10 @@
             const actionsCell = document.createElement('td');
             const saveButton = document.createElement('button');
             saveButton.textContent = '保存';
-            saveButton.classList.add('saveButtonClassName');
+            saveButton.classList.add('saveButtonClassName','button');
             const deleteButton = document.createElement('button');
             deleteButton.textContent = '删除';
-            deleteButton.classList.add('deleteButtonClassName');
+            deleteButton.classList.add('deleteButtonClassName','button');
             actionsCell.appendChild(saveButton);
             actionsCell.appendChild(deleteButton);
             row.appendChild(valueCell);
@@ -3925,7 +4246,7 @@
     }
 
     // 切换页面
-    switchbox.addEventListener("change", () => {
+    switchbox.addEventListener("click", () => {
         // Get selected page
         const selectedPage = document.querySelector('input[name="page"]:checked').id;
 
@@ -3937,8 +4258,37 @@
             } else {
                 pages[i].style.display = "none";
             }
+            switchDisplay()
         }
     });
+
+    function switchDisplay() {
+        // 获取switchbox元素下的所有子元素
+        const children = switchbox.children;
+
+        // 判断当前状态并进行相应的处理
+        if (switchbox.style.display === 'none') {
+            // 当前处于隐藏状态，将所有子元素显示出来
+            for (let i = 0; i < children.length; i++) {
+                children[i].style.display = 'block';
+            }
+            switchbox.style.display = 'grid'; // 如果之前是基于网格布局，则将其修改为'grid'，否则请根据实际情况设置为其他值（例如'block'）
+        } else {
+            // 当前处于显示状态，将所有子元素隐藏
+            for (let i = 0; i < children.length; i++) {
+                children[i].style.display = 'none';
+            }
+            switchbox.style.display = 'none';
+        }
+    }
+
+    // 监听按钮的点击事件
+    switchbutton.addEventListener('click', function () {
+        switchDisplay()
+    });
+
+
+
 
     //只在切换到对应页面时进行对应页面查询
     function reloadPageDataById(selectedPage) {
@@ -3958,7 +4308,7 @@
             reloadIpv4ListLink()
         } else if (selectedPage === pages[7].id) {
             reloadIpv6ListLink()
-        } else if (selectedPage === pages[9].id) {
+        } else if (selectedPage === pages[8].id) {
             // 这里面有查询有问题，暂时不管
             reloadProxiesListLink()
             // 加载代理类型:clash/v2ray/ss/ssr...
@@ -3969,11 +4319,11 @@
             reloadSelectedServer()
             reloadProxyModelListLink()
             reloadProxyServerListLink()
-        } else if (selectedPage === pages[10].id) {
+        } else if (selectedPage === pages[9].id) {
             reloadProxyModelListLink()
-        } else if (selectedPage === pages[11].id) {
+        } else if (selectedPage === pages[10].id) {
             reloadProxyServerListLink()
-        } else if (selectedPage === pages[12].id) {
+        } else if (selectedPage === pages[11].id) {
             reloadThreadNum()
             reloadChinaDnsServer()
             reloadExtraDnsServer()
@@ -3981,7 +4331,10 @@
             reloadChinaDnsPort()
             reloadQueryThreadNum()
             reloadTimeout()
-        } else if (selectedPage === pages[13].id) {
+            getFileName('chinaTopDomain', 'chinaTopDomain', chinaTopDomain)
+            getFileName('foreignTopDomain', 'foreignTopDomain', foreignTopDomain)
+            getFileName('dnsMode', 'dnsMode', dnsMode)
+        } else if (selectedPage === pages[12].id) {
             reloadThreadNum2()
             reloadChinaDnsServer2()
             reloadChinaDnsPort2()
@@ -3989,7 +4342,7 @@
             reloadExtraDnsPort2()
             reloadExtraDnsPort3()
             reloadHistorySubscribePassList()
-        } else if (selectedPage === pages[14].id) {
+        } else if (selectedPage === pages[13].id) {
             getSyncData('username', 'bbs', 'giteeUsername', giteeUsername)
             getSyncData('reponame', 'bbs', 'giteeRePoname', giteeRePoname)
             getSyncData('path', 'bbs', 'giteePath', giteePath)
@@ -4004,14 +4357,21 @@
             getSyncData('port', 'lls', 'webdavPort', webdavPort)
             getSyncData('path', 'lls', 'webdavPath', webdavPath)
             getSyncData('agreement', 'lls', 'webdavAgreement', webdavAgreement)
-        } else if (selectedPage === pages[15].id) {
+        } else if (selectedPage === pages[14].id) {
             reloadM3uWhiteList()
-        } else if (selectedPage === pages[16].id) {
+        } else if (selectedPage === pages[15].id) {
             getFileName('minTimeout', 'minTimeout', minTimeout)
             getFileName('maxTimeout', 'maxTimeout', maxTimeout)
             getFileName('usernameSys', 'usernameSys', usernameSys)
             getFileName('passwordSys', 'passwordSys', passwordSys)
-        } else if (selectedPage === pages[17].id) {
+            getFileName('normalM3uClock', 'normalM3uClock', normalM3uClock)
+            getFileName('normalSubscriberClock', 'normalSubscriberClock', normalSubscriberClock)
+            getFileName('proxySubscriberClock', 'proxySubscriberClock', proxySubscriberClock)
+            getFileName('spM3uClock', 'spM3uClock', spM3uClock)
+            getFileName('autoDnsSwitchClock', 'autoDnsSwitchClock', autoDnsSwitchClock)
+            getFileName('syncClock', 'syncClock', syncClock)
+            getFileName('reliveAlistTsTime', 'reliveAlistTsTime', reliveAlistTsTime)
+        } else if (selectedPage === pages[16].id) {
             //生成有效M3U
             reloadFunctionOpenButton('switch')
             //全部M3U加密
@@ -4080,31 +4440,37 @@
             reloadFunctionOpenButton('switch34')
             //youtube-定时器
             reloadFunctionOpenButton('switch35')
-        } else if (selectedPage === pages[18].id) {
+        } else if (selectedPage === pages[17].id) {
             reloadDNSSIMPLEWhiteList()
-        } else if (selectedPage === pages[19].id) {
+        } else if (selectedPage === pages[18].id) {
             reloadDNSSIMPLEBlackList()
-        } else if (selectedPage === pages[20].id) {
+        } else if (selectedPage === pages[19].id) {
             // 打赏图片
             reloadImage()
-        } else if (selectedPage === pages[22].id) {
+        } else if (selectedPage === pages[21].id) {
             reloadM3uBlackList()
-        } else if (selectedPage === pages[23].id) {
+        } else if (selectedPage === pages[22].id) {
             reloadM3uWhiteListRank()
-        } else if (selectedPage === pages[24].id) {
+        } else if (selectedPage === pages[23].id) {
             reloadDownLoadAndSecretUpload()
-        } else if (selectedPage === pages[25].id) {
+        } else if (selectedPage === pages[24].id) {
             reloadDownLoadAndDeSecret()
-        } else if (selectedPage === pages[26].id) {
+        } else if (selectedPage === pages[25].id) {
             reloadYoutubeM3U()
-        } else if (selectedPage === pages[27].id) {
+        } else if (selectedPage === pages[26].id) {
             reloadBilibiliM3U()
-        } else if (selectedPage === pages[28].id) {
+        } else if (selectedPage === pages[27].id) {
             reloadHuyaM3U()
-        } else if (selectedPage === pages[29].id) {
+        } else if (selectedPage === pages[28].id) {
             reloadYYM3U()
-        } else if (selectedPage === pages[30].id) {
+        } else if (selectedPage === pages[29].id) {
             reloadTWITCHM3U()
+        } else if (selectedPage === pages[30].id) {
+            reloadDOUYINM3U()
+        } else if (selectedPage === pages[31].id) {
+            reloadAlistM3U()
+        } else if (selectedPage === pages[32].id) {
+            reloadNormalM3U()
         }
         if (selectedPage !== pages[1].id) {
             window.removeEventListener('scroll', handleScroll);
@@ -4114,6 +4480,7 @@
     function init() {
         reload()
         reloadIP()
+        switchDisplay()
     }
 
     // 超融合-工具-上传m3u文件-自动下载格式规整化的m3u文件
@@ -4165,7 +4532,6 @@
     }
 
 
-
     // 上传文件处理后自动下载
     function formsAddEventListener(formtarget, requestpath, filename, uploadbtnId) {
         formtarget.addEventListener('submit', async (e) => {
@@ -4215,6 +4581,12 @@
     downloadBtnAddEventListenerBase('download-json-btn27', 'redisKeyYY')
     // twitch直播源-导出订阅json配置
     downloadBtnAddEventListenerBase('download-json-btn28', 'redisKeyTWITCH')
+    // DOUYIN直播源-导出订阅json配置
+    downloadBtnAddEventListenerBase('download-json-btn29', 'redisKeyDOUYIN')
+    // alist直播源-导出订阅json配置
+    downloadBtnAddEventListenerBase('download-json-btn30', 'redisKeyAlist')
+    // normal直播源-导出订阅json配置
+    downloadBtnAddEventListenerBase('download-json-btn31', 'redisKeyNormal')
     // 下载加密上传-导出订阅json配置
     downloadBtnAddEventListenerBase('download-json-btn17', 'downloadAndSecretUploadUrlPasswordAndName')
     // M3U白名单分组优先级-导出订阅json配置
@@ -4325,6 +4697,12 @@
     addRowButtonAddEventListener(addRowButton27, inputTable27)
     //TWITCH直播源-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton28, inputTable28)
+    //DOUYIN直播源-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton29, inputTable29)
+    //alist直播源-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton30, inputTable30)
+    //normal直播源-只添加一行列表，不存储数据
+    addRowButtonAddEventListener(addRowButton31, inputTable31)
     //DNS简易白名单-只添加一行列表，不存储数据
     addRowButtonAddEventListener(addRowButton12, inputTable12)
     //M3U白名单-关键字-只添加一行列表，不存储数据
@@ -4380,13 +4758,13 @@
         const actionsCell = document.createElement('td');
         const changePasswordButton = document.createElement('button');
         changePasswordButton.textContent = '换密码';
-        changePasswordButton.classList.add(changePasswordButtonClassName);
+        changePasswordButton.classList.add(changePasswordButtonClassName,'button');
         const saveButton = document.createElement('button');
         saveButton.textContent = '保存';
-        saveButton.classList.add(savebuttonClassName);
+        saveButton.classList.add(savebuttonClassName,'button');
         const deleteButton = document.createElement('button');
         deleteButton.textContent = '删除';
-        deleteButton.classList.add(deletebuttonClassName);
+        deleteButton.classList.add(deletebuttonClassName,'button');
         actionsCell.appendChild(changePasswordButton);
         actionsCell.appendChild(saveButton);
         actionsCell.appendChild(deleteButton);
@@ -4410,10 +4788,10 @@
         const actionsCell = document.createElement('td');
         const saveButton = document.createElement('button');
         saveButton.textContent = '保存';
-        saveButton.classList.add(savebuttonClassName);
+        saveButton.classList.add(savebuttonClassName,'button');
         const deleteButton = document.createElement('button');
         deleteButton.textContent = '删除';
-        deleteButton.classList.add(deletebuttonClassName);
+        deleteButton.classList.add(deletebuttonClassName,'button');
         actionsCell.appendChild(saveButton);
         actionsCell.appendChild(deleteButton);
         row.appendChild(valueCell);
@@ -4494,6 +4872,21 @@
     //超融合-YY直播源生成
     function execute28() {
         executeBase('/api/chaoronghe28')
+    }
+
+    //超融合-DOUYIN直播源生成
+    function execute29() {
+        executeBase('/api/chaoronghe29')
+    }
+
+    //超融合-alist直播源生成
+    function execute30() {
+        executeBase('/api/chaoronghe30')
+    }
+
+    //超融合-normal直播源生成
+    function execute31() {
+        executeBase('/api/chaoronghe31')
     }
 
     function executeBase(requestPath) {

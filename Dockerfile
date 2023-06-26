@@ -1,16 +1,15 @@
 FROM nginx
 # 将当前目录下的 python 脚本复制到容器中的 /app 目录
 # 创建目录
-RUN mkdir -p /app/ini /app/img /app/secret /app/m3u8
+RUN mkdir -p /app/ini /app/img /app/secret /app/m3u8 /app/templates
 COPY ./*.py /app/
 COPY ./ini/*.ini /app/ini/
 COPY ./list/*.list /app/secret/
 COPY ./list/*.yml /app/secret/
 COPY ./bitcoin.png /app/img/
 # 将前端文件复制到容器中的 /usr/share/nginx/html 目录
-COPY index.html /usr/share/nginx/html
-# 将 nginx 配置文件复制到容器中的 /etc/nginx/conf.d/default.conf
-COPY nginx.conf /etc/nginx/nginx.conf
+COPY index.html /app/templates
+
 # 将Python依赖包复制到容器中
 COPY requirements.txt /app/requirements.txt
 RUN apt-get update && \

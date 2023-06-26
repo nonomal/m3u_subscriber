@@ -6255,13 +6255,13 @@ async def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, sessio
         if 'stream' in dict_url.keys():
             data_dict = dict_url['stream']
             try:
-                url = data_dict['rtmp']
+                url = data_dict['m3u8']
                 url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
             except:
                 pass
             if url is None or url == '':
                 try:
-                    url = data_dict['m3u8']
+                    url = data_dict['rtmp']
                     url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
@@ -6275,13 +6275,13 @@ async def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, sessio
             if 'playStreamInfo' in dict_url.keys():
                 data_dict = dict_url['playStreamInfo']
                 try:
-                    url = data_dict['rtmp']
+                    url = data_dict['m3u8']
                     url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
                 if url is None or url == '':
                     try:
-                        url = data_dict['m3u8']
+                        url = data_dict['rtmp']
                         url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
@@ -6295,13 +6295,13 @@ async def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, sessio
             if 'hd' in dict_url.keys():
                 data_dict = dict_url['hd']
                 try:
-                    url = data_dict['rtmp']
+                    url = data_dict['m3u8']
                     url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
                 if url is None or url == '':
                     try:
-                        url = data_dict['m3u8']
+                        url = data_dict['rtmp']
                         url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
@@ -6315,13 +6315,13 @@ async def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, sessio
             if 'sd' in dict_url.keys():
                 data_dict = dict_url['sd']
                 try:
-                    url = data_dict['rtmp']
+                    url = data_dict['m3u8']
                     url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
                 if url is None or url == '':
                     try:
-                        url = data_dict['m3u8']
+                        url = data_dict['rtmp']
                         url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
@@ -6335,13 +6335,13 @@ async def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, sessio
             if 'ld' in dict_url.keys():
                 data_dict = dict_url['ld']
                 try:
-                    url = data_dict['rtmp']
+                    url = data_dict['m3u8']
                     url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
                 if url is None or url == '':
                     try:
-                        url = data_dict['m3u8']
+                        url = data_dict['rtmp']
                         url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
@@ -6355,13 +6355,13 @@ async def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, sessio
             if 'ud' in dict_url.keys():
                 data_dict = dict_url['ud']
                 try:
-                    url = data_dict['rtmp']
+                    url = data_dict['m3u8']
                     url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
                 if url is None or url == '':
                     try:
-                        url = data_dict['m3u8']
+                        url = data_dict['rtmp']
                         url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
@@ -6422,7 +6422,7 @@ async def grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, source_
                         source = live_dict['source'][0]
                     except:
                         source = live_dict['source']
-                    update_longzhu(source, m3u_dict, rid, source_type, pic, name, session, mintimeout, maxTimeout)
+                    await update_longzhu(source, m3u_dict, rid, source_type, pic, name, session, mintimeout, maxTimeout)
             except Exception as e:
                 pass
     except Exception as e:
@@ -7525,16 +7525,11 @@ def chaoronghe_normal():
 
 
 def map_remove_keys(map, keys):
-    if len(keys) == 0:
+    if not keys:
         return
-    mapb = {}
-    for key, value in map.items():
-        if key not in keys:
-            mapb[key] = value
-    if len(mapb) == 0:
-        return
-    map.clear()
-    map.update(mapb)
+    for k in keys:
+        map.pop(k, None)
+
 
 
 def update_by_type_normal(type):
@@ -8490,7 +8485,7 @@ def main():
     timer_thread1 = threading.Thread(target=clock_thread, daemon=True)
     timer_thread1.start()
     try:
-        app.run(debug=True, host='0.0.0.0', port=5000)
+        app.run(debug=True, host='0.0.0.0', port=22771)
     finally:
         print("close")
 

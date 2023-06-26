@@ -1,4 +1,4 @@
-FROM nginx
+FROM ubuntu:latest
 # 将当前目录下的 python 脚本复制到容器中的 /app 目录
 # 创建目录
 RUN mkdir -p /app/ini /app/img /app/secret /app/m3u8 /app/templates
@@ -13,7 +13,7 @@ COPY index.html /app/templates
 # 将Python依赖包复制到容器中
 COPY requirements.txt /app/requirements.txt
 RUN apt-get update && \
-    apt-get install -yqq --no-install-recommends python3-pip redis-server  && \
+    apt-get install -yqq --no-install-recommends python3.9 python3-pip python3-dev redis-server  && \
     pip3 install --no-cache-dir -r /app/requirements.txt && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*

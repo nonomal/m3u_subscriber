@@ -549,6 +549,20 @@ def serve_files_normal(filename):
     elif id == 'longzhu,':
         chaoronghe31_single('longzhu,')
         return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
+    elif id.startswith('jstv,'):
+        id = id.split(',')[1]
+        e = f"https://live-hls.jstv.com/livezhuzhan/{id}.m3u8"
+        a = f"/livezhuzhan/{id}.m3u8"
+        r = "jstvlivezhuzhan@2022cdn!@#124gg"
+        i = int(time.time()) + 5
+        d = f"{hashlib.md5((r + '&' + str(i) + '&' + a).encode()).hexdigest()[12:20]}{i}"
+        m3u8 = f"{e}?upt={d}"
+        headers = {
+            'Referer': 'http://live.jstv.com/',
+        }
+        response = requests.get(m3u8, headers=headers, verify=False)
+        return response.content.replace(b"/livezhuzhan:livezhuzhan/",
+                                        b"https://live-hls.jstv.com/livezhuzhan:livezhuzhan/").decode()
     url = tv_dict_normal.get(id)
     if not url:
         url = redisKeyNormalM3U.get(id)
@@ -7582,8 +7596,8 @@ def chaoronghe31_single(type):
             return "empty"
         ip = init_IP()
         redisKeyM3uFake = {}
-        fakeurl = f"http://127.0.0.1:5000/normal/"
-        #fakeurl = f"http://{ip}:{port_live}/normal/"
+        #fakeurl = f"http://127.0.0.1:5000/normal/"
+        fakeurl = f"http://{ip}:{port_live}/normal/"
         for id, url in redisKeyNormalM3U.items():
             try:
                 if id in m3u_dict.keys():
@@ -7687,8 +7701,20 @@ def chaoronghe31():
         redisKeyM3uFake = {}
         redisKeyNormalM3U.clear()
         redis_del_map(REDIS_KEY_NORMAL_M3U)
-        fakeurl = f"http://127.0.0.1:5000/normal/"
-        #fakeurl = f"http://{ip}:{port_live}/normal/"
+        #fakeurl = f"http://127.0.0.1:5000/normal/"
+        fakeurl = f"http://{ip}:{port_live}/normal/"
+        for id, name in redisKeyNormal.items():
+            if id.startswith('jstv,'):
+                try:
+                    name, logo = name.split(',')
+                except Exception as e:
+                    logo = None
+                if logo is None:
+                    link = f'#EXTINF:-1 group-title="国内"  tvg-name="{name}",{name}\n'
+                else:
+                    link = f'#EXTINF:-1 group-title="国内" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                redisKeyM3uFake[f'{fakeurl}{id}.m3u8'] = link
+                redisKeyNormalM3U[id] = ''
         for id, url in m3u_dict.items():
             try:
                 redisKeyNormalM3U[id] = url

@@ -5670,23 +5670,7 @@ async def download_files_normal_single(ids, mintimeout, maxTimeout):
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             print(f"setv Failed to fetch files. Error: {e}")
         try:
-            check_url = f'https://aapi.qmh01.com/api/room/page?roomType=&navId=&roomId=&word=&page=1&pageSize=30&channelId=3&platform=1'
-            try:
-                async with session.get(check_url, timeout=mintimeout) as response:
-                    data = await response.read()
-                    m3u8_dict = json.loads(data.decode('utf-8'))['data']['list']
-
-            except asyncio.TimeoutError:
-                async with session.get(check_url, timeout=maxTimeout) as response:
-                    data = await response.read()
-                    m3u8_dict = json.loads(data.decode('utf-8'))['data']['list']
-            if m3u8_dict:
-                tasks = []
-                for dict_single in m3u8_dict:
-                    task = asyncio.ensure_future(
-                        grab_normal_qiumihui(session, m3u_dict, mintimeout, maxTimeout, 'qiumihui', dict_single))
-                tasks.append(task)
-                await asyncio.gather(*tasks)
+            await deal_qiumihui(session, m3u_dict, mintimeout, maxTimeout)
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             print(f"qiumihui Failed to fetch files. Error: {e}")
         try:
@@ -5699,14 +5683,33 @@ async def download_files_normal_single(ids, mintimeout, maxTimeout):
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             print(f"cetv Failed to fetch files. Error: {e}")
         try:
-            tasks = []
-            task = asyncio.ensure_future(
-                grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, 'longzhu'))
-            tasks.append(task)
-            await asyncio.gather(*tasks)
-        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            await  grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, 'longzhu')
+        except Exception as e:
             print(f"longzhu Failed to fetch files. Error: {e}")
     return m3u_dict
+
+
+async def deal_qiumihui(session, m3u_dict, mintimeout, maxTimeout):
+    try:
+        check_url = f'https://aapi.qmh01.com/api/room/page?roomType=&navId=&roomId=&word=&page=1&pageSize=30&channelId=3&platform=1'
+        try:
+            async with session.get(check_url, timeout=mintimeout) as response:
+                data = await response.read()
+                m3u8_dict = json.loads(data.decode('utf-8'))['data']['list']
+
+        except asyncio.TimeoutError:
+            async with session.get(check_url, timeout=maxTimeout) as response:
+                data = await response.read()
+                m3u8_dict = json.loads(data.decode('utf-8'))['data']['list']
+        if m3u8_dict:
+            tasks = []
+            for dict_single in m3u8_dict:
+                task = asyncio.ensure_future(
+                    grab_normal_qiumihui(session, m3u_dict, mintimeout, maxTimeout, 'qiumihui', dict_single))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        print(f"qiumihui Failed to fetch files. Error: {e}")
 
 
 async def download_files7():
@@ -7503,8 +7506,8 @@ def chaoronghe31():
         redisKeyM3uFake = {}
         redisKeyNormalM3U.clear()
         redis_del_map(REDIS_KEY_NORMAL_M3U)
-        #fakeurl = f"http://127.0.0.1:5000/normal/"
-        fakeurl = f"http://{ip}:{port_live}/normal/"
+        fakeurl = f"http://127.0.0.1:5000/normal/"
+        #fakeurl = f"http://{ip}:{port_live}/normal/"
         for id, url in m3u_dict.items():
             try:
                 redisKeyNormalM3U[id] = url

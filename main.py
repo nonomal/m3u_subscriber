@@ -18,7 +18,6 @@ import hashlib
 import urllib
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
-import m3u8 as m3u8
 from zhconv import convert
 import aiohttp
 import aiofiles
@@ -29,7 +28,6 @@ from urllib.parse import urlparse, urlencode
 from flask import Flask, jsonify, request, send_file, render_template, send_from_directory, \
     after_this_request, redirect, Response
 
-import chardet
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from multidict import CIMultiDict
@@ -594,7 +592,7 @@ def serve_files_normal(filename):
         headers = {
             'Referer': 'http://live.jstv.com/',
         }
-        response = requests.get(m3u8, headers=headers, verify=False)
+        response = requests.get(m3u8, headers=headers, verify=True)
         return response.content.replace(b"/livezhuzhan:livezhuzhan/",
                                         b"https://live-hls.jstv.com/livezhuzhan:livezhuzhan/").decode()
     url = tv_dict_normal.get(id)
@@ -1063,7 +1061,7 @@ def checkToDecrydecrypt2(url, redis_dict, m3u_string, filenameDict, secretNameDi
 
 def fetch_url(url, redis_dict):
     try:
-        response = requests.get(url, timeout=5, verify=False)
+        response = requests.get(url, timeout=5, verify=True)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1075,7 +1073,7 @@ def fetch_url(url, redis_dict):
         # print(f"success to fetch URL: {url}")
         return m3u_string
     except requests.exceptions.Timeout:
-        response = requests.get(url, timeout=30, verify=False)
+        response = requests.get(url, timeout=30, verify=True)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1088,7 +1086,7 @@ def fetch_url(url, redis_dict):
         return m3u_string
     except requests.exceptions.RequestException as e:
         url = url.decode('utf-8')
-        response = requests.get(url, timeout=15, verify=False)
+        response = requests.get(url, timeout=15, verify=True)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1154,7 +1152,7 @@ def download_files(urls, redis_dict):
 
 def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, uploadGithub, uploadWebdav):
     try:
-        response = requests.get(url, timeout=5, verify=False)
+        response = requests.get(url, timeout=5, verify=True)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1162,7 +1160,7 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
         checkToDecrydecrypt2(url, passwordDict, m3u_string, filenameDict, secretNameDict, uploadGitee,
                              uploadGithub, uploadWebdav)
     except requests.exceptions.Timeout:
-        response = requests.get(url, timeout=30, verify=False)
+        response = requests.get(url, timeout=30, verify=True)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1171,7 +1169,7 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
                              uploadGithub, uploadWebdav)
     except requests.exceptions.RequestException as e:
         url = url.decode('utf-8')
-        response = requests.get(url, timeout=15, verify=False)
+        response = requests.get(url, timeout=15, verify=True)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1185,14 +1183,14 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
 
 def fetch_url3(url, passwordDict, filenameDict):
     try:
-        response = requests.get(url, timeout=5, verify=False)
+        response = requests.get(url, timeout=5, verify=True)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
         # 加密文件检测和解码
         checkToDecrydecrypt3(url, passwordDict, m3u_string, filenameDict)
     except requests.exceptions.Timeout:
-        response = requests.get(url, timeout=30, verify=False)
+        response = requests.get(url, timeout=30, verify=True)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1200,7 +1198,7 @@ def fetch_url3(url, passwordDict, filenameDict):
         checkToDecrydecrypt3(url, passwordDict, m3u_string, filenameDict)
     except requests.exceptions.RequestException as e:
         url = url.decode('utf-8')
-        response = requests.get(url, timeout=15, verify=False)
+        response = requests.get(url, timeout=15, verify=True)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -2376,45 +2374,11 @@ def updateAdguardhomeWithelistForM3u(url):
     # 是ip
 
 
-# 自动编码格式检测转换
-def decode_text(text):
-    try:
-        # detect encoding of the string
-        result = chardet.detect(text)
-        # decode the string using detected encoding
-        decoded_text = text.decode(result['encoding']).strip()
-        return decoded_text
-    except (UnicodeDecodeError, KeyError):
-        pass
-
-    try:
-        result = text.encode('ascii').decode('utf-8', 'ignore')
-        return result
-    except UnicodeEncodeError:
-        pass
-
-    try:
-        result = text.encode('cp936').decode('utf-8', 'ignore')
-        return result
-    except UnicodeEncodeError:
-        pass
-
-    try:
-        decoded_text = text.decode('utf-8')
-        return decoded_text
-    except UnicodeDecodeError:
-        pass
-
-    try:
-        decoded_text = text.decode('gbk')
-        return decoded_text
-    except UnicodeDecodeError:
-        pass
-
 
 def decode_bytes(text):
     # define a list of possible encodings
-    encodings = ['utf-8', 'gbk', 'iso-8859-1', 'ascii', 'cp936', 'big5', 'shift_jis', 'koi8-r']
+    encodings = ['utf-8', 'gbk', 'iso-8859-1', 'ascii', 'cp936', 'big5', 'shift_jis', 'koi8-r',
+                 'utf-16', 'utf-32', 'euc-jp', 'gb18030', 'iso-2022-jp', 'windows-1250', 'windows-1251']
 
     # try each encoding until one works
     for encoding in encodings:
@@ -2422,12 +2386,7 @@ def decode_bytes(text):
             return text.decode(encoding).strip()
         except (TypeError, UnicodeDecodeError):
             continue
-
-    # if none of the above worked, use chardet to detect the encoding
-    result = chardet.detect(text)
-    decoded_text = text.decode(result['encoding']).strip()
-    return decoded_text
-
+    return text.decode().strip()
 
 def pureUrl(s):
     result = s.split('$', 1)[0]
@@ -2884,7 +2843,7 @@ def generate_json_string(mapname):
         m3ulink = redis_get_map(mapname)
     else:
         # 从Redis中读取JSON字符串
-        m3ulink =redis_get(mapname)
+        m3ulink = redis_get(mapname)
         m3ulink = json.loads(m3ulink)
     # 将字典转换为JSON字符串并返回
     json_str = json.dumps(m3ulink)
@@ -2907,7 +2866,7 @@ def generate_multi_json_string(mapnameArr):
     for name in specialRedisKey:
         try:
             # 从Redis中读取JSON字符串
-            json_string_redis =redis_get(name)
+            json_string_redis = redis_get(name)
             # 反序列化成Python对象
             my_dict_redis = json.loads(json_string_redis)
             if len(my_dict_redis.keys()) > 0:
@@ -3435,7 +3394,7 @@ def download_files_for_encryp_proxy(urls, redis_dict):
 
 
 def chaorongheProxies(filename):
-    redis_dict =redis_get_map(REDIS_KEY_PROXIES_LINK)
+    redis_dict = redis_get_map(REDIS_KEY_PROXIES_LINK)
     urlStr = ""
     urlAes = []
     for key in redis_dict.keys():
@@ -3558,7 +3517,7 @@ def write_content_to_file(content, filename, num_threads):
 
 
 def setRandomValueChosen(key1, key2):
-    redis_dict =redis_get_map(key1)
+    redis_dict = redis_get_map(key1)
     if redis_dict and len(redis_dict.items()) > 0:
         for key, value in redis_dict.items():
             dict = {}
@@ -3858,7 +3817,7 @@ def initReloadCacheForSpecial():
         if redisKey in REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME:
             try:
                 # 从Redis中读取JSON字符串
-                json_string_redis =redis_get(redisKey)
+                json_string_redis = redis_get(redisKey)
                 # 反序列化成Python对象
                 my_dict_redis = json.loads(json_string_redis)
                 global downAndSecUploadUrlPassAndName
@@ -3869,7 +3828,7 @@ def initReloadCacheForSpecial():
         elif redisKey in REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME:
             try:
                 # 从Redis中读取JSON字符串
-                json_string_redis =redis_get(redisKey)
+                json_string_redis = redis_get(redisKey)
                 # 反序列化成Python对象
                 my_dict_redis = json.loads(json_string_redis)
                 global downAndDeSecUrlPassAndName
@@ -4981,7 +4940,7 @@ def addnewm3u17():
     name = request.json.get('secretName')
     if len(downAndSecUploadUrlPassAndName.items()) == 0:
         # 从Redis中读取JSON字符串
-        json_string_redis =redis_get(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME)
+        json_string_redis = redis_get(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME)
         # 反序列化成Python对象
         my_dict_redis = json.loads(json_string_redis)
         downAndSecUploadUrlPassAndName.update(my_dict_redis)
@@ -5002,7 +4961,7 @@ def addnewm3u18():
     name = request.json.get('secretName')
     if len(downAndDeSecUrlPassAndName.items()) == 0:
         # 从Redis中读取JSON字符串
-        json_string_redis =redis_get(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME)
+        json_string_redis = redis_get(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME)
         # 反序列化成Python对象
         my_dict_redis = json.loads(json_string_redis)
         downAndDeSecUrlPassAndName.update(my_dict_redis)
@@ -6337,19 +6296,19 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, min
             data_dict = dict_url['stream']
             try:
                 url = data_dict['m3u8']
-                #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
             except:
                 pass
             if url is None or url == '':
                 try:
                     url = data_dict['rtmp']
-                    #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
             if url is None or url == '':
                 try:
                     url = data_dict['fly']
-                    #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
         if url is None or url == '':
@@ -6357,19 +6316,19 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, min
                 data_dict = dict_url['playStreamInfo']
                 try:
                     url = data_dict['m3u8']
-                    #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
                 if url is None or url == '':
                     try:
                         url = data_dict['rtmp']
-                        #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                        # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
                 if url is None or url == '':
                     try:
                         url = data_dict['fly']
-                        #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                        # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
         if url is None or url == '':
@@ -6377,19 +6336,19 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, min
                 data_dict = dict_url['hd']
                 try:
                     url = data_dict['m3u8']
-                    #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
                 if url is None or url == '':
                     try:
                         url = data_dict['rtmp']
-                        #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                        # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
                 if url is None or url == '':
                     try:
                         url = data_dict['fly']
-                        #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                        # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
         if url is None or url == '':
@@ -6397,19 +6356,19 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, min
                 data_dict = dict_url['sd']
                 try:
                     url = data_dict['m3u8']
-                    #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
                 if url is None or url == '':
                     try:
                         url = data_dict['rtmp']
-                        #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                        # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
                 if url is None or url == '':
                     try:
                         url = data_dict['fly']
-                        #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                        # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
         if url is None or url == '':
@@ -6417,19 +6376,19 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, min
                 data_dict = dict_url['ld']
                 try:
                     url = data_dict['m3u8']
-                    #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
                 if url is None or url == '':
                     try:
                         url = data_dict['rtmp']
-                        #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                        # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
                 if url is None or url == '':
                     try:
                         url = data_dict['fly']
-                        #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                        # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
         if url is None or url == '':
@@ -6437,19 +6396,19 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, min
                 data_dict = dict_url['ud']
                 try:
                     url = data_dict['m3u8']
-                    #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
                 if url is None or url == '':
                     try:
                         url = data_dict['rtmp']
-                        #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                        # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
                 if url is None or url == '':
                     try:
                         url = data_dict['fly']
-                        #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                        # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
         if url is not None and url != '':
@@ -6883,17 +6842,55 @@ async def get_resolution(session, liveurl, mintimeout, maxTimeout):
     except asyncio.TimeoutError:
         async with session.get(liveurl, timeout=maxTimeout) as response:
             playlist_text = await response.text()
-    playlist = m3u8.loads(playlist_text)
-    playlists = playlist.playlists
-    if len(playlists) < 1:
-        return None
+    url = get_best_youtube_url(playlist_text)
+    # playlist = m3u8.loads(playlist_text)
+    # playlists = playlist.playlists
+    # if len(playlists) < 1:
+    #     return None
+    # highest_resolution = 0
+    # url = ''
+    # for item in playlists:
+    #     resolution = item.stream_info.resolution[0] * item.stream_info.resolution[1]
+    #     if resolution > highest_resolution:
+    #         highest_resolution = resolution
+    #         url = item.uri
+    return url
+
+
+def get_target_url(input_url, line):
+    find = False
+    tmp_url = ''
+    for line2 in input_url.splitlines():
+        line2 = line2.strip()
+        if line2.startswith(("#EXTM3U", "#EXT-X-INDEPENDENT-SEGMENTS")):
+            continue
+        if line2.startswith(line):
+            find = True
+            continue
+        if line2.startswith('#EXT-X-STREAM-INF:BANDWIDTH='):
+            break
+        if find:
+            tmp_url += line2
+    return tmp_url
+
+
+def get_best_youtube_url(input_url):
     highest_resolution = 0
     url = ''
-    for item in playlists:
-        resolution = item.stream_info.resolution[0] * item.stream_info.resolution[1]
-        if resolution > highest_resolution:
-            highest_resolution = resolution
-            url = item.uri
+    pattern = r'RESOLUTION=(\d+x\d+)'
+    for line in input_url.splitlines():
+        line = line.strip()
+        if line.startswith(("#EXTM3U", "#EXT-X-INDEPENDENT-SEGMENTS")):
+            continue
+        if line.startswith('#EXT-X-STREAM-INF:BANDWIDTH='):
+            match = re.search(pattern, line)
+            if match:
+                resolution = match.group(1)
+                resolution_arr = resolution.split('x')
+                tmp = int(resolution_arr[0]) * int(resolution_arr[1])
+                if tmp > highest_resolution:
+                    highest_resolution = tmp
+                    url = get_target_url(input_url, line)
     return url
 
 
@@ -6957,7 +6954,7 @@ def chaoronghe25():
         redisKeyBililiM3uFake = {}
         redisKeyBililiM3u.clear()
         redis_del_map(REDIS_KEY_BILIBILI_M3U)
-        #fakeurl=f'http://127.0.0.1:22771/bilibili/'
+        # fakeurl=f'http://127.0.0.1:22771/bilibili/'
         fakeurl = f"http://{ip}:{port_live}/bilibili/"
         for id, url in m3u_dict.items():
             try:
@@ -7398,10 +7395,10 @@ def get_new_content_by_uuid(mintimeout, maxTimeout, same_level_path, uuid, heade
         if content_list:
             return content_list
         try:
-            response = requests.get(same_level_path, headers=headers, timeout=mintimeout, verify=False)
+            response = requests.get(same_level_path, headers=headers, timeout=mintimeout, verify=True)
         except requests.exceptions.Timeout:
             # 处理请求超时异常
-            response = requests.get(same_level_path, headers=headers, timeout=maxTimeout, verify=False)
+            response = requests.get(same_level_path, headers=headers, timeout=maxTimeout, verify=True)
         if response.status_code == 200:
             json_data = response.json()
             content = json_data['data']['content']
@@ -7601,7 +7598,7 @@ def chaoronghe28():
         redisKeyTWITCHM3uFake = {}
         redisKeyTWITCHM3u.clear()
         redis_del_map(REDIS_KEY_TWITCH_M3U)
-        # fakeurl = f"http://127.0.0.1:5000/TWITCH/"
+        #fakeurl = f"http://127.0.0.1:22771/TWITCH/"
         fakeurl = f"http://{ip}:{port_live}/TWITCH/"
         for id, url in m3u_dict.items():
             try:
@@ -7803,7 +7800,7 @@ def chaoronghe31():
         redisKeyM3uFake = {}
         redisKeyNormalM3U.clear()
         redis_del_map(REDIS_KEY_NORMAL_M3U)
-        # fakeurl = f"http://127.0.0.1:5000/normal/"
+        #fakeurl = f"http://127.0.0.1:22771/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
         for id, name in redisKeyNormal.items():
             if id.startswith('jstv,'):
@@ -7901,7 +7898,7 @@ def chaoronghe24():
         redisKeyYoutubeM3u.clear()
         redis_del_map(REDIS_KEY_YOUTUBE_M3U)
         redisKeyYoutubeM3uFake = {}
-        # fakeurl='http://127.0.0.1:5000/youtube/'
+        #fakeurl = 'http://127.0.0.1:22771/youtube/'
         fakeurl = f"http://{ip}:{port_live}/youtube/"
         for id, url in m3u_dict.items():
             try:

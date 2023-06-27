@@ -7,7 +7,9 @@ import dnslib
 import redis
 
 r = redis.Redis(host='localhost', port=22772)
-
+# 订阅频道
+pubsub = r.pubsub()
+pubsub.subscribe('dns-notify')
 # 下载的域名白名单存储到redis服务器里
 REDIS_KEY_WHITE_DOMAINS = "whitedomains"
 # 白名单总命中缓存规则，数据中等，是实际命中的规则缓存
@@ -694,16 +696,16 @@ def hungry_check_in_multi_method(domain_name_str):
     executor = None
     try:
         with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
-                # 为各个任务分配ThreadPoolExecutor
-                futures = [executor.submit(check_by_choice, domain_name_str, i) for i in range(12)]
-                # 使用wait等待第一个非None结果
-                done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
-                # 使用as_completed以非阻塞的方式返回第一个非None结果
-                for future in done:
-                    result = future.result()
-                    if result is not None:
-                        if result == find_white or result == find_black:
-                            return result
+            # 为各个任务分配ThreadPoolExecutor
+            futures = [executor.submit(check_by_choice, domain_name_str, i) for i in range(12)]
+            # 使用wait等待第一个非None结果
+            done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
+            # 使用as_completed以非阻塞的方式返回第一个非None结果
+            for future in done:
+                result = future.result()
+                if result is not None:
+                    if result == find_white or result == find_black:
+                        return result
     except TypeError:
         return find_none
     finally:
@@ -880,7 +882,7 @@ def redis_get_map(key):
 def initSimpleBlackList():
     global black_list_simple_policy
     simpleblacklist = redis_get_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST)
-    if simpleblacklist and len(simpleblacklist) > 0:
+    if simpleblacklist:
         black_list_simple_policy.clear()
         for domain in simpleblacklist:
             updateSpData(domain, black_list_simple_policy)
@@ -889,10 +891,9 @@ def initSimpleBlackList():
 def initSimpleWhiteList():
     global white_list_simple_nameserver_policy
     simplewhitelist = redis_get_map(REDIS_KEY_DNS_SIMPLE_WHITELIST)
-    if simplewhitelist and len(simplewhitelist) > 0:
+    if simplewhitelist:
         white_list_simple_nameserver_policy.clear()
         for domain in simplewhitelist:
-            # updateSimpleWhiteListSpData(domain)
             updateSpData(domain, white_list_simple_nameserver_policy)
 
 
@@ -963,25 +964,23 @@ def updateSpData(domain_name_str, dict):
 
 
 # 白名单总表转换成tire树，数据太大，只用这个方法更新
-def initWhiteListSP(redis_key):
+def initWhiteListSP():
     global whitelistSpData
     whitelistSP = redis_get_map(REDIS_KEY_WHITELIST_DATA_SP)
-    if whitelistSP and len(whitelistSP) > 0:
+    if whitelistSP:
         whitelistSpData.clear()
         for domain in whitelistSP:
             updateSpData(domain, whitelistSpData)
-        redis_add(redis_key, 0)
 
 
 # 黑名单总表转换成tire树，数据太大，只用这个方法更新
-def initBlackListSP(redis_key):
+def initBlackListSP():
     global blacklistSpData
     blacklistSP = redis_get_map(REDIS_KEY_BLACKLIST_DATA_SP)
-    if blacklistSP and len(blacklistSP) > 0:
+    if blacklistSP:
         blacklistSpData.clear()
         for domain in blacklistSP:
             updateSpData(domain, blacklistSpData)
-        redis_add(redis_key, 0)
 
 
 # 将CIDR表示的IP地址段转换为IP网段数组
@@ -1000,12 +999,6 @@ def initBlackListSP(redis_key):
 #         broadcast = network | (1 << 32 - mask) - 1
 #         # 将地址段转换为元组
 #         return (network, broadcast)
-
-
-# def initBlackList():
-#     blacklist = redis_get_map(REDIS_KEY_BLACK_DOMAINS)
-#     if blacklist and len(blacklist) > 0:
-#         black_list_policy.update(blacklist)
 
 ################################################ipv4暂时不能解决根据域名查找ipv4
 # # IP地址转换为32位整数
@@ -1101,42 +1094,15 @@ def redis_get(key):
 
 # 定时器似乎影响挺严重的
 # 0-数据未更新 1-数据已更新 max-所有服务器都更新完毕(有max个服务器做负载均衡)
-REDIS_KEY_UPDATE_WHITE_LIST_FLAG = "updatewhitelistflag"
-REDIS_KEY_UPDATE_BLACK_LIST_FLAG = "updateblacklistflag"
 REDIS_KEY_UPDATE_THREAD_NUM_FLAG = "updatethreadnumflag"
-REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG = "updatechinadnsserverflag"
-REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG = "updatechinadnsportflag"
-REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG = "updateextradnsserverflag"
-REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG = "updateextradnsportflag"
 REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG = "updatesimplewhitelistflag"
-REDIS_KEY_UPDATE_IPV4_LIST_FLAG = "updateipv4listflag"
 REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG = "updatesimpleblacklistflag"
 REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG = "updatewhitelistspflag"
 REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG = "updateblacklistspflag"
 REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG = "updatechinadomainflag"
 REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG = "updateforeigndomainflag"
 REDIS_KEY_UPDATE_DNS_MODE_FLAG = "updatednsmodeflag"
-
-
-# true-拉取更新吧
-def needUpdate(redis_key):
-    flag = redis_get(redis_key)
-    if flag:
-        flag = int(flag.decode())
-        # 数据没有更新
-        if flag == 0:
-            return False
-        return True
-        # # 服务器全部更新完毕(逻辑不严谨感觉)
-        # if flag >= 2:
-        #     redis_add(redis_key, 0)
-        #     return False
-        # # 服务器未全部完成更新(逻辑不严谨，一个服务器的话还能用用)
-        # else:
-        #     redis_add(redis_key, flag + 1)
-        #     return True
-    return False
-
+REDIS_KEY_OPEN_AUTO_UPDATE_SIMPLE_WHITE_AND_BLACK_LIST_FLAG = 'openAutoUpdateSimpleWhiteAndBlackList'
 
 # 上次更新时间戳
 time_clock_update_dict = {'updateSubscribeList': '0', 'deal_black_list_simple_policy_queue': '0', 'clearCache': '0',
@@ -1162,9 +1128,6 @@ def update_clock(cachekey):
 
 def clock_thread():
     while True:
-        if is_update_clock('updateSubscribeList'):
-            init()
-            update_clock('updateSubscribeList')
         if is_update_clock('deal_black_list_simple_tmp_cache_queue'):
             deal_black_list_simple_tmp_cache_queue()
             update_clock('deal_black_list_simple_tmp_cache_queue')
@@ -1295,7 +1258,7 @@ def getFileNameByTagName(tagname):
             return name
 
 
-def update_china_top_domain(redis_key):
+def update_china_top_domain():
     global china_top_domain_list
     function_dict = redis_get_map(REDIS_KEY_FILE_NAME)
     if function_dict and len(function_dict) > 0:
@@ -1312,11 +1275,9 @@ def update_china_top_domain(redis_key):
                 file_name_dict['chinaTopDomain'] = name
             except Exception as e:
                 pass
-            finally:
-                redis_add(redis_key, 0)
 
 
-def update_dns_mode(redis_key):
+def update_dns_mode():
     global file_name_dict
     function_dict = redis_get_map(REDIS_KEY_FILE_NAME)
     if function_dict and len(function_dict) > 0:
@@ -1324,10 +1285,9 @@ def update_dns_mode(redis_key):
         if name and name != getFileNameByTagName('dnsMode'):
             if name == '0' or name == '1':
                 file_name_dict['dnsMode'] = name
-        redis_add(redis_key, 0)
 
 
-def update_foreign_top_domain(redis_key):
+def update_foreign_top_domain():
     global foreign_top_domain_list
     function_dict = redis_get_map(REDIS_KEY_FILE_NAME)
     if function_dict and len(function_dict) > 0:
@@ -1344,8 +1304,6 @@ def update_foreign_top_domain(redis_key):
                 file_name_dict['foreignTopDomain'] = name
             except Exception as e:
                 pass
-            finally:
-                redis_add(redis_key, 0)
 
 
 def is_china_top_domain(domain):
@@ -1363,56 +1321,46 @@ def is_foreign_top_domain(domain):
 
 
 def init():
-    # if needUpdate(REDIS_KEY_UPDATE_WHITE_LIST_FLAG):
-    #     initWhiteList()
-    # if needUpdate(REDIS_KEY_UPDATE_BLACK_LIST_FLAG):
-    #     initBlackList()
-    if needUpdate(REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG):
-        initWhiteListSP(REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG)
-    if needUpdate(REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG):
-        initBlackListSP(REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG)
-    if needUpdate(REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG):
-        update_china_top_domain(REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG)
-    if needUpdate(REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG):
-        update_foreign_top_domain(REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG)
-    if needUpdate(REDIS_KEY_UPDATE_DNS_MODE_FLAG):
-        update_dns_mode(REDIS_KEY_UPDATE_DNS_MODE_FLAG)
-    if needUpdate(REDIS_KEY_UPDATE_THREAD_NUM_FLAG):
-        init_threads_num()
-        redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 0)
-    # if needUpdate(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG):
-    #     init_china_dns_server()
-    # if needUpdate(REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG):
-    #     init_china_dns_port()
-    # if needUpdate(REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG):
-    #     init_extra_dns_server()
-    # if needUpdate(REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG):
-    #     init_extra_dns_port()
-    if needUpdate(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG):
-        initSimpleWhiteList()
-    if needUpdate(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG):
-        initSimpleBlackList()
-    # if needUpdate(REDIS_KEY_UPDATE_IPV4_LIST_FLAG):
-    #     initIPV4List()
-    openAutoUpdateSimpleWhiteAndBlackList()
+    while True:
+        try:
+            for message in pubsub.listen():
+                if message['type'] == 'message':
+                    data = message['data']
+                    print(data)
+                    if data == REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG:
+                        initWhiteListSP()
+                    elif data == REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG:
+                        initBlackListSP()
+                    elif data == REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG:
+                        update_china_top_domain()
+                    elif data == REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG:
+                        update_foreign_top_domain()
+                    elif data == REDIS_KEY_UPDATE_DNS_MODE_FLAG:
+                        update_dns_mode()
+                    elif data == REDIS_KEY_UPDATE_THREAD_NUM_FLAG:
+                        init_threads_num()
+                    elif data == REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG:
+                        initSimpleWhiteList()
+                    elif data == REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG:
+                        initSimpleBlackList()
+                    elif REDIS_KEY_OPEN_AUTO_UPDATE_SIMPLE_WHITE_AND_BLACK_LIST_FLAG in data:
+                        openAutoUpdateSimpleWhiteAndBlackList(data)
+        except:
+            pass
 
 
-REDIS_KEY_FUNCTION_DICT = "functiondict"
 # 是否开启自动维护生成简易黑白名单：0-不开启，1-开启
 AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST = '1'
 
 
 # 检测是否开启自动维护简易黑白名单
-def openAutoUpdateSimpleWhiteAndBlackList():
+def openAutoUpdateSimpleWhiteAndBlackList(data):
     global AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST
-    dict = redis_get_map(REDIS_KEY_FUNCTION_DICT)
-    if dict:
-        if 'switch24' in dict.keys():
-            AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST = str(dict['switch24'])
-        else:
-            return
-    else:
-        return
+    try:
+        choose = data.split('_')[1]
+        AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST = choose
+    except:
+        pass
 
 
 def checkAndUpdateSimpleList(isBlack, domain):
@@ -1581,16 +1529,18 @@ def main():
     init_extra_dns_port()
     init_dns_query_num()
     init_dns_timeout()
-    initWhiteListSP(REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG)
-    initBlackListSP(REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG)
-    update_china_top_domain(REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG)
-    update_foreign_top_domain(REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG)
-    update_dns_mode(REDIS_KEY_UPDATE_DNS_MODE_FLAG)
+    initWhiteListSP()
+    initBlackListSP()
+    update_china_top_domain()
+    update_foreign_top_domain()
+    update_dns_mode()
     # initIPV4List()
     initSimpleWhiteList()
     initSimpleBlackList()
     timer_thread = threading.Thread(target=clock_thread, daemon=True)
     timer_thread.start()
+    timer_thread2 = threading.Thread(target=init, daemon=True)
+    timer_thread2.start()
     # 中国dns端口
     china_port = chinadnsport[REDIS_KEY_CHINA_DNS_PORT]
     # 中国dns服务器

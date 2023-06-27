@@ -44,7 +44,7 @@ app.config['PROXY_SEND_TIMEOUT'] = 6000
 app.config['PROXY_READ_TIMEOUT'] = 6000
 
 r = redis.Redis(host='localhost', port=22772)
-
+channel = 'dns-notify'
 ##########################################################redis key#############################################
 REDIS_KEY_M3U_LINK = "m3ulink"
 REDIS_KEY_M3U_DATA = "localm3u"
@@ -301,9 +301,6 @@ REDIS_KEY_WHITE_DOMAINS = "whitedomains"
 REDIS_KEY_BLACK_DOMAINS = "blackdomains"
 
 # 0-数据未更新 1-数据已更新 max-所有服务器都更新完毕(有max个服务器做负载均衡)
-REDIS_KEY_UPDATE_WHITE_LIST_FLAG = "updatewhitelistflag"
-REDIS_KEY_UPDATE_BLACK_LIST_FLAG = "updateblacklistflag"
-REDIS_KEY_UPDATE_IPV4_LIST_FLAG = "updateipv4listflag"
 REDIS_KEY_UPDATE_THREAD_NUM_FLAG = "updatethreadnumflag"
 REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG = "updatechinadnsserverflag"
 REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG = "updatechinadnsportflag"
@@ -316,6 +313,7 @@ REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG = "updateblacklistspflag"
 REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG = "updatechinadomainflag"
 REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG = "updateforeigndomainflag"
 REDIS_KEY_UPDATE_DNS_MODE_FLAG = "updatednsmodeflag"
+REDIS_KEY_OPEN_AUTO_UPDATE_SIMPLE_WHITE_AND_BLACK_LIST_FLAG = 'openAutoUpdateSimpleWhiteAndBlackList'
 
 REDIS_KEY_THREADS = "threadsnum"
 threadsNum = {REDIS_KEY_THREADS: 1000}
@@ -661,6 +659,13 @@ def redis_del_map_keys(key, map_keys):
         pass
 
 
+def redis_public_message(message):
+    try:
+        r.publish(channel, message)
+    except:
+        pass
+
+
 #########################################################通用工具区#################################################
 # 上传订阅配置
 def upload_json_base(rediskey, file_content):
@@ -679,6 +684,10 @@ def upload_json_base(rediskey, file_content):
                 importToReloadCache(rediskey, json_dict)
         else:
             importToReloadCacheForSpecial(rediskey, json_dict)
+        if 'dnssimpleblacklist' == rediskey:
+            redis_public_message(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG)
+        elif 'dnssimplewhitelist' == rediskey:
+            redis_public_message(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG)
         return jsonify({'success': True})
     except Exception as e:
         print("An error occurred: ", e)
@@ -793,7 +802,7 @@ def toggle_m3u(functionId, value):
     if functionId == 'switch24':
         function_dict[functionId] = str(value)
         redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
-        redis_add(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG, 1)
+        redis_public_message(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG)
     elif functionId == 'switch25':
         function_dict[functionId] = str(value)
         redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
@@ -1207,7 +1216,7 @@ def writeOpenclashNameServerPolicy():
         redis_add_map(REDIS_KEY_WHITELIST_DATA_SP, whitelistSpData)
         whitelistSpData.clear()
         # 通知dns服务器更新内存
-        redis_add(REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG, 1)
+        redis_public_message(REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG)
         # redis_add(REDIS_KEY_UPDATE_WHITE_LIST_FLAG, 1)
         # 更新redis数据库白名单
         # redis_add_map(REDIS_KEY_WHITE_DOMAINS, white_list_nameserver_policy)
@@ -1232,8 +1241,7 @@ def writeBlackList():
         redis_add_map(REDIS_KEY_BLACKLIST_DATA_SP, blacklistSpData)
         blacklistSpData.clear()
         # 通知dns服务器更新内存
-        redis_add(REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG, 1)
-
+        redis_public_message(REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG)
         # 更新redis数据库黑名单
         # redis_add_map(REDIS_KEY_BLACK_DOMAINS, black_list_nameserver_policy)
         # 通知dns服务器更新内存
@@ -3528,13 +3536,13 @@ def init_threads_num():
             num = 1000
             redis_add(REDIS_KEY_THREADS, num)
             threadsNum[REDIS_KEY_THREADS] = num
-            redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
+            redis_public_message(REDIS_KEY_UPDATE_THREAD_NUM_FLAG)
         threadsNum[REDIS_KEY_THREADS] = num
     else:
         num = 1000
         redis_add(REDIS_KEY_THREADS, num)
         threadsNum[REDIS_KEY_THREADS] = num
-        redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
+        redis_public_message(REDIS_KEY_UPDATE_THREAD_NUM_FLAG)
     return num
 
 
@@ -3590,13 +3598,13 @@ def init_china_dns_port():
             num = 5336
             redis_add(REDIS_KEY_CHINA_DNS_PORT, num)
             chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
-            redis_add(REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG, 1)
+            redis_public_message(REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG)
         chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
     else:
         num = 5336
         redis_add(REDIS_KEY_CHINA_DNS_PORT, num)
         chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
-        redis_add(REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG, 1)
+        redis_public_message(REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG)
     return num
 
 
@@ -3612,13 +3620,13 @@ def init_extra_dns_port():
             num = 7874
             redis_add(REDIS_KEY_EXTRA_DNS_PORT, num)
             extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
-            redis_add(REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG, 1)
+            redis_public_message(REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG)
         extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
     else:
         num = 7874
         redis_add(REDIS_KEY_EXTRA_DNS_PORT, num)
         extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
-        redis_add(REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG, 1)
+        redis_public_message(REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG)
     return num
 
 
@@ -3634,13 +3642,13 @@ def init_china_dns_server():
             num = "127.0.0.1"
             redis_add(REDIS_KEY_CHINA_DNS_SERVER, num)
             chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
-            redis_add(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG, 1)
+            redis_public_message(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG)
         chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
     else:
         num = "127.0.0.1"
         redis_add(REDIS_KEY_CHINA_DNS_SERVER, num)
         chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
-        redis_add(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG, 1)
+        redis_public_message(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG)
     return num
 
 
@@ -3656,13 +3664,13 @@ def init_extra_dns_server():
             num = "127.0.0.1"
             redis_add(REDIS_KEY_EXTRA_DNS_SERVER, num)
             extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num
-            redis_add(REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG, 1)
+            redis_public_message(REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG)
         extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num
     else:
         num = "127.0.0.1"
         redis_add(REDIS_KEY_EXTRA_DNS_SERVER, num)
         extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num
-        redis_add(REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG, 1)
+        redis_public_message(REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG)
     return num
 
 
@@ -3877,13 +3885,16 @@ def changeFileName2(cachekey, newFileName):
     file_name_dict[cachekey] = newFileName
     if cachekey == 'chinaTopDomain':
         # 通知dns服务器更新内存
-        redis_add(REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG, 1)
+        redis_public_message(REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG)
     elif cachekey == 'foreignTopDomain':
         # 通知dns服务器更新内存
-        redis_add(REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG, 1)
+        redis_public_message(REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG)
     elif cachekey == 'dnsMode':
         # 通知dns服务器更新内存
-        redis_add(REDIS_KEY_UPDATE_DNS_MODE_FLAG, 1)
+        redis_public_message(REDIS_KEY_UPDATE_DNS_MODE_FLAG)
+    elif cachekey == 'switch24':
+        # 通知dns服务器更新内存
+        redis_public_message(f'{REDIS_KEY_OPEN_AUTO_UPDATE_SIMPLE_WHITE_AND_BLACK_LIST_FLAG}_{newFileName}')
     return newFileName
 
 
@@ -4295,10 +4306,6 @@ def upload_json():
     data = request.get_json()
     rediskey = data.get('rediskey')
     file_content = data.get('content')
-    if 'dnssimpleblacklist' == rediskey:
-        redis_add(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG, 1)
-    elif 'dnssimplewhitelist' == rediskey:
-        redis_add(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG, 1)
     return upload_json_base(rediskey, file_content)
 
 
@@ -4468,8 +4475,9 @@ def getQueryThreadNum():
 @app.route('/api/deletewm3u13', methods=['POST'])
 @requires_auth
 def deletewm3u13():
-    redis_add(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG, 1)
-    return dellist(request, REDIS_KEY_DNS_SIMPLE_BLACKLIST)
+    return_value = dellist(request, REDIS_KEY_DNS_SIMPLE_BLACKLIST)
+    redis_public_message(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG)
+    return return_value
 
 
 # 删除youtube直播源
@@ -4548,13 +4556,13 @@ def deletewm3u31():
 @app.route('/api/addnewm3u13', methods=['POST'])
 @requires_auth
 def addnewm3u13():
-    redis_add(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG, 1)
     # 获取 HTML 页面发送的 POST 请求参数
     addurl = request.json.get('addurl')
     name = request.json.get('name')
     addurl = stupidThink(addurl)
     my_dict = {addurl: name}
     redis_add_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST, my_dict)
+    redis_public_message(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG)
     return jsonify({'addresult': "add success"})
 
 
@@ -4642,21 +4650,22 @@ def returnDictCache(redisKey, cacheDict):
 @app.route('/api/deletewm3u12', methods=['POST'])
 @requires_auth
 def deletewm3u12():
-    redis_add(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG, 1)
-    return dellist(request, REDIS_KEY_DNS_SIMPLE_WHITELIST)
+    return_value = dellist(request, REDIS_KEY_DNS_SIMPLE_WHITELIST)
+    redis_public_message(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG)
+    return return_value
 
 
 # 添加DNS简易白名单
 @app.route('/api/addnewm3u12', methods=['POST'])
 @requires_auth
 def addnewm3u12():
-    redis_add(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG, 1)
     # 获取 HTML 页面发送的 POST 请求参数
     addurl = request.json.get('addurl')
     name = request.json.get('name')
     addurl = stupidThink(addurl)
     my_dict = {addurl: name}
     redis_add_map(REDIS_KEY_DNS_SIMPLE_WHITELIST, my_dict)
+    redis_public_message(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG)
     return jsonify({'addresult': "add success"})
 
 
@@ -5180,7 +5189,7 @@ def saveExtraDnsPort():
     data = request.json['selected_button']
     redis_add(REDIS_KEY_EXTRA_DNS_PORT, int(data))
     extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = int(data)
-    redis_add(REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG, 1)
+    redis_public_message(REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG)
     return "数据已经保存"
 
 
@@ -5201,7 +5210,7 @@ def saveExtraDnsServer():
         data = "127.0.0.1"
     redis_add(REDIS_KEY_EXTRA_DNS_SERVER, data)
     extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = data
-    redis_add(REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG, 1)
+    redis_public_message(REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG)
     return "数据已经保存"
 
 
@@ -5220,7 +5229,7 @@ def savechinaDnsPort():
     data = request.json['selected_button']
     redis_add(REDIS_KEY_CHINA_DNS_PORT, int(data))
     chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = int(data)
-    redis_add(REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG, 1)
+    redis_public_message(REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG)
     return "数据已经保存"
 
 
@@ -5241,7 +5250,7 @@ def savechinaDnsServer():
         data = "127.0.0.1"
     redis_add(REDIS_KEY_CHINA_DNS_SERVER, data)
     chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = data
-    redis_add(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG, 1)
+    redis_public_message(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG)
     return "数据已经保存"
 
 
@@ -5260,7 +5269,7 @@ def saveThreadS():
     data = request.json['selected_button']
     redis_add(REDIS_KEY_THREADS, min(int(data), 1000))
     threadsNum[REDIS_KEY_THREADS] = min(int(data), 1000)
-    redis_add(REDIS_KEY_UPDATE_THREAD_NUM_FLAG, 1)
+    redis_public_message(REDIS_KEY_UPDATE_THREAD_NUM_FLAG)
     return "数据已经保存"
 
 
@@ -7531,7 +7540,6 @@ def map_remove_keys(map, keys):
         map.pop(k, None)
 
 
-
 def update_by_type_normal(type):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -7591,7 +7599,7 @@ def chaoronghe31_single(type):
             return "empty"
         ip = init_IP()
         redisKeyM3uFake = {}
-        #fakeurl = f"http://127.0.0.1:5000/normal/"
+        # fakeurl = f"http://127.0.0.1:5000/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
         for id, url in redisKeyNormalM3U.items():
             try:
@@ -7696,7 +7704,7 @@ def chaoronghe31():
         redisKeyM3uFake = {}
         redisKeyNormalM3U.clear()
         redis_del_map(REDIS_KEY_NORMAL_M3U)
-        #fakeurl = f"http://127.0.0.1:5000/normal/"
+        # fakeurl = f"http://127.0.0.1:5000/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
         for id, name in redisKeyNormal.items():
             if id.startswith('jstv,'):
@@ -8061,7 +8069,7 @@ def removem3ulinks14():
 @requires_auth
 def removem3ulinks13():
     redis_del_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST)
-    redis_add(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG, 1)
+    redis_public_message(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG)
     return "success"
 
 
@@ -8160,7 +8168,7 @@ def removem3ulinks31():
 @requires_auth
 def removem3ulinks12():
     redis_del_map(REDIS_KEY_DNS_SIMPLE_WHITELIST)
-    redis_add(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG, 1)
+    redis_public_message(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG)
     return "success"
 
 

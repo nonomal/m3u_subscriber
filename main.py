@@ -6954,7 +6954,7 @@ def chaoronghe25():
         redisKeyBililiM3uFake = {}
         redisKeyBililiM3u.clear()
         redis_del_map(REDIS_KEY_BILIBILI_M3U)
-        # fakeurl:192.168.5.1:22771/bilibili?id=xxxxx
+        #fakeurl=f'http://127.0.0.1:22771/bilibili/'
         fakeurl = f"http://{ip}:{port_live}/bilibili/"
         for id, url in m3u_dict.items():
             try:

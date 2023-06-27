@@ -6857,7 +6857,7 @@ async def get_resolution(session, liveurl, mintimeout, maxTimeout):
     return url
 
 
-def get_target_url(input_url, line):
+def get_target_url(input_url, line,list):
     find = False
     tmp_url = ''
     for line2 in input_url.splitlines():
@@ -6867,7 +6867,7 @@ def get_target_url(input_url, line):
         if line2.startswith(line):
             find = True
             continue
-        if line2.startswith('#EXT-X-STREAM-INF:BANDWIDTH='):
+        if line2.startswith('#EXT-X-STREAM-INF:BANDWIDTH=') and line2 not in list:
             break
         if find:
             tmp_url += line2
@@ -6878,6 +6878,7 @@ def get_best_youtube_url(input_url):
     highest_resolution = 0
     url = ''
     pattern = r'RESOLUTION=(\d+x\d+)'
+    list = []
     for line in input_url.splitlines():
         line = line.strip()
         if line.startswith(("#EXTM3U", "#EXT-X-INDEPENDENT-SEGMENTS")):
@@ -6885,12 +6886,13 @@ def get_best_youtube_url(input_url):
         if line.startswith('#EXT-X-STREAM-INF:BANDWIDTH='):
             match = re.search(pattern, line)
             if match:
+                list.append(line)
                 resolution = match.group(1)
                 resolution_arr = resolution.split('x')
                 tmp = int(resolution_arr[0]) * int(resolution_arr[1])
                 if tmp > highest_resolution:
                     highest_resolution = tmp
-                    url = get_target_url(input_url, line)
+                    url = get_target_url(input_url, line, list)
     return url
 
 

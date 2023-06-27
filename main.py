@@ -638,7 +638,10 @@ def redis_add(key, value):
 
 # redis查询
 def redis_get(key):
-    return r.get(key)
+    try:
+        return r.get(key)
+    except:
+        return None
 
 
 # redis删除
@@ -2881,7 +2884,7 @@ def generate_json_string(mapname):
         m3ulink = redis_get_map(mapname)
     else:
         # 从Redis中读取JSON字符串
-        m3ulink = r.get(mapname)
+        m3ulink =redis_get(mapname)
         m3ulink = json.loads(m3ulink)
     # 将字典转换为JSON字符串并返回
     json_str = json.dumps(m3ulink)
@@ -2904,7 +2907,7 @@ def generate_multi_json_string(mapnameArr):
     for name in specialRedisKey:
         try:
             # 从Redis中读取JSON字符串
-            json_string_redis = r.get(name)
+            json_string_redis =redis_get(name)
             # 反序列化成Python对象
             my_dict_redis = json.loads(json_string_redis)
             if len(my_dict_redis.keys()) > 0:
@@ -2960,7 +2963,7 @@ def importToReloadCacheForSpecial(finalKey22, finalDict22):
         global_var.update(finalDict22)
         # Serialize global variable to JSON string and store in Redis
         json_string = json.dumps(global_var)
-        r.set(finalKey22, json_string)
+        redis_add(finalKey22, json_string)
 
 
 # 上传订阅配置
@@ -2992,7 +2995,7 @@ def upload_oneKey_json(request):
 def dellist(request, rediskey):
     # 获取 HTML 页面发送的 POST 请求参数
     deleteurl = request.json.get('deleteurl')
-    r.hdel(rediskey, deleteurl)
+    redis_del_map_key(rediskey, deleteurl)
     return jsonify({'deleteresult': "delete success"})
 
 
@@ -3432,7 +3435,7 @@ def download_files_for_encryp_proxy(urls, redis_dict):
 
 
 def chaorongheProxies(filename):
-    redis_dict = r.hgetall(REDIS_KEY_PROXIES_LINK)
+    redis_dict =redis_get_map(REDIS_KEY_PROXIES_LINK)
     urlStr = ""
     urlAes = []
     for key in redis_dict.keys():
@@ -3555,7 +3558,7 @@ def write_content_to_file(content, filename, num_threads):
 
 
 def setRandomValueChosen(key1, key2):
-    redis_dict = r.hgetall(key1)
+    redis_dict =redis_get_map(key1)
     if redis_dict and len(redis_dict.items()) > 0:
         for key, value in redis_dict.items():
             dict = {}
@@ -3855,7 +3858,7 @@ def initReloadCacheForSpecial():
         if redisKey in REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME:
             try:
                 # 从Redis中读取JSON字符串
-                json_string_redis = r.get(redisKey)
+                json_string_redis =redis_get(redisKey)
                 # 反序列化成Python对象
                 my_dict_redis = json.loads(json_string_redis)
                 global downAndSecUploadUrlPassAndName
@@ -3866,7 +3869,7 @@ def initReloadCacheForSpecial():
         elif redisKey in REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME:
             try:
                 # 从Redis中读取JSON字符串
-                json_string_redis = r.get(redisKey)
+                json_string_redis =redis_get(redisKey)
                 # 反序列化成Python对象
                 my_dict_redis = json.loads(json_string_redis)
                 global downAndDeSecUrlPassAndName
@@ -4806,7 +4809,7 @@ def checkAndRemoveM3uRank(group):
         if group in m3u_whitlist_rank:
             rank = m3u_whitlist_rank.get(group)
             del m3u_whitlist_rank[group]
-            r.hdel(REDIS_KEY_M3U_WHITELIST_RANK, group)
+            redis_del_map_key(REDIS_KEY_M3U_WHITELIST_RANK, group)
             rankNum = int(rank)
             updateDict = {}
             for key, value in m3u_whitlist_rank.items():
@@ -4839,7 +4842,7 @@ def deletewm3u17():
     # 序列化成JSON字符串
     json_string = json.dumps(downAndSecUploadUrlPassAndName)
     # 将JSON字符串存储到Redis中
-    r.set(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME, json_string)
+    redis_add(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME, json_string)
     return jsonify({'deleteresult': "delete success"})
 
 
@@ -4852,7 +4855,7 @@ def deletewm3u18():
     # 序列化成JSON字符串
     json_string = json.dumps(downAndDeSecUrlPassAndName)
     # 将JSON字符串存储到Redis中
-    r.set(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME, json_string)
+    redis_add(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME, json_string)
     return jsonify({'deleteresult': "delete success"})
 
 
@@ -4978,7 +4981,7 @@ def addnewm3u17():
     name = request.json.get('secretName')
     if len(downAndSecUploadUrlPassAndName.items()) == 0:
         # 从Redis中读取JSON字符串
-        json_string_redis = r.get(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME)
+        json_string_redis =redis_get(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME)
         # 反序列化成Python对象
         my_dict_redis = json.loads(json_string_redis)
         downAndSecUploadUrlPassAndName.update(my_dict_redis)
@@ -4986,7 +4989,7 @@ def addnewm3u17():
     # 序列化成JSON字符串
     json_string = json.dumps(downAndSecUploadUrlPassAndName)
     # 将JSON字符串存储到Redis中
-    r.set(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME, json_string)
+    redis_add(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME, json_string)
     return jsonify({'addresult': "add success"})
 
 
@@ -4999,7 +5002,7 @@ def addnewm3u18():
     name = request.json.get('secretName')
     if len(downAndDeSecUrlPassAndName.items()) == 0:
         # 从Redis中读取JSON字符串
-        json_string_redis = r.get(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME)
+        json_string_redis =redis_get(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME)
         # 反序列化成Python对象
         my_dict_redis = json.loads(json_string_redis)
         downAndDeSecUrlPassAndName.update(my_dict_redis)
@@ -5007,7 +5010,7 @@ def addnewm3u18():
     # 序列化成JSON字符串
     json_string = json.dumps(downAndDeSecUrlPassAndName)
     # 将JSON字符串存储到Redis中
-    r.set(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME, json_string)
+    redis_add(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME, json_string)
     return jsonify({'addresult': "add success"})
 
 
@@ -5200,7 +5203,7 @@ def changeSubscribePassword2():
         # 序列化成JSON字符串
         json_string = json.dumps(downAndSecUploadUrlPassAndName)
         # 将JSON字符串存储到Redis中
-        r.set(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME, json_string)
+        redis_add(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME, json_string)
     return jsonify({"password": password})
 
 
@@ -8428,7 +8431,7 @@ def upload_m3u_file():
 def deletem3udata():
     # 获取 HTML 页面发送的 POST 请求参数
     deleteurl = request.json.get('deleteurl')
-    r.hdel('localm3u', deleteurl)
+    redis_del_map_key('localm3u', deleteurl)
     return jsonify({'deletem3udata': "delete success"})
 
 

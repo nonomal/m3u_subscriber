@@ -18,6 +18,8 @@ import hashlib
 import urllib
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
+
+import m3u8
 from zhconv import convert
 import aiohttp
 import aiofiles
@@ -28,6 +30,7 @@ from urllib.parse import urlparse, urlencode
 from flask import Flask, jsonify, request, send_file, render_template, send_from_directory, \
     after_this_request, redirect, Response
 
+import chardet
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from multidict import CIMultiDict
@@ -592,7 +595,7 @@ def serve_files_normal(filename):
         headers = {
             'Referer': 'http://live.jstv.com/',
         }
-        response = requests.get(m3u8, headers=headers, verify=True)
+        response = requests.get(m3u8, headers=headers, verify=False)
         return response.content.replace(b"/livezhuzhan:livezhuzhan/",
                                         b"https://live-hls.jstv.com/livezhuzhan:livezhuzhan/").decode()
     url = tv_dict_normal.get(id)
@@ -1061,7 +1064,7 @@ def checkToDecrydecrypt2(url, redis_dict, m3u_string, filenameDict, secretNameDi
 
 def fetch_url(url, redis_dict):
     try:
-        response = requests.get(url, timeout=5, verify=True)
+        response = requests.get(url, timeout=5, verify=False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1073,7 +1076,7 @@ def fetch_url(url, redis_dict):
         # print(f"success to fetch URL: {url}")
         return m3u_string
     except requests.exceptions.Timeout:
-        response = requests.get(url, timeout=30, verify=True)
+        response = requests.get(url, timeout=30, verify=False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1086,7 +1089,7 @@ def fetch_url(url, redis_dict):
         return m3u_string
     except requests.exceptions.RequestException as e:
         url = url.decode('utf-8')
-        response = requests.get(url, timeout=15, verify=True)
+        response = requests.get(url, timeout=15, verify=False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1152,7 +1155,7 @@ def download_files(urls, redis_dict):
 
 def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, uploadGithub, uploadWebdav):
     try:
-        response = requests.get(url, timeout=5, verify=True)
+        response = requests.get(url, timeout=5, verify=False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1160,7 +1163,7 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
         checkToDecrydecrypt2(url, passwordDict, m3u_string, filenameDict, secretNameDict, uploadGitee,
                              uploadGithub, uploadWebdav)
     except requests.exceptions.Timeout:
-        response = requests.get(url, timeout=30, verify=True)
+        response = requests.get(url, timeout=30, verify=False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1169,7 +1172,7 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
                              uploadGithub, uploadWebdav)
     except requests.exceptions.RequestException as e:
         url = url.decode('utf-8')
-        response = requests.get(url, timeout=15, verify=True)
+        response = requests.get(url, timeout=15, verify=False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1183,14 +1186,14 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
 
 def fetch_url3(url, passwordDict, filenameDict):
     try:
-        response = requests.get(url, timeout=5, verify=True)
+        response = requests.get(url, timeout=5, verify=False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
         # 加密文件检测和解码
         checkToDecrydecrypt3(url, passwordDict, m3u_string, filenameDict)
     except requests.exceptions.Timeout:
-        response = requests.get(url, timeout=30, verify=True)
+        response = requests.get(url, timeout=30, verify=False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1198,7 +1201,7 @@ def fetch_url3(url, passwordDict, filenameDict):
         checkToDecrydecrypt3(url, passwordDict, m3u_string, filenameDict)
     except requests.exceptions.RequestException as e:
         url = url.decode('utf-8')
-        response = requests.get(url, timeout=15, verify=True)
+        response = requests.get(url, timeout=15, verify=False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -2386,7 +2389,12 @@ def decode_bytes(text):
             return text.decode(encoding).strip()
         except (TypeError, UnicodeDecodeError):
             continue
-    return text.decode().strip()
+
+    # if none of the above worked, use chardet to detect the encoding
+    result = chardet.detect(text)
+    decoded_text = text.decode(result['encoding']).strip()
+    return decoded_text
+
 
 def pureUrl(s):
     result = s.split('$', 1)[0]
@@ -3398,11 +3406,11 @@ def chaorongheProxies(filename):
     urlStr = ""
     urlAes = []
     for key in redis_dict.keys():
-        url = key.decode('utf-8')
+        url = key
         if urlStr != "":
             urlStr += "|"
         # 提取加密的订阅
-        password = redis_dict.get(key).decode()
+        password = redis_dict.get(key)
         if password and password != "":
             urlAes.append(key)
         else:
@@ -6842,57 +6850,17 @@ async def get_resolution(session, liveurl, mintimeout, maxTimeout):
     except asyncio.TimeoutError:
         async with session.get(liveurl, timeout=maxTimeout) as response:
             playlist_text = await response.text()
-    url = get_best_youtube_url(playlist_text)
-    # playlist = m3u8.loads(playlist_text)
-    # playlists = playlist.playlists
-    # if len(playlists) < 1:
-    #     return None
-    # highest_resolution = 0
-    # url = ''
-    # for item in playlists:
-    #     resolution = item.stream_info.resolution[0] * item.stream_info.resolution[1]
-    #     if resolution > highest_resolution:
-    #         highest_resolution = resolution
-    #         url = item.uri
-    return url
-
-
-def get_target_url(input_url, line,list):
-    find = False
-    tmp_url = ''
-    for line2 in input_url.splitlines():
-        line2 = line2.strip()
-        if line2.startswith(("#EXTM3U", "#EXT-X-INDEPENDENT-SEGMENTS")):
-            continue
-        if line2.startswith(line):
-            find = True
-            continue
-        if line2.startswith('#EXT-X-STREAM-INF:BANDWIDTH=') and line2 not in list:
-            break
-        if find:
-            tmp_url += line2
-    return tmp_url
-
-
-def get_best_youtube_url(input_url):
+    playlist = m3u8.loads(playlist_text)
+    playlists = playlist.playlists
+    if len(playlists) < 1:
+        return None
     highest_resolution = 0
     url = ''
-    pattern = r'RESOLUTION=(\d+x\d+)'
-    list = []
-    for line in input_url.splitlines():
-        line = line.strip()
-        if line.startswith(("#EXTM3U", "#EXT-X-INDEPENDENT-SEGMENTS")):
-            continue
-        if line.startswith('#EXT-X-STREAM-INF:BANDWIDTH='):
-            match = re.search(pattern, line)
-            if match:
-                list.append(line)
-                resolution = match.group(1)
-                resolution_arr = resolution.split('x')
-                tmp = int(resolution_arr[0]) * int(resolution_arr[1])
-                if tmp > highest_resolution:
-                    highest_resolution = tmp
-                    url = get_target_url(input_url, line, list)
+    for item in playlists:
+        resolution = item.stream_info.resolution[0] * item.stream_info.resolution[1]
+        if resolution > highest_resolution:
+            highest_resolution = resolution
+            url = item.uri
     return url
 
 
@@ -7397,10 +7365,10 @@ def get_new_content_by_uuid(mintimeout, maxTimeout, same_level_path, uuid, heade
         if content_list:
             return content_list
         try:
-            response = requests.get(same_level_path, headers=headers, timeout=mintimeout, verify=True)
+            response = requests.get(same_level_path, headers=headers, timeout=mintimeout, verify=False)
         except requests.exceptions.Timeout:
             # 处理请求超时异常
-            response = requests.get(same_level_path, headers=headers, timeout=maxTimeout, verify=True)
+            response = requests.get(same_level_path, headers=headers, timeout=maxTimeout, verify=False)
         if response.status_code == 200:
             json_data = response.json()
             content = json_data['data']['content']

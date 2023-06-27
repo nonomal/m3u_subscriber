@@ -1089,7 +1089,10 @@ def redis_add(key, value):
 
 # redis查询
 def redis_get(key):
-    return r.get(key)
+    try:
+        return r.get(key)
+    except:
+        return None
 
 
 # 定时器似乎影响挺严重的
@@ -1331,36 +1334,81 @@ def init():
                         initWhiteListSP()
                     elif data == REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG:
                         initBlackListSP()
-                    elif data == REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG:
-                        update_china_top_domain()
-                    elif data == REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG:
-                        update_foreign_top_domain()
-                    elif data == REDIS_KEY_UPDATE_DNS_MODE_FLAG:
-                        update_dns_mode()
-                    elif data == REDIS_KEY_UPDATE_THREAD_NUM_FLAG:
-                        init_threads_num()
-                    elif data == REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG:
-                        initSimpleWhiteList()
-                    elif data == REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG:
-                        initSimpleBlackList()
+                    elif REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG in data:
+                        name = data.split('_')[1]
+                        global china_top_domain_list
+                        try:
+                            arr = name.split(',')
+                            if arr:
+                                china_top_domain_list.clear()
+                                for i in arr:
+                                    if i == '':
+                                        continue
+                                    china_top_domain_list.append(f'.{i}')
+                            file_name_dict['chinaTopDomain'] = name
+                        except Exception as e:
+                            pass
+                    elif REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG in data:
+                        name = data.split('_')[1]
+                        global foreign_top_domain_list
+                        if name:
+                            try:
+                                arr = name.split(',')
+                                if arr:
+                                    foreign_top_domain_list.clear()
+                                    for i in arr:
+                                        if i == '':
+                                            continue
+                                        foreign_top_domain_list.append(f'.{i}')
+                                file_name_dict['foreignTopDomain'] = name
+                            except Exception as e:
+                                pass
+                    elif REDIS_KEY_UPDATE_DNS_MODE_FLAG in data:
+                        name = data.split('_')[1]
+                        if name == '0' or name == '1':
+                            file_name_dict['dnsMode'] = name
+                    elif REDIS_KEY_UPDATE_THREAD_NUM_FLAG in data:
+                        num = data.split('_')[1]
+                        if num == 0:
+                            num = 1000
+                            threadsNum[REDIS_KEY_THREADS] = num
+                        else:
+                            threadsNum[REDIS_KEY_THREADS] = num
+                    elif REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG in data:
+                        global white_list_simple_nameserver_policy
+                        arr = data.split('_')
+                        #0-单个增加，1-全部删除，3-批量增加，批量删除，单个删除，全部拉取
+                        if arr[1] == '0':
+                            updateSpData(data.split(f'{REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG}_0_')[1],
+                                         white_list_simple_nameserver_policy)
+                        elif arr[1] == '1':
+                            white_list_simple_nameserver_policy.clear()
+                        elif arr[1] == '3':
+                            initSimpleWhiteList()
+                    elif REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG in data:
+                        global black_list_simple_policy
+                        arr = data.split('_')
+                        #0-单个增加，1-全部删除，3-批量增加，批量删除，单个删除，全部拉取
+                        if arr[1] == '0':
+                            updateSpData(data.split(f'{REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG}_0_')[1],
+                                         black_list_simple_policy)
+                        elif arr[1] == '1':
+                            black_list_simple_policy.clear()
+                        elif arr[1] == '3':
+                            initSimpleBlackList()
                     elif REDIS_KEY_OPEN_AUTO_UPDATE_SIMPLE_WHITE_AND_BLACK_LIST_FLAG in data:
-                        openAutoUpdateSimpleWhiteAndBlackList(data)
+                        global AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST
+                        try:
+                            choose = data.split('_')[1]
+                            AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST = choose
+                        except:
+                            pass
         except:
             pass
 
 
 # 是否开启自动维护生成简易黑白名单：0-不开启，1-开启
 AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST = '1'
-
-
-# 检测是否开启自动维护简易黑白名单
-def openAutoUpdateSimpleWhiteAndBlackList(data):
-    global AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST
-    try:
-        choose = data.split('_')[1]
-        AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST = choose
-    except:
-        pass
 
 
 def checkAndUpdateSimpleList(isBlack, domain):
@@ -1376,13 +1424,15 @@ def checkAndUpdateSimpleList(isBlack, domain):
 
 # 线程数获取
 def init_threads_num():
+    global threadsNum
     num = redis_get(REDIS_KEY_THREADS)
     if num:
         num = int(num.decode())
         if num == 0:
             num = 1000
             threadsNum[REDIS_KEY_THREADS] = num
-        threadsNum[REDIS_KEY_THREADS] = num
+        else:
+            threadsNum[REDIS_KEY_THREADS] = num
     else:
         num = 1000
         threadsNum[REDIS_KEY_THREADS] = num
@@ -1390,13 +1440,15 @@ def init_threads_num():
 
 # 中国DNS端口获取
 def init_china_dns_port():
+    global chinadnsport
     num = redis_get(REDIS_KEY_CHINA_DNS_PORT)
     if num:
         num = int(num.decode())
         if num == 0:
             num = 5336
             chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
-        chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
+        else:
+            chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
     else:
         num = 5336
         chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
@@ -1404,13 +1456,15 @@ def init_china_dns_port():
 
 # 外国DNS端口获取
 def init_extra_dns_port():
+    global extradnsport
     num = redis_get(REDIS_KEY_EXTRA_DNS_PORT)
     if num:
         num = int(num.decode())
         if num == 0:
             num = 7874
             extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
-        extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
+        else:
+            extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
     else:
         num = 7874
         extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
@@ -1418,13 +1472,15 @@ def init_extra_dns_port():
 
 # dns并发查询数获取
 def init_dns_query_num():
+    global dnsquerynum
     num = redis_get(REDIS_KEY_DNS_QUERY_NUM)
     if num:
         num = int(num.decode())
         if num == 0:
             num = 150
             dnsquerynum[REDIS_KEY_DNS_QUERY_NUM] = num
-        dnsquerynum[REDIS_KEY_DNS_QUERY_NUM] = num
+        else:
+            dnsquerynum[REDIS_KEY_DNS_QUERY_NUM] = num
     else:
         num = 150
         dnsquerynum[REDIS_KEY_DNS_QUERY_NUM] = num
@@ -1433,13 +1489,15 @@ def init_dns_query_num():
 
 # dns并发查询数获取
 def init_dns_timeout():
+    global dnstimeout
     num = redis_get(REDIS_KEY_DNS_TIMEOUT)
     if num:
         num = int(num.decode())
         if num == 0:
             num = 20
             dnstimeout[REDIS_KEY_DNS_TIMEOUT] = num
-        dnstimeout[REDIS_KEY_DNS_TIMEOUT] = num
+        else:
+            dnstimeout[REDIS_KEY_DNS_TIMEOUT] = num
     else:
         num = 20
         dnstimeout[REDIS_KEY_DNS_TIMEOUT] = num
@@ -1448,13 +1506,15 @@ def init_dns_timeout():
 
 # 中国DNS服务器获取
 def init_china_dns_server():
+    global chinadnsserver
     num = redis_get(REDIS_KEY_CHINA_DNS_SERVER)
     if num:
         num = num.decode()
         if num == "":
             num = "127.0.0.1"
             chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
-        chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
+        else:
+            chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
     else:
         num = "127.0.0.1"
         chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
@@ -1462,13 +1522,15 @@ def init_china_dns_server():
 
 # 外国dns服务器获取
 def init_extra_dns_server():
+    global extradnsserver
     num = redis_get(REDIS_KEY_EXTRA_DNS_SERVER)
     if num:
         num = num.decode()
         if num == "":
             num = "127.0.0.1"
             extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num
-        extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num
+        else:
+            extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num
     else:
         num = "127.0.0.1"
         extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num

@@ -403,6 +403,12 @@ tv_dict_youtube = {}
 @app.route('/youtube/<path:filename>')
 def serve_youtube(filename):
     id = filename.split('.')[0]
+    if id == 'youtube':
+        if is_update_clock_live('youtube'):
+            chaoronghe24()
+            chaoronghe()
+            update_clock('normalM3uClock')
+        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
     url = tv_dict_youtube.get(id)
     if not url:
         url = redisKeyYoutubeM3u.get(id)
@@ -426,6 +432,12 @@ tv_dict_bilibili = {}
 @app.route('/bilibili/<path:filename>')
 def serve_files4(filename):
     id = filename.split('.')[0]
+    if id == 'bilibili':
+        if is_update_clock_live('bilibili'):
+            chaoronghe25()
+            chaoronghe()
+            update_clock('normalM3uClock')
+        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
     url = tv_dict_bilibili.get(id)
     if not url:
         url = redisKeyBililiM3u.get(id)
@@ -449,6 +461,12 @@ tv_dict_huya = {}
 @app.route('/huya/<path:filename>')
 def serve_files5(filename):
     id = filename.split('.')[0]
+    if id == 'huya':
+        if is_update_clock_live('huya'):
+            chaoronghe26()
+            chaoronghe()
+            update_clock('normalM3uClock')
+        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
     url = tv_dict_huya.get(id)
     if not url:
         url = redisKeyHuyaM3u.get(id)
@@ -472,6 +490,12 @@ tv_dict_yy = {}
 @app.route('/YY/<path:filename>')
 def serve_files6(filename):
     id = filename.split('.')[0]
+    if id == 'YY':
+        if is_update_clock_live('yy'):
+            chaoronghe27()
+            chaoronghe()
+            update_clock('normalM3uClock')
+        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
     url = tv_dict_yy.get(id)
     if not url:
         url = redisKeyYYM3u.get(id)
@@ -495,6 +519,12 @@ tv_dict_douyin = {}
 @app.route('/DOUYIN/<path:filename>')
 def serve_files_DOUYIN(filename):
     id = filename.split('.')[0]
+    if id == 'Douyin':
+        if is_update_clock_live('douyin'):
+            chaoronghe29()
+            chaoronghe()
+            update_clock('normalM3uClock')
+        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
     url = tv_dict_douyin.get(id)
     if not url:
         url = redisKeyDOUYINM3u.get(id)
@@ -518,6 +548,12 @@ tv_dict_twitch = {}
 @app.route('/TWITCH/<path:filename>')
 def serve_files7(filename):
     id = filename.split('.')[0]
+    if id == 'Twitch':
+        if is_update_clock_live('twitch'):
+            chaoronghe28()
+            chaoronghe()
+            update_clock('normalM3uClock')
+        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
     url = tv_dict_twitch.get(id)
     if not url:
         url = redisKeyTWITCHM3u.get(id)
@@ -685,9 +721,9 @@ def upload_json_base(rediskey, file_content):
         else:
             importToReloadCacheForSpecial(rediskey, json_dict)
         if 'dnssimpleblacklist' == rediskey:
-            redis_public_message(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG)
+            redis_public_message(f'{REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG}_3_1')
         elif 'dnssimplewhitelist' == rediskey:
-            redis_public_message(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG)
+            redis_public_message(f'{REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG}_3_1')
         return jsonify({'success': True})
     except Exception as e:
         print("An error occurred: ", e)
@@ -695,8 +731,17 @@ def upload_json_base(rediskey, file_content):
 
 
 # 上次更新时间戳
-time_clock_update_dict = {'proxySubscriberClock': '0', 'spM3uClock': '0', 'normalM3uClock': '0',
+time_clock_update_dict = {'proxySubscriberClock': '0', 'spM3uClock': '0', 'normalM3uClock': '0', 'youtube': '0',
+                          'bilibili': '0', 'huya': '0', 'yy': '0', 'twitch': '0', 'douyin': '0',
                           'autoDnsSwitchClock': '0', 'normalSubscriberClock': '0', 'syncClock': '0', 'recycle': '0'}
+
+
+# true-需要更新 false-不需要更新
+def is_update_clock_live(cachekey):
+    lastUpdateTime = float(time_clock_update_dict[cachekey])
+    if (time.time() - lastUpdateTime) >= 10:
+        return True
+    return False
 
 
 # true-需要更新 false-不需要更新
@@ -802,7 +847,7 @@ def toggle_m3u(functionId, value):
     if functionId == 'switch24':
         function_dict[functionId] = str(value)
         redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
-        redis_public_message(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG)
+        redis_public_message(f'{REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG}_3_1')
     elif functionId == 'switch25':
         function_dict[functionId] = str(value)
         redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
@@ -3526,6 +3571,7 @@ def setRandomValueChosen(key1, key2):
 
 # 黑白名单线程数获取
 def init_threads_num():
+    global threadsNum
     data = threadsNum.get(REDIS_KEY_THREADS)
     if data and data > 0:
         return data
@@ -3536,18 +3582,20 @@ def init_threads_num():
             num = 1000
             redis_add(REDIS_KEY_THREADS, num)
             threadsNum[REDIS_KEY_THREADS] = num
-            redis_public_message(REDIS_KEY_UPDATE_THREAD_NUM_FLAG)
-        threadsNum[REDIS_KEY_THREADS] = num
+            redis_public_message(f'{REDIS_KEY_UPDATE_THREAD_NUM_FLAG}_{num}')
+        else:
+            threadsNum[REDIS_KEY_THREADS] = num
     else:
         num = 1000
         redis_add(REDIS_KEY_THREADS, num)
         threadsNum[REDIS_KEY_THREADS] = num
-        redis_public_message(REDIS_KEY_UPDATE_THREAD_NUM_FLAG)
+        redis_public_message(f'{REDIS_KEY_UPDATE_THREAD_NUM_FLAG}_{num}')
     return num
 
 
 # dns并发查询数获取
 def init_dns_timeout():
+    global dnstimeout
     data = dnstimeout.get(REDIS_KEY_DNS_TIMEOUT)
     if data and data > 0:
         return data
@@ -3558,7 +3606,8 @@ def init_dns_timeout():
             num = 20
             redis_add(REDIS_KEY_DNS_TIMEOUT, num)
             dnstimeout[REDIS_KEY_DNS_TIMEOUT] = num
-        dnstimeout[REDIS_KEY_DNS_TIMEOUT] = num
+        else:
+            dnstimeout[REDIS_KEY_DNS_TIMEOUT] = num
     else:
         num = 20
         redis_add(REDIS_KEY_DNS_TIMEOUT, num)
@@ -3568,6 +3617,7 @@ def init_dns_timeout():
 
 # dns并发查询数获取
 def init_dns_query_num():
+    global dnsquerynum
     data = dnsquerynum.get(REDIS_KEY_DNS_QUERY_NUM)
     if data and data > 0:
         return data
@@ -3578,7 +3628,8 @@ def init_dns_query_num():
             num = 150
             redis_add(REDIS_KEY_DNS_QUERY_NUM, num)
             dnsquerynum[REDIS_KEY_DNS_QUERY_NUM] = num
-        dnsquerynum[REDIS_KEY_DNS_QUERY_NUM] = num
+        else:
+            dnsquerynum[REDIS_KEY_DNS_QUERY_NUM] = num
     else:
         num = 150
         redis_add(REDIS_KEY_DNS_QUERY_NUM, num)
@@ -3588,6 +3639,7 @@ def init_dns_query_num():
 
 # 中国DNS端口获取
 def init_china_dns_port():
+    global chinadnsport
     data = chinadnsport.get(REDIS_KEY_CHINA_DNS_PORT)
     if data and data > 0:
         return data
@@ -3599,7 +3651,8 @@ def init_china_dns_port():
             redis_add(REDIS_KEY_CHINA_DNS_PORT, num)
             chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
             redis_public_message(REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG)
-        chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
+        else:
+            chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
     else:
         num = 5336
         redis_add(REDIS_KEY_CHINA_DNS_PORT, num)
@@ -3610,6 +3663,7 @@ def init_china_dns_port():
 
 # 外国DNS端口获取
 def init_extra_dns_port():
+    global extradnsport
     data = extradnsport.get(REDIS_KEY_EXTRA_DNS_PORT)
     if data and data > 0:
         return data
@@ -3621,7 +3675,8 @@ def init_extra_dns_port():
             redis_add(REDIS_KEY_EXTRA_DNS_PORT, num)
             extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
             redis_public_message(REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG)
-        extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
+        else:
+            extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
     else:
         num = 7874
         redis_add(REDIS_KEY_EXTRA_DNS_PORT, num)
@@ -3632,6 +3687,7 @@ def init_extra_dns_port():
 
 # 中国DNS服务器获取
 def init_china_dns_server():
+    global chinadnsserver
     data = chinadnsserver.get(REDIS_KEY_CHINA_DNS_SERVER)
     if data and data != '':
         return data
@@ -3643,7 +3699,8 @@ def init_china_dns_server():
             redis_add(REDIS_KEY_CHINA_DNS_SERVER, num)
             chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
             redis_public_message(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG)
-        chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
+        else:
+            chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
     else:
         num = "127.0.0.1"
         redis_add(REDIS_KEY_CHINA_DNS_SERVER, num)
@@ -3654,6 +3711,7 @@ def init_china_dns_server():
 
 # 外国DNS服务器获取
 def init_extra_dns_server():
+    global extradnsserver
     data = extradnsserver.get(REDIS_KEY_EXTRA_DNS_SERVER)
     if data and data != '':
         return data
@@ -3665,7 +3723,8 @@ def init_extra_dns_server():
             redis_add(REDIS_KEY_EXTRA_DNS_SERVER, num)
             extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num
             redis_public_message(REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG)
-        extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num
+        else:
+            extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num
     else:
         num = "127.0.0.1"
         redis_add(REDIS_KEY_EXTRA_DNS_SERVER, num)
@@ -3885,13 +3944,13 @@ def changeFileName2(cachekey, newFileName):
     file_name_dict[cachekey] = newFileName
     if cachekey == 'chinaTopDomain':
         # 通知dns服务器更新内存
-        redis_public_message(REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG)
+        redis_public_message(f'{REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG}_{newFileName}')
     elif cachekey == 'foreignTopDomain':
         # 通知dns服务器更新内存
-        redis_public_message(REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG)
+        redis_public_message(f'{REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG}_{newFileName}')
     elif cachekey == 'dnsMode':
         # 通知dns服务器更新内存
-        redis_public_message(REDIS_KEY_UPDATE_DNS_MODE_FLAG)
+        redis_public_message(f'{REDIS_KEY_UPDATE_DNS_MODE_FLAG}_{newFileName}')
     elif cachekey == 'switch24':
         # 通知dns服务器更新内存
         redis_public_message(f'{REDIS_KEY_OPEN_AUTO_UPDATE_SIMPLE_WHITE_AND_BLACK_LIST_FLAG}_{newFileName}')
@@ -4476,7 +4535,7 @@ def getQueryThreadNum():
 @requires_auth
 def deletewm3u13():
     return_value = dellist(request, REDIS_KEY_DNS_SIMPLE_BLACKLIST)
-    redis_public_message(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG)
+    redis_public_message(f'{REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG}_3_1')
     return return_value
 
 
@@ -4562,7 +4621,7 @@ def addnewm3u13():
     addurl = stupidThink(addurl)
     my_dict = {addurl: name}
     redis_add_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST, my_dict)
-    redis_public_message(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG)
+    redis_public_message(f'{REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG}_0_{addurl}')
     return jsonify({'addresult': "add success"})
 
 
@@ -4651,7 +4710,7 @@ def returnDictCache(redisKey, cacheDict):
 @requires_auth
 def deletewm3u12():
     return_value = dellist(request, REDIS_KEY_DNS_SIMPLE_WHITELIST)
-    redis_public_message(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG)
+    redis_public_message(f'{REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG}_3_1')
     return return_value
 
 
@@ -4665,7 +4724,7 @@ def addnewm3u12():
     addurl = stupidThink(addurl)
     my_dict = {addurl: name}
     redis_add_map(REDIS_KEY_DNS_SIMPLE_WHITELIST, my_dict)
-    redis_public_message(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG)
+    redis_public_message(f'{REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG}_0_{addurl}')
     return jsonify({'addresult': "add success"})
 
 
@@ -5269,7 +5328,7 @@ def saveThreadS():
     data = request.json['selected_button']
     redis_add(REDIS_KEY_THREADS, min(int(data), 1000))
     threadsNum[REDIS_KEY_THREADS] = min(int(data), 1000)
-    redis_public_message(REDIS_KEY_UPDATE_THREAD_NUM_FLAG)
+    redis_public_message(f'{REDIS_KEY_UPDATE_THREAD_NUM_FLAG}_{data}')
     return "数据已经保存"
 
 
@@ -5554,6 +5613,8 @@ async def download_file5_single(ids, mintimeout, maxTimeout):
         async with aiohttp.ClientSession() as session:
             tasks = []
             for id in ids:
+                if id == 'bilibili':
+                    continue
                 task = asyncio.ensure_future(grab2(session, id, m3u_dict, mintimeout, maxTimeout))
                 tasks.append(task)
             await asyncio.gather(*tasks)
@@ -5577,6 +5638,8 @@ async def download_files6_single(ids, mintimeout, maxTimeout):
         async with aiohttp.ClientSession() as session:
             tasks = []
             for id in ids:
+                if id == 'huya':
+                    continue
                 task = asyncio.ensure_future(grab3(session, id, m3u_dict, mintimeout, maxTimeout))
                 tasks.append(task)
             await asyncio.gather(*tasks)
@@ -5600,6 +5663,8 @@ async def download_files7_single(ids, mintimeout, maxTimeout):
         async with aiohttp.ClientSession() as session:
             tasks = []
             for id in ids:
+                if id == 'YY':
+                    continue
                 task = asyncio.ensure_future(grab4(session, id, m3u_dict, mintimeout, maxTimeout))
                 tasks.append(task)
             await asyncio.gather(*tasks)
@@ -5614,6 +5679,8 @@ async def download_files_douyin_single(ids, mintimeout, maxTimeout):
         async with aiohttp.ClientSession() as session:
             tasks = []
             for id in ids:
+                if id == 'Douyin':
+                    continue
                 task = asyncio.ensure_future(grab_douyin(session, id, m3u_dict, mintimeout, maxTimeout))
                 tasks.append(task)
             await asyncio.gather(*tasks)
@@ -5628,6 +5695,8 @@ async def download_files8_single(ids, mintimeout, maxTimeout):
         async with aiohttp.ClientSession() as session:
             tasks = []
             for id in ids:
+                if id == 'Twitch':
+                    continue
                 task = asyncio.ensure_future(grab5(session, id, m3u_dict, mintimeout, maxTimeout))
                 tasks.append(task)
             await asyncio.gather(*tasks)
@@ -6256,7 +6325,7 @@ async def pingM3u2(session, value, real_dict, key, mintimeout, maxTimeout):
         return None
 
 
-async def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, mintimeout, maxTimeout):
+def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, mintimeout, maxTimeout):
     global redisKeyNormal
     update_dict = {}
     if dict_url:
@@ -6265,19 +6334,19 @@ async def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, sessio
             data_dict = dict_url['stream']
             try:
                 url = data_dict['m3u8']
-                url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
             except:
                 pass
             if url is None or url == '':
                 try:
                     url = data_dict['rtmp']
-                    url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
             if url is None or url == '':
                 try:
                     url = data_dict['fly']
-                    url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
         if url is None or url == '':
@@ -6285,19 +6354,19 @@ async def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, sessio
                 data_dict = dict_url['playStreamInfo']
                 try:
                     url = data_dict['m3u8']
-                    url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
                 if url is None or url == '':
                     try:
                         url = data_dict['rtmp']
-                        url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                        #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
                 if url is None or url == '':
                     try:
                         url = data_dict['fly']
-                        url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                        #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
         if url is None or url == '':
@@ -6305,19 +6374,19 @@ async def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, sessio
                 data_dict = dict_url['hd']
                 try:
                     url = data_dict['m3u8']
-                    url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
                 if url is None or url == '':
                     try:
                         url = data_dict['rtmp']
-                        url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                        #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
                 if url is None or url == '':
                     try:
                         url = data_dict['fly']
-                        url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                        #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
         if url is None or url == '':
@@ -6325,19 +6394,19 @@ async def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, sessio
                 data_dict = dict_url['sd']
                 try:
                     url = data_dict['m3u8']
-                    url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
                 if url is None or url == '':
                     try:
                         url = data_dict['rtmp']
-                        url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                        #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
                 if url is None or url == '':
                     try:
                         url = data_dict['fly']
-                        url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                        #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
         if url is None or url == '':
@@ -6345,19 +6414,19 @@ async def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, sessio
                 data_dict = dict_url['ld']
                 try:
                     url = data_dict['m3u8']
-                    url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
                 if url is None or url == '':
                     try:
                         url = data_dict['rtmp']
-                        url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                        #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
                 if url is None or url == '':
                     try:
                         url = data_dict['fly']
-                        url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                        #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
         if url is None or url == '':
@@ -6365,19 +6434,19 @@ async def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, sessio
                 data_dict = dict_url['ud']
                 try:
                     url = data_dict['m3u8']
-                    url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                    #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
                 if url is None or url == '':
                     try:
                         url = data_dict['rtmp']
-                        url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                        #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
                 if url is None or url == '':
                     try:
                         url = data_dict['fly']
-                        url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
+                        #url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
         if url is not None and url != '':
@@ -6409,7 +6478,7 @@ async def grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, source_
                         source = live_dict['source'][0]
                     except:
                         source = live_dict['source']
-                    await update_longzhu(source, m3u_dict, rid, source_type, pic, name, session, mintimeout, maxTimeout)
+                    update_longzhu(source, m3u_dict, rid, source_type, pic, name, session, mintimeout, maxTimeout)
             except Exception as e:
                 pass
     except asyncio.TimeoutError:
@@ -6431,7 +6500,7 @@ async def grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, source_
                         source = live_dict['source'][0]
                     except:
                         source = live_dict['source']
-                    await update_longzhu(source, m3u_dict, rid, source_type, pic, name, session, mintimeout, maxTimeout)
+                    update_longzhu(source, m3u_dict, rid, source_type, pic, name, session, mintimeout, maxTimeout)
             except Exception as e:
                 pass
     except Exception as e:
@@ -6782,6 +6851,8 @@ async def download_youtube_single(ids, mintimeout, maxTimeout):
         async with aiohttp.ClientSession() as session:
             tasks = []
             for id in ids:
+                if id == 'youtube':
+                    continue
                 task = asyncio.ensure_future(grab(session, id, m3u_dict, mintimeout, maxTimeout))
                 tasks.append(task)
             await asyncio.gather(*tasks)
@@ -6893,10 +6964,15 @@ def chaoronghe25():
                 redisKeyBililiM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except:
                 pass
+        redisKeyBilili['bilibili'] = '更新bilibili直播'
+        redis_add_map(REDIS_KEY_BILIBILI, {'bilibili': '更新bilibili直播'})
+        link1 = f'#EXTINF:-1 group-title="哔哩哔哩" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新bilibili直播",更新bilibili直播\n'
+        redisKeyBililiM3uFake[f'{fakeurl}bilibili.m3u8'] = link1
         # 同步方法写出全部配置
         distribute_data(redisKeyBililiM3uFake, f"{secret_path}bilibili.m3u", 10)
         redis_add_map(REDIS_KEY_BILIBILI_M3U, redisKeyBililiM3u)
         fuck_m3u_to_txt(f"{secret_path}bilibili.m3u", f"{secret_path}bilibili.txt")
+        update_clock('bilibili')
         return "result"
     except Exception as e:
         return "empty"
@@ -6934,10 +7010,15 @@ def chaoronghe26():
                 redisKeyHuyaM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except:
                 pass
+        redisKeyHuya['huya'] = '更新虎牙直播'
+        redis_add_map(REDIS_KEY_HUYA, {'huya': '更新虎牙直播'})
+        link1 = f'#EXTINF:-1 group-title="虎牙" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新虎牙直播",更新虎牙直播\n'
+        redisKeyHuyaM3uFake[f'{fakeurl}huya.m3u8'] = link1
         # 同步方法写出全部配置
         distribute_data(redisKeyHuyaM3uFake, f"{secret_path}huya.m3u", 10)
         redis_add_map(REDIS_KEY_HUYA_M3U, redisKeyHuyaM3u)
         fuck_m3u_to_txt(f"{secret_path}huya.m3u", f"{secret_path}huya.txt")
+        update_clock('huya')
         return "result"
     except Exception as e:
         return "empty"
@@ -6975,10 +7056,15 @@ def chaoronghe27():
                 redisKeyYYM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except:
                 pass
+        redisKeyYY['YY'] = '更新YY直播'
+        redis_add_map(REDIS_KEY_YY, {'YY': '更新YY直播'})
+        link1 = f'#EXTINF:-1 group-title="YY" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新YY直播",更新YY直播\n'
+        redisKeyYYM3uFake[f'{fakeurl}YY.m3u8'] = link1
         # 同步方法写出全部配置
         distribute_data(redisKeyYYM3uFake, f"{secret_path}YY.m3u", 10)
         redis_add_map(REDIS_KEY_YY_M3U, redisKeyYYM3u)
         fuck_m3u_to_txt(f"{secret_path}YY.m3u", f"{secret_path}YY.txt")
+        update_clock('yy')
         return "result"
     except Exception as e:
         return "empty"
@@ -7016,10 +7102,15 @@ def chaoronghe29():
                 redisKeyDOUYINM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except:
                 pass
+        redisKeyDOUYIN['Douyin'] = '更新抖音直播'
+        redis_add_map(REDIS_KEY_DOUYIN, {'Douyin': '更新抖音直播'})
+        link1 = f'#EXTINF:-1 group-title="抖音" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新抖音直播",更新抖音直播\n'
+        redisKeyDOUYINM3uFake[f'{fakeurl}Douyin.m3u8'] = link1
         # 同步方法写出全部配置
         distribute_data(redisKeyDOUYINM3uFake, f"{secret_path}Douyin.m3u", 10)
         redis_add_map(REDIS_KEY_DOUYIN_M3U, redisKeyDOUYINM3u)
         fuck_m3u_to_txt(f"{secret_path}Douyin.m3u", f"{secret_path}Douyin.txt")
+        update_clock('douyin')
         return "result"
     except Exception as e:
         return "empty"
@@ -7517,10 +7608,15 @@ def chaoronghe28():
                 redisKeyTWITCHM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except:
                 pass
+        redisKeyTWITCH['Twitch'] = '更新Twitch直播'
+        redis_add_map(REDIS_KEY_TWITCH, {'Twitch': '更新Twitch直播'})
+        link1 = f'#EXTINF:-1 group-title="Twitch" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新Twitch直播",更新Twitch直播\n'
+        redisKeyTWITCHM3uFake[f'{fakeurl}Twitch.m3u8'] = link1
         # 同步方法写出全部配置
         distribute_data(redisKeyTWITCHM3uFake, f"{secret_path}TWITCH.m3u", 10)
         redis_add_map(REDIS_KEY_TWITCH_M3U, redisKeyTWITCHM3u)
         fuck_m3u_to_txt(f"{secret_path}TWITCH.m3u", f"{secret_path}TWITCH.txt")
+        update_clock('twitch')
         return "result"
     except Exception as e:
         return "empty"
@@ -7813,10 +7909,15 @@ def chaoronghe24():
                 redisKeyYoutubeM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except:
                 pass
+        redisKeyYoutube['youtube'] = '更新youtube直播'
+        redis_add_map(REDIS_KEY_YOUTUBE, {'youtube': '更新youtube直播'})
+        link1 = f'#EXTINF:-1 group-title="Youtube" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新youtube直播",更新youtube直播\n'
+        redisKeyYoutubeM3uFake[f'{fakeurl}youtube.m3u8'] = link1
         # 同步方法写出全部配置
         distribute_data(redisKeyYoutubeM3uFake, f"{secret_path}youtube.m3u", 10)
         redis_add_map(REDIS_KEY_YOUTUBE_M3U, redisKeyYoutubeM3u)
         fuck_m3u_to_txt(f"{secret_path}youtube.m3u", f"{secret_path}youtube.txt")
+        update_clock('youtube')
         return "result"
     except Exception as e:
         return "empty"
@@ -8069,7 +8170,7 @@ def removem3ulinks14():
 @requires_auth
 def removem3ulinks13():
     redis_del_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST)
-    redis_public_message(REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG)
+    redis_public_message(f'{REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG}_1_1')
     return "success"
 
 
@@ -8168,7 +8269,7 @@ def removem3ulinks31():
 @requires_auth
 def removem3ulinks12():
     redis_del_map(REDIS_KEY_DNS_SIMPLE_WHITELIST)
-    redis_public_message(REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG)
+    redis_public_message(f'{REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG}_1_1')
     return "success"
 
 

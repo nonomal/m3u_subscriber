@@ -1,12 +1,2 @@
-# 定时器似乎影响挺严重的
-# 0-数据未更新 1-数据已更新 max-所有服务器都更新完毕(有max个服务器做负载均衡)
-REDIS_KEY_UPDATE_THREAD_NUM_FLAG = "updatethreadnumflag"
-REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG = "updatesimplewhitelistflag"
-REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG = "updatesimpleblacklistflag"
-REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG = "updatewhitelistspflag"
-REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG = "updateblacklistspflag"
-REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG = "updatechinadomainflag"
-REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG = "updateforeigndomainflag"
-REDIS_KEY_UPDATE_DNS_MODE_FLAG = "updatednsmodeflag"
-
-redis_public_message(REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG)
+'youtube': '0',
+                          'bilibili': '0', 'huya': '0', 'yy': '0', 'twitch': '0', 'douyin': '0',

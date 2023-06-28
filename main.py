@@ -1,6 +1,7 @@
 import abc
 import asyncio
 import base64
+import random
 import secrets
 import string
 import concurrent
@@ -737,7 +738,16 @@ def upload_json_base(rediskey, file_content):
 # 上次更新时间戳
 time_clock_update_dict = {'proxySubscriberClock': '0', 'spM3uClock': '0', 'normalM3uClock': '0', 'youtube': '0',
                           'bilibili': '0', 'huya': '0', 'yy': '0', 'twitch': '0', 'douyin': '0',
-                          'autoDnsSwitchClock': '0', 'normalSubscriberClock': '0', 'syncClock': '0', 'recycle': '0'}
+                          'autoDnsSwitchClock': '0', 'normalSubscriberClock': '0', 'syncClock': '0', 'recycle': '0',
+                          'checkAlive': '0'}
+
+
+def is_same_action_uuid(old_uuid, cachekey):
+    global time_clock_update_dict
+    now_uuid = time_clock_update_dict[cachekey]
+    if now_uuid == old_uuid:
+        return True
+    return False
 
 
 # true-需要更新 false-不需要更新
@@ -892,8 +902,10 @@ async def checkWriteHealthM3u(url):
         return
 
 
-async def download_url(session, url, value):
+async def download_url(session, url, value, now_uuid):
     try:
+        if not is_same_action_uuid(now_uuid, 'checkAlive'):
+            return
         async with session.get(url) as resp:  # 使用asyncio.Semaphore限制TCP连接的数量
             if resp.status == 200:
                 path = f"{secret_path}{getFileNameByTagName('aliveM3u')}.m3u"
@@ -901,6 +913,8 @@ async def download_url(session, url, value):
                     await f.write(f'{value}{url}\n')
                 await checkWriteHealthM3u(url)
     except aiohttp.ClientSSLError as ssl_err:
+        if not is_same_action_uuid(now_uuid, 'checkAlive'):
+            return
         async with session.get(url, ssl=False) as resp:  # 使用asyncio.Semaphore限制TCP连接的数量
             if resp.status == 200:
                 path = f"{secret_path}{getFileNameByTagName('aliveM3u')}.m3u"
@@ -911,12 +925,25 @@ async def download_url(session, url, value):
         print(f"Error occurred while downloading {url}: {e}")
 
 
+def update_uuid_action(cachekey):
+    global time_clock_update_dict
+    now_uuid = time_clock_update_dict[cachekey]
+    while True:
+        new_uuid = generate_only_uuid(random.randrange(0, int(time.time())))
+        if new_uuid == now_uuid:
+            continue
+        time_clock_update_dict[cachekey] = new_uuid
+        break
+    return time_clock_update_dict.get(cachekey)
+
+
 async def asynctask(m3u_dict):
+    now_uuid = update_uuid_action('checkAlive')
     # sem = asyncio.Semaphore(100)  # 限制TCP连接的数量为100个
     async with aiohttp.ClientSession() as session:
         tasks = []
         for url, value in m3u_dict.items():
-            task = asyncio.create_task(download_url(session, url, value))
+            task = asyncio.create_task(download_url(session, url, value, now_uuid))
             tasks.append(task)
         await asyncio.gather(*tasks)
 
@@ -2375,7 +2402,6 @@ def updateAdguardhomeWithelistForM3u(url):
         # 是域名，但不知道是国内还是国外域名
         white_list_adguardhome["@@||" + domain + "^"] = ""
     # 是ip
-
 
 
 def decode_bytes(text):
@@ -7568,7 +7594,7 @@ def chaoronghe28():
         redisKeyTWITCHM3uFake = {}
         redisKeyTWITCHM3u.clear()
         redis_del_map(REDIS_KEY_TWITCH_M3U)
-        #fakeurl = f"http://127.0.0.1:22771/TWITCH/"
+        # fakeurl = f"http://127.0.0.1:22771/TWITCH/"
         fakeurl = f"http://{ip}:{port_live}/TWITCH/"
         for id, url in m3u_dict.items():
             try:
@@ -7737,14 +7763,9 @@ def chaoronghe31_single(type):
                     redisKeyM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except Exception as e:
                 pass
-        redisKeyNormal['qiumihui,'] = '更新球迷汇'
-        redis_add_map(REDIS_KEY_NORMAL, {'qiumihui,': '更新球迷汇'})
-        link1 = f'#EXTINF:-1 group-title="球迷汇体育" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新球迷汇",更新球迷汇\n'
-        redisKeyM3uFake[f'{fakeurl}qiumihui,.m3u8'] = link1
-        redisKeyNormal['longzhu,'] = '更新龙珠直播'
-        redis_add_map(REDIS_KEY_NORMAL, {'longzhu,': '更新龙珠直播'})
-        link2 = f'#EXTINF:-1 group-title="龙珠直播" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新龙珠直播",更新龙珠直播\n'
-        redisKeyM3uFake[f'{fakeurl}longzhu,.m3u8'] = link2
+        add_update_live('qiumihui,', '球迷汇体育', '更新球迷汇', redisKeyM3uFake, fakeurl)
+        add_update_live('longzhu,', '龙珠直播', '更新龙珠直播', redisKeyM3uFake, fakeurl)
+
         # 同步方法写出全部配置
         distribute_data(redisKeyM3uFake, f"{secret_path}normal.m3u", 10)
         fuck_m3u_to_txt(f"{secret_path}normal.m3u", f"{secret_path}normal.txt")
@@ -7830,14 +7851,8 @@ def chaoronghe31():
                 redisKeyM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except Exception as e:
                 pass
-        redisKeyNormal['qiumihui,'] = '更新球迷汇'
-        redis_add_map(REDIS_KEY_NORMAL, {'qiumihui,': '更新球迷汇'})
-        link1 = f'#EXTINF:-1 group-title="球迷汇体育" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新球迷汇",更新球迷汇\n'
-        redisKeyM3uFake[f'{fakeurl}qiumihui,.m3u8'] = link1
-        redisKeyNormal['longzhu,'] = '更新龙珠直播'
-        redis_add_map(REDIS_KEY_NORMAL, {'longzhu,': '更新龙珠直播'})
-        link2 = f'#EXTINF:-1 group-title="龙珠直播" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新龙珠直播",更新龙珠直播\n'
-        redisKeyM3uFake[f'{fakeurl}longzhu,.m3u8'] = link2
+        add_update_live('qiumihui,', '球迷汇体育', '更新球迷汇', redisKeyM3uFake, fakeurl)
+        add_update_live('longzhu,', '龙珠直播', '更新龙珠直播', redisKeyM3uFake, fakeurl)
         # 同步方法写出全部配置
         distribute_data(redisKeyM3uFake, f"{secret_path}normal.m3u", 10)
         redis_add_map(REDIS_KEY_NORMAL_M3U, redisKeyNormalM3U)
@@ -7845,6 +7860,14 @@ def chaoronghe31():
         return "result"
     except Exception as e:
         return "empty"
+
+
+def add_update_live(type, group_name, tvg_name, redisKeyM3uFake, fakeurl):
+    global redisKeyNormal
+    redisKeyNormal[type] = tvg_name
+    redis_add_map(REDIS_KEY_NORMAL, {type: tvg_name})
+    link2 = f'#EXTINF:-1 group-title="{group_name}" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="{tvg_name}",{tvg_name}\n'
+    redisKeyM3uFake[f'{fakeurl}{type}.m3u8'] = link2
 
 
 # 生成全部youtube直播源
@@ -7868,7 +7891,7 @@ def chaoronghe24():
         redisKeyYoutubeM3u.clear()
         redis_del_map(REDIS_KEY_YOUTUBE_M3U)
         redisKeyYoutubeM3uFake = {}
-        #fakeurl = 'http://127.0.0.1:22771/youtube/'
+        # fakeurl = 'http://127.0.0.1:22771/youtube/'
         fakeurl = f"http://{ip}:{port_live}/youtube/"
         for id, url in m3u_dict.items():
             try:
@@ -8556,7 +8579,7 @@ def generate_only_uuid(my_string):
     timestamp = now.strftime("%Y%m%d%H%M%S%f")
     unique_str = f"{timestamp}-{my_string}"
     serial_number = uuid.uuid5(uuid.NAMESPACE_URL, unique_str)
-    return serial_number
+    return str(serial_number)
 
 
 def main():

@@ -81,14 +81,54 @@ def redis_del_map(key):
         pass
 
 
+def remove_repeat_second_domain(tmpDict):
+    leve2_dict = {}
+    result_dict = {}
+    for key in tmpDict.keys():
+        try:
+            # 二级域名名字,一级域名名字，顶级域名名字
+            start, middle, end = key.split('.')
+            first_domain = f'{middle}.{end}'
+            try:
+                leve2 = leve2_dict.get(key)
+                leve2[first_domain] = ''
+                leve2_dict[key] = leve2
+            except Exception as e:
+                leve2_dict[key] = {first_domain: ''}
+        except Exception as e:
+            try:
+                # 一级域名名字，顶级域名名字
+                start, end = key.split('.')
+                try:
+                    leve2 = leve2_dict.get(key)
+                    continue
+                except Exception as e:
+                    leve2_dict[key] = {}
+            except Exception as e:
+                result_dict[key] = ''
+    for key in leve2_dict.keys():
+        try:
+            leve2 = leve2_dict.get(key)
+            # 子域名太多，直接记录一级域名
+            if len(leve2.keys()) >= 15:
+                result_dict[key] = ''
+                continue
+            for second_domain in leve2.keys():
+                result_dict[second_domain] = ''
+        except Exception as e:
+            pass
+    return result_dict
+
+
 # 简易dns黑白名单保留最低限度的1000条数据
 def clearAndStoreAtLeast50DataInRedis(redisKey, cacheDict):
     tmpDict = redis_get_map(redisKey)
+    slim_dict = remove_repeat_second_domain(tmpDict)
     cacheDict.clear()
     count = 0
     # data = dict(list(tmpDict.items())[:1000])
     data = {}
-    for key in tmpDict.keys():
+    for key in slim_dict.keys():
         if count > 1000:
             break
         data[key] = ''
@@ -1377,7 +1417,7 @@ def init():
                     elif REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG in data:
                         global white_list_simple_nameserver_policy
                         arr = data.split('_')
-                        #0-单个增加，1-全部删除，3-批量增加，批量删除，单个删除，全部拉取
+                        # 0-单个增加，1-全部删除，3-批量增加，批量删除，单个删除，全部拉取
                         if arr[1] == '0':
                             updateSpData(data.split(f'{REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG}_0_')[1],
                                          white_list_simple_nameserver_policy)
@@ -1388,7 +1428,7 @@ def init():
                     elif REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG in data:
                         global black_list_simple_policy
                         arr = data.split('_')
-                        #0-单个增加，1-全部删除，3-批量增加，批量删除，单个删除，全部拉取
+                        # 0-单个增加，1-全部删除，3-批量增加，批量删除，单个删除，全部拉取
                         if arr[1] == '0':
                             updateSpData(data.split(f'{REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG}_0_')[1],
                                          black_list_simple_policy)

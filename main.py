@@ -666,9 +666,12 @@ def redis_get_map(key):
 
 # redis取出map字典key
 def redis_get_map_keys(key):
-    redis_dict = r.hgetall(key)
-    array = [key for key in redis_dict.keys()]
-    return array, redis_dict
+    try:
+        redis_dict = r.hgetall(key)
+        array = [key for key in redis_dict.keys()]
+        return array, redis_dict
+    except:
+        return [], {}
 
 
 # redis删除map字典
@@ -1365,6 +1368,8 @@ def fuck_m3u_to_txt(file_path, txt_path):
 
 def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
     results, redis_dict = redis_get_map_keys(redisKeyLink)
+    if len(results) == 0:
+        return "empty"
     ism3u = processDataMethodName == 'process_data_abstract'
     global CHANNEL_LOGO
     global CHANNEL_GROUP

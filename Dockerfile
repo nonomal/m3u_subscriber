@@ -19,8 +19,8 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # 暴露容器的端口 22771-web 22770-dns 22772
-EXPOSE 22771 22770 22772
+EXPOSE 22771 22770
 # 启动多个程序进程
 COPY run.sh /app/run.sh
-RUN chmod 777 /app/run.sh  /app/main.py  /app/dns.py   /app/db.py
+RUN chmod 777 /app/run.sh  /app/main.py  /app/dns.py
 CMD ["/bin/bash", "-c", "/app/run.sh"]

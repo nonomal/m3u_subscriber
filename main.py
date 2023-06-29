@@ -636,7 +636,7 @@ async def pingM3u(session, value, real_dict, key, mintimeout, maxTimeout):
 ##########################################################redis数据库操作#############################################
 # redis增加和修改
 
-url_flask = 'http://127.0.0.1:22772/api/data2'
+url_flask = '/api/data2'
 
 
 def redis_add(key, value):
@@ -646,10 +646,11 @@ def redis_add(key, value):
             'action': 'add_single',
             'dict_data': value
         }
-        response = requests.post(url_flask, data=data)
-        if response.status_code == 200:
-            return 1
-        return 0
+        with app.test_client() as client:
+            response = client.post(url_flask, data=data)
+            if response.status_code == 200:
+                return 1
+            return 0
     except Exception as e:
         return 0
 
@@ -661,10 +662,11 @@ def redis_get(key):
             'cacheKey': key,
             'action': 'get_single',
         }
-        response = requests.post(url_flask, data=data)
-        # 字符串格式的json数据
-        response_data = response.json()
-        return response_data['result']
+        with app.test_client() as client:
+            response = client.post(url_flask, data=data)
+            # 字符串格式的json数据
+            response_data = response.get_json()
+            return response_data['result']
     except:
         return None
 
@@ -677,10 +679,11 @@ def redis_add_map(key, my_dict):
             'action': 'add_map',
             'dict_data': json.dumps(my_dict).encode('utf-8')
         }
-        response = requests.post(url_flask, data=data)
-        if response.status_code == 200:
-            return 1
-        return 0
+        with app.test_client() as client:
+            response = client.post(url_flask, data=data)
+            if response.status_code == 200:
+                return 1
+            return 0
     except Exception as e:
         return 0
 
@@ -692,10 +695,11 @@ def redis_get_map(key):
             'cacheKey': key,
             'action': 'get_map'
         }
-        response = requests.post(url_flask, data=data)
-        # 字符串格式的json数据
-        response_data = response.json()
-        return response_data
+        with app.test_client() as client:
+            response = client.post(url_flask, data=data)
+            # 字符串格式的json数据
+            response_data = response.get_json()
+            return response_data
     except Exception as e:
         return {}
 
@@ -717,10 +721,11 @@ def redis_del_map(key):
             'cacheKey': key,
             'action': 'delete'
         }
-        response = requests.post(url_flask, data=data)
-        if response.status_code == 200:
-            return 1
-        return 0
+        with app.test_client() as client:
+            response = client.post(url_flask, data=data)
+            if response.status_code == 200:
+                return 1
+            return 0
     except Exception as e:
         return 0
 
@@ -741,10 +746,11 @@ def redis_del_map_keys(key, map_keys):
             'action': 'delete_keys',
             'dict_data': json.dumps(map_keys).encode('utf-8')
         }
-        response = requests.post(url_flask, data=data)
-        if response.status_code == 200:
-            return 1
-        return 0
+        with app.test_client() as client:
+            response = client.post(url_flask, data=data)
+            if response.status_code == 200:
+                return 1
+            return 0
     except Exception as e:
         return 0
 
@@ -755,10 +761,11 @@ def redis_public_message(message):
         data = {
             'message': message
         }
-        response = requests.post(url, data=data)
-        if response.status_code == 200:
-            return 1
-        return 0
+        with app.test_client() as client:
+            response = client.post(url, data=data)
+            if response.status_code == 200:
+                return 1
+            return 0
     except Exception as e:
         return 0
 
@@ -8508,6 +8515,127 @@ def process_file4():
         f.write(resultContent)
     return send_file(filename, as_attachment=True)
 
+###################################################模仿redis服务器############################################
+# 存放数据库文件的路径
+DB_PATH = "/app/db"
+
+message_dict = {}
+
+
+@app.route('/api/data', methods=['GET'])
+def get_data():
+    global message_dict
+    returndict = jsonify(message_dict)
+    message_dict.clear()
+    return returndict
+
+
+@app.route('/api/ping', methods=['GET'])
+def ping():
+    return jsonify({'result': ''})
+
+
+@app.route('/api/data', methods=['POST'])
+def post_data():
+    global message_dict
+    message = request.form.get('message')
+    message_dict[message] = ''
+    return jsonify({'result': ''})
+
+
+@app.route('/api/data2', methods=['POST'])
+def post_data_key_data():
+    cachekey = request.form.get('cacheKey')
+    action = request.form.get('action')
+    file_path = os.path.join(DB_PATH, f'{cachekey}.txt')
+    if action == 'get_single':
+        try:
+            with open(file_path, "rb") as f:
+                data_bytes = f.read()
+            return jsonify({'result': data_bytes.decode('utf-8')})
+        except Exception as e:
+            return jsonify({'result': ''})
+    # 删除一个数据表
+    elif action == 'delete':
+        try:
+            os.remove(file_path)
+            return jsonify({'result': 1})
+        except Exception as e:
+            return jsonify({'result': 0})
+    # map增加表中一些条数据
+    elif action == 'add_map':
+        try:
+            # 字符串格式的json数据
+            add_dict = json.loads(request.form.get('dict_data'))
+            if len(add_dict) == 0:
+                return jsonify({'result': 0})
+            old_dict = {}
+            try:
+                with open(file_path, "rb") as f:
+                    data_bytes = f.read()
+                old_dict = json.loads(data_bytes.decode('utf-8'))
+            except Exception as e:
+                # 如果文件不存在，创建一个新文件
+                open(file_path, "wb").close()
+            old_dict.update(add_dict)
+            # 清除文件中的所有数据
+            with open(file_path, "wb") as f:
+                pass
+            # 复写数据
+            with open(file_path, "wb") as f:
+                f.write(json.dumps(old_dict).encode('utf-8'))
+            return jsonify({'result': 1})
+        except Exception as e:
+            return jsonify({'result': 0})
+    # 增加/修改表中一条数据
+    elif action == 'add_single':
+        try:
+            # 字符串格式的json数据
+            value = request.form.get('dict_data')
+            try:
+                # 如果文件存在，清除文件中的所有数据
+                with open(file_path, "wb") as f:
+                    pass
+            except:
+                # 如果文件不存在，创建一个新文件
+                open(file_path, "wb").close()
+            # 复写数据
+            with open(file_path, "wb") as f:
+                f.write(value.encode('utf-8'))
+            return jsonify({'result': 1})
+        except Exception as e:
+            return jsonify({'result': 0})
+    # 删除map里的单个key/多个key
+    elif action == 'delete_keys':
+        try:
+            # 字符串格式的json数据
+            dict_data = json.loads(request.form.get('dict_data'))
+            with open(file_path, "rb") as f:
+                data_bytes = f.read()
+            dict = json.loads(data_bytes.decode('utf-8'))
+            new_dict = {}
+            for key, value in dict.items():
+                if key in dict_data:
+                    continue
+                new_dict[key] = value
+            # 清除文件中的所有数据
+            with open(file_path, "wb") as f:
+                pass
+            # 复写数据
+            with open(file_path, "wb") as f:
+                f.write(json.dumps(new_dict).encode('utf-8'))
+            return jsonify({'result': 1})
+        except Exception as e:
+            return jsonify({'result': 0})
+    # 查询map
+    elif action == 'get_map':
+        try:
+            with open(file_path, "rb") as f:
+                data_bytes = f.read()
+            return jsonify(json.loads(data_bytes.decode('utf-8')))
+        except Exception as e:
+            return jsonify({})
+###################################################模仿redis服务器#############################################
 
 # 根据年月日、当前时间、输入的字符串生成的绝对唯一uuid
 def generate_only_uuid(my_string):
@@ -8529,18 +8657,18 @@ def main():
 
 
 if __name__ == '__main__':
-    start = False
-    while True:
-        try:
-            # 检查Redis连接状态
-            url = 'http://127.0.0.1:22772/api/ping'
-            response = requests.get(url)
-            if response.status_code == 200:
-                print('!!!!!!!!!!!!!!!!!!!!!!!Redis is ready dns.py\n')
-                start = True
-                break
-        except Exception as e:
-            # 连接失败，等待一段时间后重试
-            time.sleep(1)
-    if start:
+    # start = False
+    # while True:
+    #     try:
+    #         # 检查Redis连接状态
+    #         url = 'http://127.0.0.1:22772/api/ping'
+    #         response = requests.get(url)
+    #         if response.status_code == 200:
+    #             print('!!!!!!!!!!!!!!!!!!!!!!!Redis is ready dns.py\n')
+    #             start = True
+    #             break
+    #     except Exception as e:
+    #         # 连接失败，等待一段时间后重试
+    #         time.sleep(1)
+    # if start:
         main()

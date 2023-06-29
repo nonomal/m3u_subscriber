@@ -4,8 +4,6 @@ python3 /app/dns.py &
 # 启动Flask应用程序
 export FLASK_APP=/app/main.py
 flask run --host=0.0.0.0  --port=22771 &
-export FLASK_APP=/app/db.py
-flask run --host=0.0.0.0 --port=22772
 # just keep this script running
 while [[ true ]]; do
     sleep 1

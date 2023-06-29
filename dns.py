@@ -1092,7 +1092,7 @@ def initBlackListSP():
 #         # 将地址段转换为元组
 #         return (network, broadcast)
 ################################################ipv4暂时不能解决根据域名查找ipv4
-url_flask = 'http://127.0.0.1:22772/api/data2'
+url_flask = 'http://127.0.0.1:22771/api/data2'
 
 
 # redis增加和修改
@@ -1365,7 +1365,7 @@ def is_foreign_top_domain(domain):
 
 def get_message():
     try:
-        url = 'http://127.0.0.1:22772/api/data'
+        url = 'http://127.0.0.1:22771/api/data'
         response = requests.get(url)
         data = response.json()
         return data
@@ -1747,7 +1747,7 @@ if __name__ == '__main__':
     while True:
         try:
             # 检查Redis连接状态
-            url = 'http://127.0.0.1:22772/api/ping'
+            url = 'http://127.0.0.1:22771/api/ping'
             response = requests.get(url)
             if response.status_code == 200:
                 print('!!!!!!!!!!!!!!!!!!!!!!!Redis is ready dns.py\n')

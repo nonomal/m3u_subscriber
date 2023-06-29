@@ -649,12 +649,6 @@ def redis_get(key):
         return None
 
 
-# redis删除
-def redis_del(key):
-    if r.exists(key):
-        r.delete(key)
-
-
 # redis存储map字典，字典主键唯一，重复主键只会复写
 def redis_add_map(key, my_dict):
     r.hmset(key, my_dict)
@@ -672,9 +666,12 @@ def redis_get_map(key):
 
 # redis取出map字典key
 def redis_get_map_keys(key):
-    redis_dict = r.hgetall(key)
-    array = [key for key in redis_dict.keys()]
-    return array, redis_dict
+    try:
+        redis_dict = r.hgetall(key)
+        array = [key for key in redis_dict.keys()]
+        return array, redis_dict
+    except:
+        return [], {}
 
 
 # redis删除map字典
@@ -1371,6 +1368,8 @@ def fuck_m3u_to_txt(file_path, txt_path):
 
 def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
     results, redis_dict = redis_get_map_keys(redisKeyLink)
+    if len(results) == 0:
+        return "empty"
     ism3u = processDataMethodName == 'process_data_abstract'
     global CHANNEL_LOGO
     global CHANNEL_GROUP
@@ -4263,7 +4262,7 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'syncClock': '10', 'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国',
                           'foreignTopDomain':
                               'xyz,club,online,site,top,win', 'dnsMode': '0', 'dnsLimitRecordSecondDomain': '15',
-                  'dnsLimitRecordSecondLenDomain': '20'}
+                          'dnsLimitRecordSecondLenDomain': '20'}
 
 
 def init_file_name():
@@ -5083,18 +5082,18 @@ def getMaxRank():
     return str(num + 1)
 
 
-def checkAndUpdateM3uRank(group):
-    if group == '':
-        return
-    global m3u_whitlist_rank
-    global m3u_whitlist
-    # 新分组，默认加到最后
-    if group not in m3u_whitlist.values():
-        if group not in m3u_whitlist_rank:
-            rank = getMaxRank()
-            m3u_whitlist_rank[group] = rank
-            redis_add_map(REDIS_KEY_M3U_WHITELIST_RANK, {group, rank})
-    getRankWhiteList()
+# def checkAndUpdateM3uRank(group):
+#     if group == '':
+#         return
+#     global m3u_whitlist_rank
+#     global m3u_whitlist
+#     # 新分组，默认加到最后
+#     if group not in m3u_whitlist.values():
+#         if group not in m3u_whitlist_rank:
+#             rank = getMaxRank()
+#             m3u_whitlist_rank[group] = rank
+#             redis_add_map(REDIS_KEY_M3U_WHITELIST_RANK, {group, rank})
+#     getRankWhiteList()
 
 
 # 添加M3U黑名单
@@ -6146,7 +6145,6 @@ async def grab_normal_migu(session, rid, m3u_dict, mintimeout, maxTimeout, sourc
         print(f"migu An error occurred while processing {rid}. Error: {e}")
 
 
-
 async def grab_normal_ipanda(session, rid, m3u_dict, mintimeout, maxTimeout, source_type, value):
     url = f'https://vdn.live.cntv.cn/api2/liveHtml5.do?channel=pc://{rid}&channel_id={value}&video_player=1&im=0&client=flash&tsp=1687495941&vn=1537&vc=1&uid=5A9A2532F878A0DB8EFE2BC8B2B191FC&wlan='
     try:
@@ -6183,7 +6181,6 @@ async def grab_normal_ipanda(session, rid, m3u_dict, mintimeout, maxTimeout, sou
                         break
     except Exception as e:
         print(f"cetv An error occurred while processing {rid}. Error: {e}")
-
 
 
 async def grab_normal_qiumihui(session, m3u_dict, mintimeout, maxTimeout, source_type, dict_single):
@@ -8156,7 +8153,7 @@ def removem3ulinks16():
 @requires_auth
 def removem3ulinks17():
     downAndSecUploadUrlPassAndName.clear()
-    redis_del(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME)
+    redis_del_map(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME)
     return "success"
 
 
@@ -8165,7 +8162,7 @@ def removem3ulinks17():
 @requires_auth
 def removem3ulinks18():
     downAndDeSecUrlPassAndName.clear()
-    redis_del(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME)
+    redis_del_map(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME)
     return "success"
 
 

@@ -1,15 +1,12 @@
 import concurrent.futures
+import json
 import queue
 import socket
 import threading
 import time
 import dnslib
-import redis
+import requests
 
-r = redis.Redis(host='localhost', port=22772)
-# 订阅频道
-pubsub = r.pubsub()
-pubsub.subscribe('dns-notify')
 # 下载的域名白名单存储到redis服务器里
 REDIS_KEY_WHITE_DOMAINS = "whitedomains"
 # 白名单总命中缓存规则，数据中等，是实际命中的规则缓存
@@ -76,9 +73,16 @@ white_list_tmp_policy_queue = queue.Queue(maxsize=100)
 # redis删除map字典
 def redis_del_map(key):
     try:
-        r.delete(key)
-    except:
-        pass
+        data = {
+            'cacheKey': key,
+            'action': 'delete'
+        }
+        response = requests.post(url_flask, data=data)
+        if response.status_code == 200:
+            return 1
+        return 0
+    except Exception as e:
+        return 0
 
 
 # 简易dns黑白名单保留最低限度的1000条数据
@@ -863,20 +867,17 @@ def isChinaDomain(data):
         return False
 
 
-def simpleDomain(domain_name):
-    if domain_name.encode().startswith(b"www."):
-        simple_domain_name = domain_name.substring(4)
-    else:
-        simple_domain_name = domain_name
-    return simple_domain_name
-
-
 def redis_get_map(key):
     try:
-        redis_dict = r.hgetall(key)
-        python_dict = {key.decode('utf-8'): value.decode('utf-8') for key, value in redis_dict.items()}
-        return python_dict
-    except:
+        data = {
+            'cacheKey': key,
+            'action': 'get_map'
+        }
+        response = requests.post(url_flask, data=data)
+        # 字符串格式的json数据
+        response_data = response.json()
+        return response_data
+    except Exception as e:
         return {}
 
 
@@ -1091,18 +1092,38 @@ def initBlackListSP():
 #         # 将地址段转换为元组
 #         return (network, broadcast)
 ################################################ipv4暂时不能解决根据域名查找ipv4
+url_flask = 'http://127.0.0.1:22772/api/data2'
+
 
 # redis增加和修改
 def redis_add(key, value):
-    r.set(key, value)
+    try:
+        data = {
+            'cacheKey': key,
+            'action': 'add_single',
+            'dict_data': value
+        }
+        response = requests.post(url_flask, data=data)
+        if response.status_code == 200:
+            return 1
+        return 0
+    except Exception as e:
+        return 0
 
 
 # redis查询
 def redis_get(key):
     try:
-        return r.get(key)
+        data = {
+            'cacheKey': key,
+            'action': 'get_single',
+        }
+        response = requests.post(url_flask, data=data)
+        # 字符串格式的json数据
+        response_data = response.json()
+        return response_data['result']
     except:
-        return None
+        return ''
 
 
 # 定时器似乎影响挺严重的
@@ -1342,106 +1363,118 @@ def is_foreign_top_domain(domain):
     return False
 
 
+def get_message():
+    try:
+        url = 'http://127.0.0.1:22772/api/data'
+        response = requests.get(url)
+        data = response.json()
+        return data
+    except:
+        return {}
+
+
 def init():
     while True:
         try:
-            for message in pubsub.listen():
-                if message['type'] == 'message':
-                    data = message['data']
-                    print(data)
-                    if data == REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG:
-                        initWhiteListSP()
-                    elif data == REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG:
-                        initBlackListSP()
-                    elif REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG in data:
-                        name = data.split('_')[1]
-                        global china_top_domain_list
+            message_dict = get_message()
+            for message in message_dict.keys():
+                data = message
+                # print(data)
+                if data == REDIS_KEY_UPDATE_WHITE_LIST_SP_FLAG:
+                    initWhiteListSP()
+                elif data == REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG:
+                    initBlackListSP()
+                elif REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG in data:
+                    name = data.split('_')[1]
+                    global china_top_domain_list
+                    try:
+                        arr = name.split(',')
+                        if arr:
+                            china_top_domain_list.clear()
+                            for i in arr:
+                                if i == '':
+                                    continue
+                                china_top_domain_list.append(f'.{i}')
+                        file_name_dict['chinaTopDomain'] = name
+                    except Exception as e:
+                        pass
+                elif REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG in data:
+                    name = data.split('_')[1]
+                    global foreign_top_domain_list
+                    if name:
                         try:
                             arr = name.split(',')
                             if arr:
-                                china_top_domain_list.clear()
+                                foreign_top_domain_list.clear()
                                 for i in arr:
                                     if i == '':
                                         continue
-                                    china_top_domain_list.append(f'.{i}')
-                            file_name_dict['chinaTopDomain'] = name
+                                    foreign_top_domain_list.append(f'.{i}')
+                            file_name_dict['foreignTopDomain'] = name
                         except Exception as e:
                             pass
-                    elif REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG in data:
-                        name = data.split('_')[1]
-                        global foreign_top_domain_list
-                        if name:
-                            try:
-                                arr = name.split(',')
-                                if arr:
-                                    foreign_top_domain_list.clear()
-                                    for i in arr:
-                                        if i == '':
-                                            continue
-                                        foreign_top_domain_list.append(f'.{i}')
-                                file_name_dict['foreignTopDomain'] = name
-                            except Exception as e:
-                                pass
-                    elif REDIS_KEY_UPDATE_DNS_MODE_FLAG in data:
-                        name = data.split('_')[1]
-                        if name == '0' or name == '1':
-                            file_name_dict['dnsMode'] = name
-                    elif REDIS_KEY_UPDATE_DNS_LIMIT_SECOND_DOMAIN_FLAG in data:
-                        name = data.split('_')[1]
-                        try:
-                            number = int(name)
-                            if number > 0:
-                                file_name_dict['dnsLimitRecordSecondDomain'] = str(number)
-                        except Exception as e:
-                            pass
-                    elif REDIS_KEY_UPDATE_DNS_LIMIT_SECOND_DOMAIN_LEN_FLAG in data:
-                        name = data.split('_')[1]
-                        try:
-                            number = int(name)
-                            if number > 0:
-                                file_name_dict['dnsLimitRecordSecondLenDomain'] = str(number)
-                        except Exception as e:
-                            pass
-                    elif REDIS_KEY_UPDATE_THREAD_NUM_FLAG in data:
-                        num = data.split('_')[1]
-                        if num == 0:
-                            num = 1000
-                            threadsNum[REDIS_KEY_THREADS] = num
-                        else:
-                            threadsNum[REDIS_KEY_THREADS] = num
-                    elif REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG in data:
-                        global white_list_simple_nameserver_policy
-                        arr = data.split('_')
-                        # 0-单个增加，1-全部删除，3-批量增加，批量删除，单个删除，全部拉取
-                        if arr[1] == '0':
-                            num = int(getFileNameByTagName('dnsLimitRecordSecondDomain'))
-                            updateSpData(data.split(f'{REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG}_0_')[1],
-                                         white_list_simple_nameserver_policy, num)
-                        elif arr[1] == '1':
-                            white_list_simple_nameserver_policy.clear()
-                        elif arr[1] == '3':
-                            initSimpleWhiteList()
-                    elif REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG in data:
-                        global black_list_simple_policy
-                        arr = data.split('_')
-                        # 0-单个增加，1-全部删除，3-批量增加，批量删除，单个删除，全部拉取
-                        if arr[1] == '0':
-                            num = int(getFileNameByTagName('dnsLimitRecordSecondDomain'))
-                            updateSpData(data.split(f'{REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG}_0_')[1],
-                                         black_list_simple_policy, num)
-                        elif arr[1] == '1':
-                            black_list_simple_policy.clear()
-                        elif arr[1] == '3':
-                            initSimpleBlackList()
-                    elif REDIS_KEY_OPEN_AUTO_UPDATE_SIMPLE_WHITE_AND_BLACK_LIST_FLAG in data:
-                        global AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST
-                        try:
-                            choose = data.split('_')[1]
-                            AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST = choose
-                        except:
-                            pass
+                elif REDIS_KEY_UPDATE_DNS_MODE_FLAG in data:
+                    name = data.split('_')[1]
+                    if name == '0' or name == '1':
+                        file_name_dict['dnsMode'] = name
+                elif REDIS_KEY_UPDATE_DNS_LIMIT_SECOND_DOMAIN_FLAG in data:
+                    name = data.split('_')[1]
+                    try:
+                        number = int(name)
+                        if number > 0:
+                            file_name_dict['dnsLimitRecordSecondDomain'] = str(number)
+                    except Exception as e:
+                        pass
+                elif REDIS_KEY_UPDATE_DNS_LIMIT_SECOND_DOMAIN_LEN_FLAG in data:
+                    name = data.split('_')[1]
+                    try:
+                        number = int(name)
+                        if number > 0:
+                            file_name_dict['dnsLimitRecordSecondLenDomain'] = str(number)
+                    except Exception as e:
+                        pass
+                elif REDIS_KEY_UPDATE_THREAD_NUM_FLAG in data:
+                    num = data.split('_')[1]
+                    if num == 0:
+                        num = 1000
+                        threadsNum[REDIS_KEY_THREADS] = num
+                    else:
+                        threadsNum[REDIS_KEY_THREADS] = num
+                elif REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG in data:
+                    global white_list_simple_nameserver_policy
+                    arr = data.split('_')
+                    # 0-单个增加，1-全部删除，3-批量增加，批量删除，单个删除，全部拉取
+                    if arr[1] == '0':
+                        num = int(getFileNameByTagName('dnsLimitRecordSecondDomain'))
+                        updateSpData(data.split(f'{REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG}_0_')[1],
+                                     white_list_simple_nameserver_policy, num)
+                    elif arr[1] == '1':
+                        white_list_simple_nameserver_policy.clear()
+                    elif arr[1] == '3':
+                        initSimpleWhiteList()
+                elif REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG in data:
+                    global black_list_simple_policy
+                    arr = data.split('_')
+                    # 0-单个增加，1-全部删除，3-批量增加，批量删除，单个删除，全部拉取
+                    if arr[1] == '0':
+                        num = int(getFileNameByTagName('dnsLimitRecordSecondDomain'))
+                        updateSpData(data.split(f'{REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG}_0_')[1],
+                                     black_list_simple_policy, num)
+                    elif arr[1] == '1':
+                        black_list_simple_policy.clear()
+                    elif arr[1] == '3':
+                        initSimpleBlackList()
+                elif REDIS_KEY_OPEN_AUTO_UPDATE_SIMPLE_WHITE_AND_BLACK_LIST_FLAG in data:
+                    global AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST
+                    try:
+                        choose = data.split('_')[1]
+                        AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST = choose
+                    except:
+                        pass
         except:
             pass
+        finally:
+            time.sleep(1)
 
 
 # 是否开启自动维护生成简易黑白名单：0-不开启，1-开启
@@ -1464,7 +1497,10 @@ def init_threads_num():
     global threadsNum
     num = redis_get(REDIS_KEY_THREADS)
     if num:
-        num = int(num.decode())
+        try:
+            num = int(num)
+        except:
+            num = 1000
         if num == 0:
             num = 1000
             threadsNum[REDIS_KEY_THREADS] = num
@@ -1480,7 +1516,10 @@ def init_china_dns_port():
     global chinadnsport
     num = redis_get(REDIS_KEY_CHINA_DNS_PORT)
     if num:
-        num = int(num.decode())
+        try:
+            num = int(num)
+        except:
+            num = 5336
         if num == 0:
             num = 5336
             chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = num
@@ -1496,7 +1535,10 @@ def init_extra_dns_port():
     global extradnsport
     num = redis_get(REDIS_KEY_EXTRA_DNS_PORT)
     if num:
-        num = int(num.decode())
+        try:
+            num = int(num)
+        except:
+            num = 7874
         if num == 0:
             num = 7874
             extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = num
@@ -1512,7 +1554,10 @@ def init_dns_query_num():
     global dnsquerynum
     num = redis_get(REDIS_KEY_DNS_QUERY_NUM)
     if num:
-        num = int(num.decode())
+        try:
+            num = int(num)
+        except:
+            num = 150
         if num == 0:
             num = 150
             dnsquerynum[REDIS_KEY_DNS_QUERY_NUM] = num
@@ -1529,7 +1574,10 @@ def init_dns_timeout():
     global dnstimeout
     num = redis_get(REDIS_KEY_DNS_TIMEOUT)
     if num:
-        num = int(num.decode())
+        try:
+            num = int(num)
+        except:
+            num = 20
         if num == 0:
             num = 20
             dnstimeout[REDIS_KEY_DNS_TIMEOUT] = num
@@ -1546,7 +1594,7 @@ def init_china_dns_server():
     global chinadnsserver
     num = redis_get(REDIS_KEY_CHINA_DNS_SERVER)
     if num:
-        num = num.decode()
+        num = num
         if num == "":
             num = "127.0.0.1"
             chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = num
@@ -1562,7 +1610,7 @@ def init_extra_dns_server():
     global extradnsserver
     num = redis_get(REDIS_KEY_EXTRA_DNS_SERVER)
     if num:
-        num = num.decode()
+        num = num
         if num == "":
             num = "127.0.0.1"
             extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = num
@@ -1617,7 +1665,18 @@ def handle_request(sock, executor, china_dns_socket, waiguo_dns_socket, china_dn
 
 # redis存储map字典，字典主键唯一，重复主键只会复写
 def redis_add_map(key, my_dict):
-    r.hmset(key, my_dict)
+    try:
+        data = {
+            'cacheKey': key,
+            'action': 'add_map',
+            'dict_data': json.dumps(my_dict).encode('utf-8')
+        }
+        response = requests.post(url_flask, data=data)
+        if response.status_code == 200:
+            return 1
+        return 0
+    except Exception as e:
+        return 0
 
 
 def main():
@@ -1688,11 +1747,13 @@ if __name__ == '__main__':
     while True:
         try:
             # 检查Redis连接状态
-            r.ping()
-            print('!!!!!!!!!!!!!!!!!!!!!!!Redis is ready dns.py\n')
-            start = True
-            break
-        except redis.ConnectionError:
+            url = 'http://127.0.0.1:22772/api/ping'
+            response = requests.get(url)
+            if response.status_code == 200:
+                print('!!!!!!!!!!!!!!!!!!!!!!!Redis is ready dns.py\n')
+                start = True
+                break
+        except Exception as e:
             # 连接失败，等待一段时间后重试
             time.sleep(1)
     if start:

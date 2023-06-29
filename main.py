@@ -24,7 +24,6 @@ import m3u8
 from zhconv import convert
 import aiohttp
 import aiofiles
-import redis
 import requests
 import time
 from urllib.parse import urlparse, urlencode
@@ -45,8 +44,7 @@ app.config['PROXY_CONNECT_TIMEOUT'] = 6000
 app.config['PROXY_SEND_TIMEOUT'] = 6000
 app.config['PROXY_READ_TIMEOUT'] = 6000
 
-r = redis.Redis(host='localhost', port=22772)
-channel = 'dns-notify'
+
 ##########################################################redis key#############################################
 REDIS_KEY_M3U_LINK = "m3ulink"
 REDIS_KEY_M3U_DATA = "localm3u"
@@ -637,29 +635,67 @@ async def pingM3u(session, value, real_dict, key, mintimeout, maxTimeout):
 
 ##########################################################redis数据库操作#############################################
 # redis增加和修改
+
+url_flask = 'http://127.0.0.1:22772/api/data2'
+
+
 def redis_add(key, value):
-    r.set(key, value)
+    try:
+        data = {
+            'cacheKey': key,
+            'action': 'add_single',
+            'dict_data': value
+        }
+        response = requests.post(url_flask, data=data)
+        if response.status_code == 200:
+            return 1
+        return 0
+    except Exception as e:
+        return 0
 
 
 # redis查询
 def redis_get(key):
     try:
-        return r.get(key)
+        data = {
+            'cacheKey': key,
+            'action': 'get_single',
+        }
+        response = requests.post(url_flask, data=data)
+        # 字符串格式的json数据
+        response_data = response.json()
+        return response_data['result']
     except:
         return None
 
 
 # redis存储map字典，字典主键唯一，重复主键只会复写
 def redis_add_map(key, my_dict):
-    r.hmset(key, my_dict)
+    try:
+        data = {
+            'cacheKey': key,
+            'action': 'add_map',
+            'dict_data': json.dumps(my_dict).encode('utf-8')
+        }
+        response = requests.post(url_flask, data=data)
+        if response.status_code == 200:
+            return 1
+        return 0
+    except Exception as e:
+        return 0
 
 
 # redis取出map字典
 def redis_get_map(key):
     try:
-        redis_dict = r.hgetall(key)
-        python_dict = {key.decode('utf-8'): value.decode('utf-8') for key, value in redis_dict.items()}
-        return python_dict
+        data = {
+            'cacheKey': key,
+            'action': 'get_map'
+        }
+        response = requests.post(url_flask, data=data)
+        # 字符串格式的json数据
+        response_data = response.json()
+        return response_data
     except Exception as e:
         return {}
 
@@ -667,7 +703,7 @@ def redis_get_map(key):
 # redis取出map字典key
 def redis_get_map_keys(key):
     try:
-        redis_dict = r.hgetall(key)
+        redis_dict = redis_get_map(key)
         array = [key for key in redis_dict.keys()]
         return array, redis_dict
     except:
@@ -677,34 +713,54 @@ def redis_get_map_keys(key):
 # redis删除map字典
 def redis_del_map(key):
     try:
-        r.delete(key)
+        data = {
+            'cacheKey': key,
+            'action': 'delete'
+        }
+        response = requests.post(url_flask, data=data)
+        if response.status_code == 200:
+            return 1
+        return 0
     except Exception as e:
-        pass
+        return 0
 
 
 # redis删除字典单个键值对
 def redis_del_map_key(key, map_key):
     try:
-        r.hdel(key, map_key)
+        return redis_del_map_keys(key, [map_key])
     except Exception as e:
-        pass
+        return 0
 
 
 # redis删除字典多个键值对
 def redis_del_map_keys(key, map_keys):
     try:
-        if len(map_keys) == 0:
-            return
-        r.hdel(key, *map_keys)
+        data = {
+            'cacheKey': key,
+            'action': 'delete_keys',
+            'dict_data': json.dumps(map_keys).encode('utf-8')
+        }
+        response = requests.post(url_flask, data=data)
+        if response.status_code == 200:
+            return 1
+        return 0
     except Exception as e:
-        pass
+        return 0
 
 
 def redis_public_message(message):
     try:
-        r.publish(channel, message)
-    except:
-        pass
+        url = 'http://localhost:22772/api/data'
+        data = {
+            'message': message
+        }
+        response = requests.post(url, data=data)
+        if response.status_code == 200:
+            return 1
+        return 0
+    except Exception as e:
+        return 0
 
 
 #########################################################通用工具区#################################################
@@ -961,7 +1017,7 @@ def check_file(m3u_dict):
         # chaoronghe24()
         # chaoronghe25()
         oldChinaChannelDict = redis_get_map(REDIS_KET_TMP_CHINA_CHANNEL)
-        if oldChinaChannelDict:
+        if oldChinaChannelDict and len(oldChinaChannelDict) > 0:
             tmp_url_tvg_name_dict.update(oldChinaChannelDict)
         if len(tmp_url_tvg_name_dict.keys()) > 0:
             redis_add_map(REDIS_KET_TMP_CHINA_CHANNEL, tmp_url_tvg_name_dict)
@@ -1115,7 +1171,10 @@ def fetch_url(url, redis_dict):
         # print(f"success to fetch URL: {url}")
         return m3u_string
     except requests.exceptions.RequestException as e:
-        url = url.decode('utf-8')
+        try:
+            url = url.decode('utf-8')
+        except:
+            pass
         response = requests.get(url, timeout=15, verify=False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
@@ -1198,7 +1257,10 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
         checkToDecrydecrypt2(url, passwordDict, m3u_string, filenameDict, secretNameDict, uploadGitee,
                              uploadGithub, uploadWebdav)
     except requests.exceptions.RequestException as e:
-        url = url.decode('utf-8')
+        try:
+            url = url.decode('utf-8')
+        except:
+            pass
         response = requests.get(url, timeout=15, verify=False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
@@ -1227,7 +1289,10 @@ def fetch_url3(url, passwordDict, filenameDict):
         # 加密文件检测和解码
         checkToDecrydecrypt3(url, passwordDict, m3u_string, filenameDict)
     except requests.exceptions.RequestException as e:
-        url = url.decode('utf-8')
+        try:
+            url = url.decode('utf-8')
+        except:
+            pass
         response = requests.get(url, timeout=15, verify=False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
@@ -1368,8 +1433,6 @@ def fuck_m3u_to_txt(file_path, txt_path):
 
 def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
     results, redis_dict = redis_get_map_keys(redisKeyLink)
-    if len(results) == 0:
-        return "empty"
     ism3u = processDataMethodName == 'process_data_abstract'
     global CHANNEL_LOGO
     global CHANNEL_GROUP
@@ -1813,7 +1876,7 @@ def init_db():
 def init_function_dict():
     global function_dict
     dict = redis_get_map(REDIS_KEY_FUNCTION_DICT)
-    if dict:
+    if dict and len(dict.keys()) > 0:
         keys = dict.keys()
         # 生成有效M3U
         if 'switch' not in keys:
@@ -2892,7 +2955,7 @@ def generate_multi_json_string(mapnameArr):
     # 普通python字典结构统一转换成对应的redis结构
     for name in mapnameArr:
         m3ulink = redis_get_map(name)
-        if len(m3ulink.keys()) > 0:
+        if m3ulink and len(m3ulink.keys()) > 0:
             finalDict[name] = m3ulink
     outDict1 = {}
     outDict1[NORMAL_REDIS_KEY] = finalDict
@@ -2966,21 +3029,16 @@ def upload_oneKey_json(request):
     try:
         json_dict = json.loads(request.get_data())
         # 批量写入数据
-        pipe = r.pipeline()
         for key, value in json_dict.items():
             if key in NORMAL_REDIS_KEY:
                 for finalKey11, finalDict11 in value.items():
                     if len(finalDict11) > 0:
-                        pipe.hmset(finalKey11, finalDict11)
-                        # redis_add_map(finalKey11, finalDict11)
+                        redis_add_map(finalKey11, finalDict11)
                         importToReloadCache(finalKey11, finalDict11)
-                        if len(finalDict11.keys()) > 100:
-                            pipe.execute()
             elif key in SPECIAL_REDIS_KEY:
                 for finalKey22, finalDict22 in value.items():
                     if len(finalDict22) > 0:
                         importToReloadCacheForSpecial(finalKey22, finalDict22)
-        pipe.execute()
         return jsonify({'success': True})
     except Exception as e:
         print("An error occurred in upload_oneKey_json: ", e)
@@ -3301,7 +3359,7 @@ def getProxyButton():
 def getProxyServerChosen():
     # 根据选择的代理配置名字获取代理配置的url
     dict = redis_get_map(REDIS_KEY_PROXIES_SERVER_CHOSEN)
-    if dict:
+    if dict and len(dict.keys()) > 0:
         model = dict[REDIS_KEY_PROXIES_SERVER_CHOSEN]
         models = redis_get_map(REDIS_KEY_PROXIES_SERVER)
         for url, name in models.items():
@@ -3316,7 +3374,7 @@ def getProxyServerChosen():
 def getProxyModelChosen():
     # 根据选择的代理配置名字获取代理配置的url
     dict = redis_get_map(REDIS_KEY_PROXIES_MODEL_CHOSEN)
-    if dict:
+    if dict and len(dict.keys()) > 0:
         model = dict[REDIS_KEY_PROXIES_MODEL_CHOSEN]
         models = redis_get_map(REDIS_KEY_PROXIES_MODEL)
         for url, name in models.items():
@@ -3575,7 +3633,10 @@ def init_threads_num():
         return data
     num = redis_get(REDIS_KEY_THREADS)
     if num:
-        num = int(num.decode())
+        try:
+            num = int(num)
+        except:
+            num = 1000
         if num == 0:
             num = 1000
             redis_add(REDIS_KEY_THREADS, num)
@@ -3599,7 +3660,10 @@ def init_dns_timeout():
         return data
     num = redis_get(REDIS_KEY_DNS_TIMEOUT)
     if num:
-        num = int(num.decode())
+        try:
+            num = int(num)
+        except:
+            num = 20
         if num == 0:
             num = 20
             redis_add(REDIS_KEY_DNS_TIMEOUT, num)
@@ -3621,7 +3685,10 @@ def init_dns_query_num():
         return data
     num = redis_get(REDIS_KEY_DNS_QUERY_NUM)
     if num:
-        num = int(num.decode())
+        try:
+            num = int(num)
+        except:
+            num = 150
         if num == 0:
             num = 150
             redis_add(REDIS_KEY_DNS_QUERY_NUM, num)
@@ -3643,7 +3710,10 @@ def init_china_dns_port():
         return data
     num = redis_get(REDIS_KEY_CHINA_DNS_PORT)
     if num:
-        num = int(num.decode())
+        try:
+            num = int(num)
+        except:
+            num = 5336
         if num == 0:
             num = 5336
             redis_add(REDIS_KEY_CHINA_DNS_PORT, num)
@@ -3667,7 +3737,10 @@ def init_extra_dns_port():
         return data
     num = redis_get(REDIS_KEY_EXTRA_DNS_PORT)
     if num:
-        num = int(num.decode())
+        try:
+            num = int(num)
+        except:
+            num = 7874
         if num == 0:
             num = 7874
             redis_add(REDIS_KEY_EXTRA_DNS_PORT, num)
@@ -3691,7 +3764,7 @@ def init_china_dns_server():
         return data
     num = redis_get(REDIS_KEY_CHINA_DNS_SERVER)
     if num:
-        num = num.decode()
+        num = num
         if num == "":
             num = "127.0.0.1"
             redis_add(REDIS_KEY_CHINA_DNS_SERVER, num)
@@ -3715,7 +3788,7 @@ def init_extra_dns_server():
         return data
     num = redis_get(REDIS_KEY_EXTRA_DNS_SERVER)
     if num:
-        num = num.decode()
+        num = num
         if num == "":
             num = "127.0.0.1"
             redis_add(REDIS_KEY_EXTRA_DNS_SERVER, num)
@@ -3744,10 +3817,10 @@ def initReloadCacheForNormal():
                 global redisKeyYoutubeM3u
                 redisKeyYoutube.clear()
                 dict = redis_get_map(REDIS_KEY_YOUTUBE)
-                if dict:
+                if dict and len(dict.keys()) > 0:
                     redisKeyYoutube.update(dict)
                 dict2 = redis_get_map(REDIS_KEY_YOUTUBE_M3U)
-                if dict2:
+                if dict2 and len(dict2.keys()) > 0:
                     redisKeyYoutubeM3u.update(dict2)
             except Exception as e:
                 pass
@@ -3757,10 +3830,10 @@ def initReloadCacheForNormal():
                 global redisKeyBililiM3u
                 redisKeyBilili.clear()
                 dict = redis_get_map(REDIS_KEY_BILIBILI)
-                if dict:
+                if dict and len(dict.keys()) > 0:
                     redisKeyBilili.update(dict)
                 dict2 = redis_get_map(REDIS_KEY_BILIBILI_M3U)
-                if dict2:
+                if dict2 and len(dict2.keys()) > 0:
                     redisKeyBililiM3u.update(dict2)
             except Exception as e:
                 pass
@@ -3770,10 +3843,10 @@ def initReloadCacheForNormal():
                 global redisKeyHuyaM3u
                 redisKeyHuya.clear()
                 dict = redis_get_map(REDIS_KEY_HUYA)
-                if dict:
+                if dict and len(dict.keys()) > 0:
                     redisKeyHuya.update(dict)
                 dict3 = redis_get_map(REDIS_KEY_HUYA_M3U)
-                if dict3:
+                if dict3 and len(dict3.keys()) > 0:
                     redisKeyHuyaM3u.update(dict3)
             except Exception as e:
                 pass
@@ -3783,10 +3856,10 @@ def initReloadCacheForNormal():
                 global redisKeyYYM3u
                 redisKeyYY.clear()
                 dict = redis_get_map(REDIS_KEY_YY)
-                if dict:
+                if dict and len(dict.keys()) > 0:
                     redisKeyYY.update(dict)
                 dict3 = redis_get_map(REDIS_KEY_YY_M3U)
-                if dict3:
+                if dict3 and len(dict3.keys()) > 0:
                     redisKeyYYM3u.update(dict3)
             except Exception as e:
                 pass
@@ -3796,10 +3869,10 @@ def initReloadCacheForNormal():
                 global redisKeyDOUYINM3u
                 redisKeyDOUYIN.clear()
                 dict = redis_get_map(REDIS_KEY_DOUYIN)
-                if dict:
+                if dict and len(dict.keys()) > 0:
                     redisKeyDOUYIN.update(dict)
                 dict3 = redis_get_map(REDIS_KEY_DOUYIN_M3U)
-                if dict3:
+                if dict3 and len(dict3.keys()) > 0:
                     redisKeyDOUYINM3u.update(dict3)
             except Exception as e:
                 pass
@@ -3810,13 +3883,13 @@ def initReloadCacheForNormal():
                 global redisKeyAlistM3uTsPath
                 redisKeyAlist.clear()
                 dict = redis_get_map(REDIS_KEY_ALIST)
-                if dict:
+                if dict and len(dict.keys()) > 0:
                     redisKeyAlist.update(dict)
                 dict3 = redis_get_map(REDIS_KEY_Alist_M3U)
-                if dict3:
+                if dict3 and len(dict3.keys()) > 0:
                     redisKeyAlistM3u.update(dict3)
                 dict4 = redis_get_map(REDIS_KEY_Alist_M3U_TS_PATH)
-                if dict4:
+                if dict4 and len(dict4.keys()) > 0:
                     redisKeyAlistM3uTsPath.update(dict4)
             except Exception as e:
                 pass
@@ -3826,10 +3899,10 @@ def initReloadCacheForNormal():
                 global redisKeyTWITCHM3u
                 redisKeyTWITCH.clear()
                 dict = redis_get_map(REDIS_KEY_TWITCH)
-                if dict:
+                if dict and len(dict.keys()) > 0:
                     redisKeyTWITCH.update(dict)
                 dict3 = redis_get_map(REDIS_KEY_TWITCH_M3U)
-                if dict3:
+                if dict3 and len(dict3.keys()) > 0:
                     redisKeyTWITCHM3u.update(dict3)
             except Exception as e:
                 pass
@@ -3839,10 +3912,10 @@ def initReloadCacheForNormal():
                 global redisKeyNormalM3U
                 redisKeyNormal.clear()
                 dict = redis_get_map(REDIS_KEY_NORMAL)
-                if dict:
+                if dict and len(dict.keys()) > 0:
                     redisKeyNormal.update(dict)
                 dict3 = redis_get_map(REDIS_KEY_NORMAL_M3U)
-                if dict3:
+                if dict3 and len(dict3.keys()) > 0:
                     redisKeyNormalM3U.update(dict3)
             except Exception as e:
                 pass
@@ -3880,7 +3953,7 @@ def init_pass(cacheKey):
     if data and data != '':
         return data
     dict = redis_get_map(REDIS_KEY_SECRET_PASS_NOW)
-    if dict:
+    if dict and len(dict.keys()) > 0:
         value = dict.get(cacheKey)
         if value:
             redisKeySecretPassNow[cacheKey] = value
@@ -3907,7 +3980,7 @@ def init_gitee(cachekey, redisKey, cache):
     if data:
         return data
     allDict = redis_get_map(redisKey)
-    if allDict:
+    if allDict and len(allDict.keys()) > 0:
         cacheValue = allDict.get(cachekey)
         if cacheValue:
             cacheValue = cacheValue
@@ -3981,7 +4054,7 @@ def update_m3u_subscribe_pass_by_hand(cachekey, password):
         addHistorySubscribePass(oldpass, tagname)
     else:
         oldpassDict = redis_get_map(REDIS_KEY_SECRET_PASS_NOW)
-        if oldpassDict:
+        if oldpassDict and len(oldpassDict.keys()) > 0:
             oldpass = oldpassDict.get(cachekey)
             addHistorySubscribePass(oldpass.decode(), tagname)
     tmp_dict = {}
@@ -4013,7 +4086,7 @@ def update_m3u_subscribe_pass(cachekey):
         addHistorySubscribePass(oldpass, tagname)
     else:
         oldpassDict = redis_get_map(REDIS_KEY_SECRET_PASS_NOW)
-        if oldpassDict:
+        if oldpassDict and len(oldpassDict.keys()) > 0:
             oldpass = oldpassDict.get(cachekey)
             addHistorySubscribePass(oldpass.decode(), tagname)
     password = generateEncryptPassword()
@@ -4154,7 +4227,7 @@ def init_IP():
         return data
     num = redis_get(REDIS_KEY_IP)
     if num:
-        num = num.decode()
+        num = num
         if num == "":
             num = getMasterIp()
             redis_add(REDIS_KEY_IP, num)
@@ -4267,7 +4340,7 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
 
 def init_file_name():
     dict = redis_get_map(REDIS_KEY_FILE_NAME)
-    if dict:
+    if dict and len(dict.keys()) > 0:
         global file_name_dict
         file_name_dict.clear()
         file_name_dict = dict.copy()
@@ -4281,7 +4354,7 @@ def getFileNameByTagName(tagname):
         return name
     else:
         dict = redis_get_map(REDIS_KEY_FILE_NAME)
-        if dict:
+        if dict and len(dict.keys()) > 0:
             name = dict.get(tagname)
             if name and name != '':
                 file_name_dict[tagname] = name
@@ -4499,7 +4572,7 @@ def serverMode():
     return 'success'
 
 
-# 修改DNS并发查询数量
+# 修改DNS超时时间戳
 @app.route('/api/savetimeout', methods=['POST'])
 @requires_auth
 def savetimeout():
@@ -4705,7 +4778,7 @@ def returnDictCache(redisKey, cacheDict):
     if len(cacheDict.keys()) > 0:
         return jsonify(cacheDict)
     dict = redis_get_map(redisKey)
-    if dict:
+    if dict and len(dict.keys()) > 0:
         cacheDict.update(dict)
     return jsonify(cacheDict)
 
@@ -5082,18 +5155,18 @@ def getMaxRank():
     return str(num + 1)
 
 
-def checkAndUpdateM3uRank(group):
-    if group == '':
-        return
-    global m3u_whitlist_rank
-    global m3u_whitlist
-    # 新分组，默认加到最后
-    if group not in m3u_whitlist.values():
-        if group not in m3u_whitlist_rank:
-            rank = getMaxRank()
-            m3u_whitlist_rank[group] = rank
-            redis_add_map(REDIS_KEY_M3U_WHITELIST_RANK, {group, rank})
-    getRankWhiteList()
+# def checkAndUpdateM3uRank(group):
+#     if group == '':
+#         return
+#     global m3u_whitlist_rank
+#     global m3u_whitlist
+#     # 新分组，默认加到最后
+#     if group not in m3u_whitlist.values():
+#         if group not in m3u_whitlist_rank:
+#             rank = getMaxRank()
+#             m3u_whitlist_rank[group] = rank
+#             redis_add_map(REDIS_KEY_M3U_WHITELIST_RANK, {group, rank})
+#     getRankWhiteList()
 
 
 # 添加M3U黑名单
@@ -5364,7 +5437,7 @@ def chooseProxyServer():
 @requires_auth
 def getSelectedModel():
     dict = redis_get_map(REDIS_KEY_PROXIES_MODEL_CHOSEN)
-    if dict:
+    if dict and len(dict.keys()) > 0:
         value = dict[REDIS_KEY_PROXIES_MODEL_CHOSEN]
         if value:
             return jsonify({'button': value})
@@ -5387,7 +5460,7 @@ def getSelectedModel():
 @requires_auth
 def getSelectedServer():
     dict = redis_get_map(REDIS_KEY_PROXIES_SERVER_CHOSEN)
-    if dict:
+    if dict and len(dict.keys()) > 0:
         value = dict[REDIS_KEY_PROXIES_SERVER_CHOSEN]
         if value:
             return jsonify({'button': value})
@@ -8460,11 +8533,13 @@ if __name__ == '__main__':
     while True:
         try:
             # 检查Redis连接状态
-            r.ping()
-            print('!!!!!!!!!!!!!!!!!!!!!!!Redis is ready main.py\n')
-            start = True
-            break
-        except redis.ConnectionError:
+            url = 'http://127.0.0.1:22772/api/ping'
+            response = requests.get(url)
+            if response.status_code == 200:
+                print('!!!!!!!!!!!!!!!!!!!!!!!Redis is ready dns.py\n')
+                start = True
+                break
+        except Exception as e:
             # 连接失败，等待一段时间后重试
             time.sleep(1)
     if start:

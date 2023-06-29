@@ -81,58 +81,18 @@ def redis_del_map(key):
         pass
 
 
-def remove_repeat_second_domain(tmpDict):
-    leve2_dict = {}
-    result_dict = {}
-    for key in tmpDict.keys():
-        try:
-            # 二级域名名字,一级域名名字，顶级域名名字
-            start, middle, end = key.split('.')
-            first_domain = f'{middle}.{end}'
-            try:
-                leve2 = leve2_dict.get(key)
-                leve2[first_domain] = ''
-                leve2_dict[key] = leve2
-            except Exception as e:
-                leve2_dict[key] = {first_domain: ''}
-        except Exception as e:
-            try:
-                # 一级域名名字，顶级域名名字
-                start, end = key.split('.')
-                try:
-                    leve2 = leve2_dict.get(key)
-                    continue
-                except Exception as e:
-                    leve2_dict[key] = {}
-            except Exception as e:
-                result_dict[key] = ''
-    for key in leve2_dict.keys():
-        try:
-            leve2 = leve2_dict.get(key)
-            # 子域名太多，直接记录一级域名
-            if len(leve2.keys()) >= 15:
-                result_dict[key] = ''
-                continue
-            for second_domain in leve2.keys():
-                result_dict[second_domain] = ''
-        except Exception as e:
-            pass
-    return result_dict
-
-
 # 简易dns黑白名单保留最低限度的1000条数据
-def clearAndStoreAtLeast50DataInRedis(redisKey, cacheDict):
+def clearAndStoreAtLeast50DataInRedis(redisKey, cacheDict, num):
     tmpDict = redis_get_map(redisKey)
-    slim_dict = remove_repeat_second_domain(tmpDict)
     cacheDict.clear()
     count = 0
     # data = dict(list(tmpDict.items())[:1000])
     data = {}
-    for key in slim_dict.keys():
+    for key in tmpDict.keys():
         if count > 1000:
             break
         data[key] = ''
-        updateSpData(key, cacheDict)
+        updateSpData(key, cacheDict, num)
         count = count + 1
     if len(data.keys()) > 0:
         try:
@@ -621,7 +581,7 @@ def check_domain_inWhiteListPolicy(domain_name_str, white_list_chunk):
         pass
 
 
-def stupidThink(domain_name):
+def stupidThink(domain_name, limitNum):
     try:
         sub_domains = ['.'.join(domain_name.split('.')[i:]) for i in range(len(domain_name.split('.')) - 1)]
     except Exception as e:
@@ -642,8 +602,9 @@ def stupidThink(domain_name):
                 # 一级域名有顶级域名，找二级域名,没有还是用一级域名
                 if domain_first.startswith(key):
                     return domain_second
+
             # 怀疑是垃圾二级域名，只记录一级域名
-            if len(domain_second.split('.')[0]) >= 20:
+            if len(domain_second.split('.')[0]) >= limitNum:
                 return domain_first
             return domain_second
         return domain_first
@@ -923,23 +884,25 @@ def initSimpleBlackList():
     global black_list_simple_policy
     simpleblacklist = redis_get_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST)
     if simpleblacklist:
+        num = int(getFileNameByTagName('dnsLimitRecordSecondDomain'))
         black_list_simple_policy.clear()
         for domain in simpleblacklist:
-            updateSpData(domain, black_list_simple_policy)
+            updateSpData(domain, black_list_simple_policy, num)
 
 
 def initSimpleWhiteList():
     global white_list_simple_nameserver_policy
     simplewhitelist = redis_get_map(REDIS_KEY_DNS_SIMPLE_WHITELIST)
     if simplewhitelist:
+        num = int(getFileNameByTagName('dnsLimitRecordSecondDomain'))
         white_list_simple_nameserver_policy.clear()
         for domain in simplewhitelist:
-            updateSpData(domain, white_list_simple_nameserver_policy)
+            updateSpData(domain, white_list_simple_nameserver_policy, num)
 
 
 # 顶级域名,一级域名开头字母,一级域名长度,一级域名,二级域名,''
 # 顶级域名,一级域名开头字母,一级域名长度,一级域名,'',''
-def updateSpData(domain_name_str, dict):
+def updateSpData(domain_name_str, dict, numlimit):
     try:
         # 二级域名名字,一级域名名字，顶级域名名字
         start, middle, end = domain_name_str.split('.')
@@ -966,7 +929,12 @@ def updateSpData(domain_name_str, dict):
             length1Dict[middle] = {}
         # 二级域名字典
         startStr1Dict = length1Dict[middle]
-        startStr1Dict[domain_name_str] = ''
+        # 防止测试域名和临时域名过量存储
+        if len(startStr1Dict.keys()) >= numlimit:
+            startStr1Dict.clear()
+            startStr1Dict[f'{middle}.{end}'] = ''
+        else:
+            startStr1Dict[domain_name_str] = ''
     except Exception as e:
         try:
             # 顶级域名,一级域名开头字母,一级域名长度,一级域名,''
@@ -1008,9 +976,10 @@ def initWhiteListSP():
     global whitelistSpData
     whitelistSP = redis_get_map(REDIS_KEY_WHITELIST_DATA_SP)
     if whitelistSP:
+        num = int(getFileNameByTagName('dnsLimitRecordSecondDomain'))
         whitelistSpData.clear()
         for domain in whitelistSP:
-            updateSpData(domain, whitelistSpData)
+            updateSpData(domain, whitelistSpData, num)
 
 
 # 黑名单总表转换成tire树，数据太大，只用这个方法更新
@@ -1018,9 +987,10 @@ def initBlackListSP():
     global blacklistSpData
     blacklistSP = redis_get_map(REDIS_KEY_BLACKLIST_DATA_SP)
     if blacklistSP:
+        num = int(getFileNameByTagName('dnsLimitRecordSecondDomain'))
         blacklistSpData.clear()
         for domain in blacklistSP:
-            updateSpData(domain, blacklistSpData)
+            updateSpData(domain, blacklistSpData, num)
 
 
 # 将CIDR表示的IP地址段转换为IP网段数组
@@ -1145,6 +1115,8 @@ REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG = "updateblacklistspflag"
 REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG = "updatechinadomainflag"
 REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG = "updateforeigndomainflag"
 REDIS_KEY_UPDATE_DNS_MODE_FLAG = "updatednsmodeflag"
+REDIS_KEY_UPDATE_DNS_LIMIT_SECOND_DOMAIN_FLAG = "updatednslimitseconddomainflag"
+REDIS_KEY_UPDATE_DNS_LIMIT_SECOND_DOMAIN_LEN_FLAG = "updatednslimitseconddomainlenflag"
 REDIS_KEY_OPEN_AUTO_UPDATE_SIMPLE_WHITE_AND_BLACK_LIST_FLAG = 'openAutoUpdateSimpleWhiteAndBlackList'
 
 # 上次更新时间戳
@@ -1229,9 +1201,10 @@ def clearCacheFast():
 # 每天定时清除一次简易dns
 def clearCache():
     global black_list_simple_policy
-    clearAndStoreAtLeast50DataInRedis(REDIS_KEY_DNS_SIMPLE_BLACKLIST, black_list_simple_policy)
+    num = int(getFileNameByTagName('dnsLimitRecordSecondDomain'))
+    clearAndStoreAtLeast50DataInRedis(REDIS_KEY_DNS_SIMPLE_BLACKLIST, black_list_simple_policy, num)
     global white_list_simple_nameserver_policy
-    clearAndStoreAtLeast50DataInRedis(REDIS_KEY_DNS_SIMPLE_WHITELIST, white_list_simple_nameserver_policy)
+    clearAndStoreAtLeast50DataInRedis(REDIS_KEY_DNS_SIMPLE_WHITELIST, white_list_simple_nameserver_policy, num)
 
 
 # 自动更新黑白名单数据至redis,多线程插入会丢失数据，只能把插数据的操作集中到单个线程
@@ -1240,23 +1213,25 @@ def deal_black_list_simple_policy_queue():
     global white_list_simple_nameserver_policy_queue
     global white_list_simple_nameserver_policy
     global black_list_simple_policy
+    num = int(getFileNameByTagName('dnsLimitRecordSecondDomain'))
+    limitNum = int(getFileNameByTagName('dnsLimitRecordSecondLenDomain'))
     add_dict = {}
     add_dict2 = {}
     total_black = redis_get_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST)
     for i in range(10):
         if not black_list_simple_policy_queue.empty():
             domain = black_list_simple_policy_queue.get()
-            domain = stupidThink(domain)
+            domain = stupidThink(domain, limitNum)
             add_dict[domain] = ''
         if not white_list_simple_nameserver_policy_queue.empty():
             domain2 = white_list_simple_nameserver_policy_queue.get()
-            domain2 = stupidThink(domain2)
+            domain2 = stupidThink(domain2, limitNum)
             if domain2 not in total_black.keys():
                 add_dict2[domain2] = ''
     if len(add_dict) > 0:
         redis_add_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST, add_dict)
         for key in add_dict.keys():
-            updateSpData(key, black_list_simple_policy)
+            updateSpData(key, black_list_simple_policy, num)
     add_dict3 = {}
     for key in add_dict2.keys():
         if key not in add_dict.keys():
@@ -1264,7 +1239,7 @@ def deal_black_list_simple_policy_queue():
     if len(add_dict3) > 0:
         redis_add_map(REDIS_KEY_DNS_SIMPLE_WHITELIST, add_dict3)
         for key in add_dict3.keys():
-            updateSpData(key, white_list_simple_nameserver_policy)
+            updateSpData(key, white_list_simple_nameserver_policy, num)
 
 
 china_top_domain_list = []
@@ -1272,10 +1247,12 @@ foreign_top_domain_list = []
 REDIS_KEY_FILE_NAME = "redisKeyFileName"
 
 file_name_dict = {'chinaTopDomain': 'cn,中国', 'foreignTopDomain':
-    'xyz,club,online,site,top,win', 'dnsMode': '0'}
+    'xyz,club,online,site,top,win', 'dnsMode': '0', 'dnsLimitRecordSecondDomain': '15',
+                  'dnsLimitRecordSecondLenDomain': '20'}
 
 file_name_dict_default = {'chinaTopDomain': 'cn,中国', 'foreignTopDomain':
-    'xyz,club,online,site,top,win', 'dnsMode': '0'}
+    'xyz,club,online,site,top,win', 'dnsMode': '0', 'dnsLimitRecordSecondDomain': '15',
+                          'dnsLimitRecordSecondLenDomain': '20'}
 
 
 def getFileNameByTagName(tagname):
@@ -1301,38 +1278,21 @@ def getFileNameByTagName(tagname):
             return name
 
 
-def update_china_top_domain():
+def update_dns_limit_second_domain():
+    global file_name_dict
+    global foreign_top_domain_list
     global china_top_domain_list
     function_dict = redis_get_map(REDIS_KEY_FILE_NAME)
     if function_dict and len(function_dict) > 0:
-        name = function_dict.get('chinaTopDomain')
-        if name:
+        name = function_dict.get('dnsLimitRecordSecondDomain')
+        if name and name != getFileNameByTagName('dnsLimitRecordSecondDomain'):
             try:
-                arr = name.split(',')
-                if arr:
-                    china_top_domain_list.clear()
-                    for i in arr:
-                        if i == '':
-                            continue
-                        china_top_domain_list.append(f'.{i}')
-                file_name_dict['chinaTopDomain'] = name
-            except Exception as e:
+                num = int(name)
+                if num < 1:
+                    return
+                file_name_dict['dnsLimitRecordSecondDomain'] = str(num)
+            except:
                 pass
-
-
-def update_dns_mode():
-    global file_name_dict
-    function_dict = redis_get_map(REDIS_KEY_FILE_NAME)
-    if function_dict and len(function_dict) > 0:
-        name = function_dict.get('dnsMode')
-        if name and name != getFileNameByTagName('dnsMode'):
-            if name == '0' or name == '1':
-                file_name_dict['dnsMode'] = name
-
-
-def update_foreign_top_domain():
-    global foreign_top_domain_list
-    function_dict = redis_get_map(REDIS_KEY_FILE_NAME)
     if function_dict and len(function_dict) > 0:
         name = function_dict.get('foreignTopDomain')
         if name:
@@ -1345,6 +1305,25 @@ def update_foreign_top_domain():
                             continue
                         foreign_top_domain_list.append(f'.{i}')
                 file_name_dict['foreignTopDomain'] = name
+            except Exception as e:
+                pass
+    if function_dict and len(function_dict) > 0:
+        name = function_dict.get('dnsMode')
+        if name and name != getFileNameByTagName('dnsMode'):
+            if name == '0' or name == '1':
+                file_name_dict['dnsMode'] = name
+    if function_dict and len(function_dict) > 0:
+        name = function_dict.get('chinaTopDomain')
+        if name:
+            try:
+                arr = name.split(',')
+                if arr:
+                    china_top_domain_list.clear()
+                    for i in arr:
+                        if i == '':
+                            continue
+                        china_top_domain_list.append(f'.{i}')
+                file_name_dict['chinaTopDomain'] = name
             except Exception as e:
                 pass
 
@@ -1407,6 +1386,22 @@ def init():
                         name = data.split('_')[1]
                         if name == '0' or name == '1':
                             file_name_dict['dnsMode'] = name
+                    elif REDIS_KEY_UPDATE_DNS_LIMIT_SECOND_DOMAIN_FLAG in data:
+                        name = data.split('_')[1]
+                        try:
+                            number = int(name)
+                            if number > 0:
+                                file_name_dict['dnsLimitRecordSecondDomain'] = str(number)
+                        except Exception as e:
+                            pass
+                    elif REDIS_KEY_UPDATE_DNS_LIMIT_SECOND_DOMAIN_LEN_FLAG in data:
+                        name = data.split('_')[1]
+                        try:
+                            number = int(name)
+                            if number > 0:
+                                file_name_dict['dnsLimitRecordSecondLenDomain'] = str(number)
+                        except Exception as e:
+                            pass
                     elif REDIS_KEY_UPDATE_THREAD_NUM_FLAG in data:
                         num = data.split('_')[1]
                         if num == 0:
@@ -1419,8 +1414,9 @@ def init():
                         arr = data.split('_')
                         # 0-单个增加，1-全部删除，3-批量增加，批量删除，单个删除，全部拉取
                         if arr[1] == '0':
+                            num = int(getFileNameByTagName('dnsLimitRecordSecondDomain'))
                             updateSpData(data.split(f'{REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG}_0_')[1],
-                                         white_list_simple_nameserver_policy)
+                                         white_list_simple_nameserver_policy, num)
                         elif arr[1] == '1':
                             white_list_simple_nameserver_policy.clear()
                         elif arr[1] == '3':
@@ -1430,8 +1426,9 @@ def init():
                         arr = data.split('_')
                         # 0-单个增加，1-全部删除，3-批量增加，批量删除，单个删除，全部拉取
                         if arr[1] == '0':
+                            num = int(getFileNameByTagName('dnsLimitRecordSecondDomain'))
                             updateSpData(data.split(f'{REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG}_0_')[1],
-                                         black_list_simple_policy)
+                                         black_list_simple_policy, num)
                         elif arr[1] == '1':
                             black_list_simple_policy.clear()
                         elif arr[1] == '3':
@@ -1624,6 +1621,7 @@ def redis_add_map(key, my_dict):
 
 
 def main():
+    update_dns_limit_second_domain()
     init_threads_num()
     init_china_dns_server()
     init_china_dns_port()
@@ -1633,9 +1631,6 @@ def main():
     init_dns_timeout()
     initWhiteListSP()
     initBlackListSP()
-    update_china_top_domain()
-    update_foreign_top_domain()
-    update_dns_mode()
     # initIPV4List()
     initSimpleWhiteList()
     initSimpleBlackList()

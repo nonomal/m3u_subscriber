@@ -1039,6 +1039,24 @@
                     class="grid-item button stubbonsave">保存
             </button>
         </div>
+        <div style="display: flex;width: 100%;">
+            dns限制一级域名下二级域名记录数(防止测试域名和临时域名过量注入)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="dnsLimitRecordSecondDomain" class="stubboninput" placeholder="15"/>
+            <button onclick="changeFileName('dnsLimitRecordSecondDomain', 'dnsLimitRecordSecondDomain', dnsLimitRecordSecondDomain)"
+                    class="grid-item button stubbonsave">保存
+            </button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            dns限制二级域名记录长度(防止测试域名和临时域名过量注入)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="dnsLimitRecordSecondLenDomain" class="stubboninput" placeholder="20"/>
+            <button onclick="changeFileName('dnsLimitRecordSecondLenDomain', 'dnsLimitRecordSecondLenDomain', dnsLimitRecordSecondLenDomain)"
+                    class="grid-item button stubbonsave">保存
+            </button>
+        </div>
     </div>
     <div id="page13" style="display: none;">
         <h1>订阅密码锁</h1>
@@ -2511,6 +2529,8 @@
     const chinaTopDomain = document.getElementById('chinaTopDomain');
     const foreignTopDomain = document.getElementById('foreignTopDomain');
     const dnsMode = document.getElementById('dnsMode');
+    const dnsLimitRecordSecondDomain = document.getElementById('dnsLimitRecordSecondDomain');
+    const dnsLimitRecordSecondLenDomain = document.getElementById('dnsLimitRecordSecondLenDomain');
 
     const allM3u = document.getElementById('allM3u');
     const allM3uSecret = document.getElementById('allM3uSecret');
@@ -4334,6 +4354,8 @@
             getFileName('chinaTopDomain', 'chinaTopDomain', chinaTopDomain)
             getFileName('foreignTopDomain', 'foreignTopDomain', foreignTopDomain)
             getFileName('dnsMode', 'dnsMode', dnsMode)
+            getFileName('dnsLimitRecordSecondDomain', 'dnsLimitRecordSecondDomain', dnsLimitRecordSecondDomain)
+            getFileName('dnsLimitRecordSecondLenDomain', 'dnsLimitRecordSecondLenDomain', dnsLimitRecordSecondLenDomain)
         } else if (selectedPage === pages[12].id) {
             reloadThreadNum2()
             reloadChinaDnsServer2()

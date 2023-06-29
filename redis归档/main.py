@@ -1,6 +1,7 @@
 import abc
 import asyncio
 import base64
+import random
 import secrets
 import string
 import concurrent
@@ -151,7 +152,8 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'normalSubscriberClock': '10800',
                   'proxySubscriberClock': '3600', 'spM3uClock': '3700', 'autoDnsSwitchClock': '600', 'syncClock': '10',
                   'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国', 'foreignTopDomain':
-                      'xyz,club,online,site,top,win', 'dnsMode': '0'}
+                      'xyz,club,online,site,top,win', 'dnsMode': '0', 'dnsLimitRecordSecondDomain': '15',
+                  'dnsLimitRecordSecondLenDomain': '20'}
 
 # 单独导入导出使用一个配置,需特殊处理:{{url:{pass,name}}}
 # 下载网络配置并且加密后上传:url+加密密钥+加密文件名字
@@ -314,6 +316,8 @@ REDIS_KEY_UPDATE_BLACK_LIST_SP_FLAG = "updateblacklistspflag"
 REDIS_KEY_UPDATE_CHINA_DOMAIN_FLAG = "updatechinadomainflag"
 REDIS_KEY_UPDATE_FOREIGN_DOMAIN_FLAG = "updateforeigndomainflag"
 REDIS_KEY_UPDATE_DNS_MODE_FLAG = "updatednsmodeflag"
+REDIS_KEY_UPDATE_DNS_LIMIT_SECOND_DOMAIN_FLAG = "updatednslimitseconddomainflag"
+REDIS_KEY_UPDATE_DNS_LIMIT_SECOND_DOMAIN_LEN_FLAG = "updatednslimitseconddomainlenflag"
 REDIS_KEY_OPEN_AUTO_UPDATE_SIMPLE_WHITE_AND_BLACK_LIST_FLAG = 'openAutoUpdateSimpleWhiteAndBlackList'
 
 REDIS_KEY_THREADS = "threadsnum"
@@ -737,7 +741,16 @@ def upload_json_base(rediskey, file_content):
 # 上次更新时间戳
 time_clock_update_dict = {'proxySubscriberClock': '0', 'spM3uClock': '0', 'normalM3uClock': '0', 'youtube': '0',
                           'bilibili': '0', 'huya': '0', 'yy': '0', 'twitch': '0', 'douyin': '0',
-                          'autoDnsSwitchClock': '0', 'normalSubscriberClock': '0', 'syncClock': '0', 'recycle': '0'}
+                          'autoDnsSwitchClock': '0', 'normalSubscriberClock': '0', 'syncClock': '0', 'recycle': '0',
+                          'checkAlive': '0'}
+
+
+def is_same_action_uuid(old_uuid, cachekey):
+    global time_clock_update_dict
+    now_uuid = time_clock_update_dict[cachekey]
+    if now_uuid == old_uuid:
+        return True
+    return False
 
 
 # true-需要更新 false-不需要更新
@@ -892,8 +905,10 @@ async def checkWriteHealthM3u(url):
         return
 
 
-async def download_url(session, url, value):
+async def download_url(session, url, value, now_uuid):
     try:
+        if not is_same_action_uuid(now_uuid, 'checkAlive'):
+            return
         async with session.get(url) as resp:  # 使用asyncio.Semaphore限制TCP连接的数量
             if resp.status == 200:
                 path = f"{secret_path}{getFileNameByTagName('aliveM3u')}.m3u"
@@ -901,6 +916,8 @@ async def download_url(session, url, value):
                     await f.write(f'{value}{url}\n')
                 await checkWriteHealthM3u(url)
     except aiohttp.ClientSSLError as ssl_err:
+        if not is_same_action_uuid(now_uuid, 'checkAlive'):
+            return
         async with session.get(url, ssl=False) as resp:  # 使用asyncio.Semaphore限制TCP连接的数量
             if resp.status == 200:
                 path = f"{secret_path}{getFileNameByTagName('aliveM3u')}.m3u"
@@ -911,12 +928,25 @@ async def download_url(session, url, value):
         print(f"Error occurred while downloading {url}: {e}")
 
 
+def update_uuid_action(cachekey):
+    global time_clock_update_dict
+    now_uuid = time_clock_update_dict[cachekey]
+    while True:
+        new_uuid = generate_only_uuid(random.randrange(0, int(time.time())))
+        if new_uuid == now_uuid:
+            continue
+        time_clock_update_dict[cachekey] = new_uuid
+        break
+    return time_clock_update_dict.get(cachekey)
+
+
 async def asynctask(m3u_dict):
+    now_uuid = update_uuid_action('checkAlive')
     # sem = asyncio.Semaphore(100)  # 限制TCP连接的数量为100个
     async with aiohttp.ClientSession() as session:
         tasks = []
         for url, value in m3u_dict.items():
-            task = asyncio.create_task(download_url(session, url, value))
+            task = asyncio.create_task(download_url(session, url, value, now_uuid))
             tasks.append(task)
         await asyncio.gather(*tasks)
 
@@ -2375,7 +2405,6 @@ def updateAdguardhomeWithelistForM3u(url):
         # 是域名，但不知道是国内还是国外域名
         white_list_adguardhome["@@||" + domain + "^"] = ""
     # 是ip
-
 
 
 def decode_bytes(text):
@@ -3921,6 +3950,12 @@ def changeFileName2(cachekey, newFileName):
     elif cachekey == 'dnsMode':
         # 通知dns服务器更新内存
         redis_public_message(f'{REDIS_KEY_UPDATE_DNS_MODE_FLAG}_{newFileName}')
+    elif cachekey == 'dnsLimitRecordSecondDomain':
+        # 通知dns服务器更新内存
+        redis_public_message(f'{REDIS_KEY_UPDATE_DNS_LIMIT_SECOND_DOMAIN_FLAG}_{newFileName}')
+    elif cachekey == 'dnsLimitRecordSecondLenDomain':
+        # 通知dns服务器更新内存
+        redis_public_message(f'{REDIS_KEY_UPDATE_DNS_LIMIT_SECOND_DOMAIN_LEN_FLAG}_{newFileName}')
     elif cachekey == 'switch24':
         # 通知dns服务器更新内存
         redis_public_message(f'{REDIS_KEY_OPEN_AUTO_UPDATE_SIMPLE_WHITE_AND_BLACK_LIST_FLAG}_{newFileName}')
@@ -4227,7 +4262,8 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'proxySubscriberClock': '3600', 'spM3uClock': '3700', 'autoDnsSwitchClock': '600',
                           'syncClock': '10', 'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国',
                           'foreignTopDomain':
-                              'xyz,club,online,site,top,win', 'dnsMode': '0'}
+                              'xyz,club,online,site,top,win', 'dnsMode': '0', 'dnsLimitRecordSecondDomain': '15',
+                  'dnsLimitRecordSecondLenDomain': '20'}
 
 
 def init_file_name():
@@ -5683,10 +5719,6 @@ async def download_files_normal_single():
     m3u_dict = {}
     chongqing_ids = []
     migu_ids = {}
-    aomen_ids = []
-    guizhou_ids = {}
-    cetv_ids = {}
-    setv_ids = []
     ipanda_ids = {}
     for key in ids:
         id_arr = key.split(',')
@@ -5694,15 +5726,6 @@ async def download_files_normal_single():
             chongqing_ids.append(id_arr[1])
         elif id_arr[0] == 'migu':
             migu_ids[id_arr[1]] = [id_arr[2], id_arr[3]]
-        elif id_arr[0] == 'aomen':
-            aomen_ids.append(id_arr[1])
-        elif id_arr[0] == 'gzstv':
-            guizhou_ids[id_arr[1]] = id_arr[2]
-        elif id_arr[0] == 'cetv':
-            # tv序号,网站序号
-            cetv_ids[id_arr[1]] = id_arr[2]
-        elif id_arr[0] == 'setv':
-            setv_ids.append(id_arr[1])
         elif id_arr[0] == 'ipanda':
             # channel,channel_id
             ipanda_ids[id_arr[1]] = id_arr[2]
@@ -5724,41 +5747,6 @@ async def download_files_normal_single():
             await asyncio.gather(*tasks)
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             print(f"migu Failed to fetch files. Error: {e}")
-        # try:
-        #     tasks = []
-        #     for id in aomen_ids:
-        #         task = asyncio.ensure_future(grab_normal_aomen(session, id, m3u_dict, mintimeout, maxTimeout, 'aomen'))
-        #         tasks.append(task)
-        #     await asyncio.gather(*tasks)
-        # except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-        #     print(f"normal Failed to fetch files. Error: {e}")
-        try:
-            tasks = []
-            for id, value in guizhou_ids.items():
-                task = asyncio.ensure_future(
-                    grab_normal_guizhou(session, id, m3u_dict, mintimeout, maxTimeout, 'gzstv', value))
-                tasks.append(task)
-            await asyncio.gather(*tasks)
-        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-            print(f"guizhou Failed to fetch files. Error: {e}")
-        try:
-            tasks = []
-            for id, value in cetv_ids.items():
-                task = asyncio.ensure_future(
-                    grab_normal_cetv(session, id, m3u_dict, mintimeout, maxTimeout, 'cetv', value))
-                tasks.append(task)
-            await asyncio.gather(*tasks)
-        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-            print(f"cetv Failed to fetch files. Error: {e}")
-        try:
-            tasks = []
-            for id in setv_ids:
-                task = asyncio.ensure_future(
-                    grab_normal_setv(session, id, m3u_dict, mintimeout, maxTimeout, 'setv'))
-                tasks.append(task)
-            await asyncio.gather(*tasks)
-        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-            print(f"setv Failed to fetch files. Error: {e}")
         try:
             await deal_qiumihui(session, m3u_dict, mintimeout, maxTimeout)
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
@@ -5771,7 +5759,7 @@ async def download_files_normal_single():
                 tasks.append(task)
             await asyncio.gather(*tasks)
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-            print(f"cetv Failed to fetch files. Error: {e}")
+            print(f"ipanda Failed to fetch files. Error: {e}")
         try:
             await  grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, 'longzhu')
         except Exception as e:
@@ -6158,43 +6146,6 @@ async def grab_normal_migu(session, rid, m3u_dict, mintimeout, maxTimeout, sourc
         print(f"migu An error occurred while processing {rid}. Error: {e}")
 
 
-async def grab_normal_guizhou(session, rid, m3u_dict, mintimeout, maxTimeout, source_type, value):
-    url = 'https://api.gzstv.com/v1/tv/' + value + '/?stream_url'
-    try:
-        async with session.get(url, timeout=mintimeout) as response:
-            data = await response.read()
-            m3u8 = json.loads(data.decode('utf-8'))['stream_url']
-            m3u_dict[f'{source_type},{rid},{value}'] = m3u8
-    except asyncio.TimeoutError:
-        async with session.get(url, timeout=maxTimeout) as response:
-            data = await response.read()
-            m3u8 = json.loads(data.decode('utf-8'))['stream_url']
-            m3u_dict[f'{source_type},{rid},{value}'] = m3u8
-    except Exception as e:
-        print(f"guizhou An error occurred while processing {rid}. Error: {e}")
-
-
-async def grab_normal_cetv(session, rid, m3u_dict, mintimeout, maxTimeout, source_type, value):
-    url = f'http://app.cetv.cn/video/player/stream?stream_id={rid}&site_id={value}'
-    try:
-        async with session.get(url, timeout=mintimeout) as response:
-            data = await response.read()
-            m3u8 = json.loads(data.decode('utf-8'))['play_url']
-            if m3u8 == '':
-                m3u8 = json.loads(data.decode('utf-8'))['stream']
-            if m3u8 != '':
-                m3u_dict[f'{source_type},{rid},{value}'] = m3u8
-    except asyncio.TimeoutError:
-        async with session.get(url, timeout=maxTimeout) as response:
-            data = await response.read()
-            m3u8 = json.loads(data.decode('utf-8'))['play_url']
-            if m3u8 == '':
-                m3u8 = json.loads(data.decode('utf-8'))['stream']
-            if m3u8 != '':
-                m3u_dict[f'{source_type},{rid},{value}'] = m3u8
-    except Exception as e:
-        print(f"cetv An error occurred while processing {rid}. Error: {e}")
-
 
 async def grab_normal_ipanda(session, rid, m3u_dict, mintimeout, maxTimeout, source_type, value):
     url = f'https://vdn.live.cntv.cn/api2/liveHtml5.do?channel=pc://{rid}&channel_id={value}&video_player=1&im=0&client=flash&tsp=1687495941&vn=1537&vc=1&uid=5A9A2532F878A0DB8EFE2BC8B2B191FC&wlan='
@@ -6233,21 +6184,6 @@ async def grab_normal_ipanda(session, rid, m3u_dict, mintimeout, maxTimeout, sou
     except Exception as e:
         print(f"cetv An error occurred while processing {rid}. Error: {e}")
 
-
-async def grab_normal_setv(session, rid, m3u_dict, mintimeout, maxTimeout, source_type):
-    m3u8_url = f'http://www.setv.fjtv.net/m2o/channel/channel_info.php?channel_id={rid}'
-    try:
-        async with session.get(m3u8_url, timeout=mintimeout) as response:
-            data = await response.read()
-            m3u8 = json.loads(data.decode('utf-8'))[0]['channel_stream'][0]['url']
-            m3u_dict[f'{source_type},{rid}'] = m3u8
-    except asyncio.TimeoutError:
-        async with session.get(m3u8_url, timeout=maxTimeout) as response:
-            data = await response.read()
-            m3u8 = json.loads(data.decode('utf-8'))[0]['channel_stream'][0]['url']
-            m3u_dict[f'{source_type},{rid}'] = m3u8
-    except Exception as e:
-        print(f"setv An error occurred while processing {rid}. Error: {e}")
 
 
 async def grab_normal_qiumihui(session, m3u_dict, mintimeout, maxTimeout, source_type, dict_single):
@@ -6475,40 +6411,6 @@ async def grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, source_
                 pass
     except Exception as e:
         print(f"longzhu An error occurred while processing {rid}. Error: {e}")
-
-
-async def grab_normal_aomen(session, rid, m3u_dict, mintimeout, maxTimeout, source_type):
-    m3u8_url = "http://live-hls.macaulotustv.com/lotustv/macaulotustv.m3u8"
-    # 模拟请求头
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
-        "Referer": "http://www.macaulotustv.cc/",
-        "Accept-Language": "en-US,en;q=0.9",
-    }
-    try:
-        async with session.get(m3u8_url, headers=headers, timeout=mintimeout) as response:
-            # 指定响应头内容并输出m3u8
-            if response.status == 200:
-                content = await response.text()
-                content_arr = content.split('\n')
-                for arr in content_arr:
-                    if arr.startswith('#EXTM3U') or arr.startswith('#EXT-X-STREAM-INF'):
-                        continue
-                    if arr.startswith('http'):
-                        m3u_dict[f'{source_type},{rid}'] = arr
-    except asyncio.TimeoutError:
-        async with session.get(m3u8_url, headers=headers, timeout=maxTimeout) as response:
-            # 指定响应头内容并输出m3u8
-            if response.status == 200:
-                content = await response.text()
-                content_arr = content.split('\n')
-                for arr in content_arr:
-                    if arr.startswith('#EXTM3U') or arr.startswith('#EXT-X-STREAM-INF'):
-                        continue
-                    if arr.startswith('http'):
-                        m3u_dict[f'{source_type},{rid}'] = arr
-    except Exception as e:
-        print(f"aomen An error occurred while processing {rid}. Error: {e}")
 
 
 async def grab_normal_chongqin(session, rid, m3u_dict, mintimeout, maxTimeout, source_type):
@@ -7568,7 +7470,7 @@ def chaoronghe28():
         redisKeyTWITCHM3uFake = {}
         redisKeyTWITCHM3u.clear()
         redis_del_map(REDIS_KEY_TWITCH_M3U)
-        #fakeurl = f"http://127.0.0.1:22771/TWITCH/"
+        # fakeurl = f"http://127.0.0.1:22771/TWITCH/"
         fakeurl = f"http://{ip}:{port_live}/TWITCH/"
         for id, url in m3u_dict.items():
             try:
@@ -7686,11 +7588,6 @@ def chaoronghe31_single(type):
                         link = f'#EXTINF:-1 group-title="咪咕源"  tvg-name="{name}",{name}\n'
                     else:
                         link = f'#EXTINF:-1 group-title="咪咕源" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
-                elif id.startswith('gzstv,'):
-                    if logo is None:
-                        link = f'#EXTINF:-1 group-title="贵州源"  tvg-name="{name}",{name}\n'
-                    else:
-                        link = f'#EXTINF:-1 group-title="贵州源" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 elif id.startswith('qiumihui,'):
                     if logo is None:
                         link = f'#EXTINF:-1 group-title="球迷汇体育"  tvg-name="{name}",{name}\n'
@@ -7737,14 +7634,9 @@ def chaoronghe31_single(type):
                     redisKeyM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except Exception as e:
                 pass
-        redisKeyNormal['qiumihui,'] = '更新球迷汇'
-        redis_add_map(REDIS_KEY_NORMAL, {'qiumihui,': '更新球迷汇'})
-        link1 = f'#EXTINF:-1 group-title="球迷汇体育" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新球迷汇",更新球迷汇\n'
-        redisKeyM3uFake[f'{fakeurl}qiumihui,.m3u8'] = link1
-        redisKeyNormal['longzhu,'] = '更新龙珠直播'
-        redis_add_map(REDIS_KEY_NORMAL, {'longzhu,': '更新龙珠直播'})
-        link2 = f'#EXTINF:-1 group-title="龙珠直播" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新龙珠直播",更新龙珠直播\n'
-        redisKeyM3uFake[f'{fakeurl}longzhu,.m3u8'] = link2
+        add_update_live('qiumihui,', '球迷汇体育', '更新球迷汇', redisKeyM3uFake, fakeurl)
+        add_update_live('longzhu,', '龙珠直播', '更新龙珠直播', redisKeyM3uFake, fakeurl)
+
         # 同步方法写出全部配置
         distribute_data(redisKeyM3uFake, f"{secret_path}normal.m3u", 10)
         fuck_m3u_to_txt(f"{secret_path}normal.m3u", f"{secret_path}normal.txt")
@@ -7770,7 +7662,7 @@ def chaoronghe31():
         redisKeyM3uFake = {}
         redisKeyNormalM3U.clear()
         redis_del_map(REDIS_KEY_NORMAL_M3U)
-        #fakeurl = f"http://127.0.0.1:22771/normal/"
+        # fakeurl = f"http://127.0.0.1:22771/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
         for id, name in redisKeyNormal.items():
             if id.startswith('jstv,'):
@@ -7802,11 +7694,6 @@ def chaoronghe31():
                         link = f'#EXTINF:-1 group-title="咪咕源"  tvg-name="{name}",{name}\n'
                     else:
                         link = f'#EXTINF:-1 group-title="咪咕源" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
-                elif id.startswith('gzstv,'):
-                    if logo is None:
-                        link = f'#EXTINF:-1 group-title="贵州源"  tvg-name="{name}",{name}\n'
-                    else:
-                        link = f'#EXTINF:-1 group-title="贵州源" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 elif id.startswith('qiumihui,'):
                     if logo is None:
                         link = f'#EXTINF:-1 group-title="球迷汇体育"  tvg-name="{name}",{name}\n'
@@ -7830,14 +7717,8 @@ def chaoronghe31():
                 redisKeyM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except Exception as e:
                 pass
-        redisKeyNormal['qiumihui,'] = '更新球迷汇'
-        redis_add_map(REDIS_KEY_NORMAL, {'qiumihui,': '更新球迷汇'})
-        link1 = f'#EXTINF:-1 group-title="球迷汇体育" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新球迷汇",更新球迷汇\n'
-        redisKeyM3uFake[f'{fakeurl}qiumihui,.m3u8'] = link1
-        redisKeyNormal['longzhu,'] = '更新龙珠直播'
-        redis_add_map(REDIS_KEY_NORMAL, {'longzhu,': '更新龙珠直播'})
-        link2 = f'#EXTINF:-1 group-title="龙珠直播" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新龙珠直播",更新龙珠直播\n'
-        redisKeyM3uFake[f'{fakeurl}longzhu,.m3u8'] = link2
+        add_update_live('qiumihui,', '球迷汇体育', '更新球迷汇', redisKeyM3uFake, fakeurl)
+        add_update_live('longzhu,', '龙珠直播', '更新龙珠直播', redisKeyM3uFake, fakeurl)
         # 同步方法写出全部配置
         distribute_data(redisKeyM3uFake, f"{secret_path}normal.m3u", 10)
         redis_add_map(REDIS_KEY_NORMAL_M3U, redisKeyNormalM3U)
@@ -7845,6 +7726,14 @@ def chaoronghe31():
         return "result"
     except Exception as e:
         return "empty"
+
+
+def add_update_live(type, group_name, tvg_name, redisKeyM3uFake, fakeurl):
+    global redisKeyNormal
+    redisKeyNormal[type] = tvg_name
+    redis_add_map(REDIS_KEY_NORMAL, {type: tvg_name})
+    link2 = f'#EXTINF:-1 group-title="{group_name}" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="{tvg_name}",{tvg_name}\n'
+    redisKeyM3uFake[f'{fakeurl}{type}.m3u8'] = link2
 
 
 # 生成全部youtube直播源
@@ -7868,7 +7757,7 @@ def chaoronghe24():
         redisKeyYoutubeM3u.clear()
         redis_del_map(REDIS_KEY_YOUTUBE_M3U)
         redisKeyYoutubeM3uFake = {}
-        #fakeurl = 'http://127.0.0.1:22771/youtube/'
+        # fakeurl = 'http://127.0.0.1:22771/youtube/'
         fakeurl = f"http://{ip}:{port_live}/youtube/"
         for id, url in m3u_dict.items():
             try:
@@ -8556,7 +8445,7 @@ def generate_only_uuid(my_string):
     timestamp = now.strftime("%Y%m%d%H%M%S%f")
     unique_str = f"{timestamp}-{my_string}"
     serial_number = uuid.uuid5(uuid.NAMESPACE_URL, unique_str)
-    return serial_number
+    return str(serial_number)
 
 
 def main():

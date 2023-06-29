@@ -651,7 +651,7 @@
         </div>
     </div>
     <div id="page5" style="display: none;">
-        <h1>分流dns1域名订阅:从网络下载分流域名</h1>
+        <h1>分流dns1域名订阅:从网络下载分流域名(ex:chia)</h1>
         <div style="float: left;width: 70%">
             <h3>订阅地址:</h3>
             <h3 class="urllink">dnsmasq-无加密:http://192.168.5.1:22771/secret/whiteListDnsmasq.conf</h3>
@@ -696,7 +696,7 @@
         </div>
     </div>
     <div id="page6" style="display: none;">
-        <h1>分流dns2域名订阅:从网络下载分流域名</h1>
+        <h1>分流dns2域名订阅:从网络下载分流域名(ex:usa)</h1>
         <div style="float: left;width: 70%">
             <h3>订阅地址:</h3>
             <h3 class="urllink">分流dns2-OP-无加密:http://192.168.5.1:22771/secret/openclashFallbackFilterDomain.conf</h3>
@@ -1036,6 +1036,24 @@
         <div style="width:100%">
             <input type="text" id="dnsMode" class="stubboninput" placeholder="0"/>
             <button onclick="changeFileName('dnsMode', 'dnsMode', dnsMode)"
+                    class="grid-item button stubbonsave">保存
+            </button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            dns限制一级域名下二级域名记录数(防止测试域名和临时域名过量注入)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="dnsLimitRecordSecondDomain" class="stubboninput" placeholder="15"/>
+            <button onclick="changeFileName('dnsLimitRecordSecondDomain', 'dnsLimitRecordSecondDomain', dnsLimitRecordSecondDomain)"
+                    class="grid-item button stubbonsave">保存
+            </button>
+        </div>
+        <div style="display: flex;width: 100%;">
+            dns限制二级域名记录长度(防止测试域名和临时域名过量注入)
+        </div>
+        <div style="width:100%">
+            <input type="text" id="dnsLimitRecordSecondLenDomain" class="stubboninput" placeholder="20"/>
+            <button onclick="changeFileName('dnsLimitRecordSecondLenDomain', 'dnsLimitRecordSecondLenDomain', dnsLimitRecordSecondLenDomain)"
                     class="grid-item button stubbonsave">保存
             </button>
         </div>
@@ -1592,7 +1610,7 @@
         </div>
     </div>
     <div id="page18" style="display: none;">
-        <h1>简易分流dns1域名</h1>
+        <h1>简易分流dns1域名(ex:china)</h1>
         <div style="float: left;width: 70%">
             <h3 class="urllink">个人dns1浏览记录-dnsmasq: http://192.168.5.1:22771/secret/simpleDnsmasq.conf</h3>
             <h3 class="urllink">个人dns1分流规则-openclash:
@@ -1633,7 +1651,7 @@
         </div>
     </div>
     <div id="page19" style="display: none;">
-        <h1>简易分流dns2域名</h1>
+        <h1>简易分流dns2域名(ex:usa)</h1>
         <div style="float: left;width: 70%">
             <h3 class="urllink">个人dns2浏览记录-openclash:
                 http://192.168.5.1:22771/secret/simpleOpenclashFallBackFilterDomain.txt</h3>
@@ -2511,6 +2529,8 @@
     const chinaTopDomain = document.getElementById('chinaTopDomain');
     const foreignTopDomain = document.getElementById('foreignTopDomain');
     const dnsMode = document.getElementById('dnsMode');
+    const dnsLimitRecordSecondDomain = document.getElementById('dnsLimitRecordSecondDomain');
+    const dnsLimitRecordSecondLenDomain = document.getElementById('dnsLimitRecordSecondLenDomain');
 
     const allM3u = document.getElementById('allM3u');
     const allM3uSecret = document.getElementById('allM3uSecret');
@@ -4334,6 +4354,8 @@
             getFileName('chinaTopDomain', 'chinaTopDomain', chinaTopDomain)
             getFileName('foreignTopDomain', 'foreignTopDomain', foreignTopDomain)
             getFileName('dnsMode', 'dnsMode', dnsMode)
+            getFileName('dnsLimitRecordSecondDomain', 'dnsLimitRecordSecondDomain', dnsLimitRecordSecondDomain)
+            getFileName('dnsLimitRecordSecondLenDomain', 'dnsLimitRecordSecondLenDomain', dnsLimitRecordSecondLenDomain)
         } else if (selectedPage === pages[12].id) {
             reloadThreadNum2()
             reloadChinaDnsServer2()

@@ -649,12 +649,6 @@ def redis_get(key):
         return None
 
 
-# redis删除
-def redis_del(key):
-    if r.exists(key):
-        r.delete(key)
-
-
 # redis存储map字典，字典主键唯一，重复主键只会复写
 def redis_add_map(key, my_dict):
     r.hmset(key, my_dict)
@@ -4263,7 +4257,7 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'syncClock': '10', 'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国',
                           'foreignTopDomain':
                               'xyz,club,online,site,top,win', 'dnsMode': '0', 'dnsLimitRecordSecondDomain': '15',
-                  'dnsLimitRecordSecondLenDomain': '20'}
+                          'dnsLimitRecordSecondLenDomain': '20'}
 
 
 def init_file_name():
@@ -6146,7 +6140,6 @@ async def grab_normal_migu(session, rid, m3u_dict, mintimeout, maxTimeout, sourc
         print(f"migu An error occurred while processing {rid}. Error: {e}")
 
 
-
 async def grab_normal_ipanda(session, rid, m3u_dict, mintimeout, maxTimeout, source_type, value):
     url = f'https://vdn.live.cntv.cn/api2/liveHtml5.do?channel=pc://{rid}&channel_id={value}&video_player=1&im=0&client=flash&tsp=1687495941&vn=1537&vc=1&uid=5A9A2532F878A0DB8EFE2BC8B2B191FC&wlan='
     try:
@@ -6183,7 +6176,6 @@ async def grab_normal_ipanda(session, rid, m3u_dict, mintimeout, maxTimeout, sou
                         break
     except Exception as e:
         print(f"cetv An error occurred while processing {rid}. Error: {e}")
-
 
 
 async def grab_normal_qiumihui(session, m3u_dict, mintimeout, maxTimeout, source_type, dict_single):
@@ -8156,7 +8148,7 @@ def removem3ulinks16():
 @requires_auth
 def removem3ulinks17():
     downAndSecUploadUrlPassAndName.clear()
-    redis_del(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME)
+    redis_del_map(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME)
     return "success"
 
 
@@ -8165,7 +8157,7 @@ def removem3ulinks17():
 @requires_auth
 def removem3ulinks18():
     downAndDeSecUrlPassAndName.clear()
-    redis_del(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME)
+    redis_del_map(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME)
     return "success"
 
 

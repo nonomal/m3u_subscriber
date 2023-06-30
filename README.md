@@ -29,11 +29,11 @@ docker run    -d --name m3usubscriber --restart unless-stopped --net=host --memo
 
 #### 二、bridge模式:不建议使用，估计有不少BUG
 
-docker run   -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770 -p 22772:22772 -e TZ=Asia/Shanghai jkld310/m3usubscriber:latest
+docker run   -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770  -e TZ=Asia/Shanghai jkld310/m3usubscriber:latest
 
-docker run   -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770 -p 22772:22772 -e TZ=Asia/Shanghai jkld310/m3usubscriber:arm64v8
+docker run   -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770  -e TZ=Asia/Shanghai jkld310/m3usubscriber:arm64v8
 
-docker run   -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770 -p 22772:22772 -e TZ=Asia/Shanghai jkld310/m3usubscriber:x86_64
+docker run   -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p 22770:22770  -e TZ=Asia/Shanghai jkld310/m3usubscriber:x86_64
 
 ### 非常高兴能为您介绍本工具所实现的各项功能：
 

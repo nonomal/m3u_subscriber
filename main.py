@@ -44,7 +44,6 @@ app.config['PROXY_CONNECT_TIMEOUT'] = 6000
 app.config['PROXY_SEND_TIMEOUT'] = 6000
 app.config['PROXY_READ_TIMEOUT'] = 6000
 
-
 ##########################################################redis key#############################################
 REDIS_KEY_M3U_LINK = "m3ulink"
 REDIS_KEY_M3U_DATA = "localm3u"
@@ -8515,6 +8514,7 @@ def process_file4():
         f.write(resultContent)
     return send_file(filename, as_attachment=True)
 
+
 ###################################################模仿redis服务器############################################
 # 存放数据库文件的路径
 DB_PATH = "/app/db"
@@ -8635,6 +8635,8 @@ def post_data_key_data():
             return jsonify(json.loads(data_bytes.decode('utf-8')))
         except Exception as e:
             return jsonify({})
+
+
 ###################################################模仿redis服务器#############################################
 
 # 根据年月日、当前时间、输入的字符串生成的绝对唯一uuid
@@ -8671,4 +8673,4 @@ if __name__ == '__main__':
     #         # 连接失败，等待一段时间后重试
     #         time.sleep(1)
     # if start:
-        main()
+    main()

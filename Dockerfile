@@ -18,7 +18,7 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# 暴露容器的端口 22771-web 22770-dns 22772
+# 暴露容器的端口 22771-web/db 22770-dns
 EXPOSE 22771 22770
 # 启动多个程序进程
 COPY run.sh /app/run.sh

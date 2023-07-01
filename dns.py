@@ -883,22 +883,28 @@ def redis_get_map(key):
 
 def initSimpleBlackList():
     global black_list_simple_policy
+    global latest_mins_update_dict_black
     simpleblacklist = redis_get_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST)
     if simpleblacklist:
         num = int(getFileNameByTagName('dnsLimitRecordSecondDomain'))
         black_list_simple_policy.clear()
+        timeStr = str(time.time())
         for domain in simpleblacklist:
             updateSpData(domain, black_list_simple_policy, num)
+            latest_mins_update_dict_black[domain] = timeStr
 
 
 def initSimpleWhiteList():
     global white_list_simple_nameserver_policy
+    global latest_mins_update_dict_white
     simplewhitelist = redis_get_map(REDIS_KEY_DNS_SIMPLE_WHITELIST)
     if simplewhitelist:
         num = int(getFileNameByTagName('dnsLimitRecordSecondDomain'))
         white_list_simple_nameserver_policy.clear()
+        timeStr = str(time.time())
         for domain in simplewhitelist:
             updateSpData(domain, white_list_simple_nameserver_policy, num)
+            latest_mins_update_dict_white[domain] = timeStr
 
 
 # 顶级域名,一级域名开头字母,一级域名长度,一级域名,二级域名,''
@@ -1142,11 +1148,15 @@ REDIS_KEY_OPEN_AUTO_UPDATE_SIMPLE_WHITE_AND_BLACK_LIST_FLAG = 'openAutoUpdateSim
 
 # 上次更新时间戳
 time_clock_update_dict = {'updateSubscribeList': '0', 'deal_black_list_simple_policy_queue': '0', 'clearCache': '0',
-                          'clearCacheFast': '0', 'deal_black_list_simple_tmp_cache_queue': '0'}
+                          'clearCacheFast': '0', 'deal_black_list_simple_tmp_cache_queue': '0',
+                          'latest_mins_update_dict_black_white': '0',
+                          'latest_mins_update_dict': '0'}
 
 time_clock_update_dict_sys = {'updateSubscribeList': '60', 'deal_black_list_simple_policy_queue': '10',
                               'clearCache': '86400', 'clearCacheFast': '3613',
-                              'deal_black_list_simple_tmp_cache_queue': '10'}
+                              'deal_black_list_simple_tmp_cache_queue': '10',
+                              'latest_mins_update_dict_black_white': '86400',
+                              'latest_mins_update_dict': '3600'}
 
 
 # true-需要更新 false-不需要更新
@@ -1176,7 +1186,36 @@ def clock_thread():
         if is_update_clock('clearCacheFast'):
             clearCacheFast()
             update_clock('clearCacheFast')
+        if is_update_clock('latest_mins_update_dict'):
+            slow_remove_one_day_visited_domain()
+            update_clock('latest_mins_update_dict')
         time.sleep(10)
+
+
+# 缓存一天内已经访问的域名，减少重复域名导致频繁的重复入库行为
+def slow_remove_one_day_visited_domain():
+    global latest_mins_update_dict_black
+    global latest_mins_update_dict_white
+    try:
+        black_new = {}
+        white_new = {}
+        sysTime = int(time_clock_update_dict_sys['latest_mins_update_dict_black_white'])
+        for key, value in latest_mins_update_dict_black.items():
+            lastUpdateTime = float(value)
+            if (time.time() - lastUpdateTime) >= sysTime:
+                black_new[key] = value
+        if len(black_new.keys()) > 0:
+            latest_mins_update_dict_black.clear()
+            latest_mins_update_dict_black.update(black_new)
+        for key, value in latest_mins_update_dict_white.items():
+            lastUpdateTime = float(value)
+            if (time.time() - lastUpdateTime) >= sysTime:
+                white_new[key] = value
+        if len(white_new.keys()) > 0:
+            latest_mins_update_dict_white.clear()
+            latest_mins_update_dict_white.update(white_new)
+    except:
+        pass
 
 
 # 快速动态更新缓存
@@ -1228,12 +1267,20 @@ def clearCache():
     clearAndStoreAtLeast50DataInRedis(REDIS_KEY_DNS_SIMPLE_WHITELIST, white_list_simple_nameserver_policy, num)
 
 
+# 最近查询的黑名单域名，目标是减少重复域名入库行为
+latest_mins_update_dict_black = {}
+# 最近查询的白名单域名，目标是减少重复域名入库行为
+latest_mins_update_dict_white = {}
+
+
 # 自动更新黑白名单数据至redis,多线程插入会丢失数据，只能把插数据的操作集中到单个线程
 def deal_black_list_simple_policy_queue():
     global black_list_simple_policy_queue
     global white_list_simple_nameserver_policy_queue
     global white_list_simple_nameserver_policy
     global black_list_simple_policy
+    global latest_mins_update_dict_black
+    global latest_mins_update_dict_white
     num = int(getFileNameByTagName('dnsLimitRecordSecondDomain'))
     limitNum = int(getFileNameByTagName('dnsLimitRecordSecondLenDomain'))
     add_dict = {}
@@ -1243,14 +1290,18 @@ def deal_black_list_simple_policy_queue():
         if not black_list_simple_policy_queue.empty():
             domain = black_list_simple_policy_queue.get()
             domain = stupidThink(domain, limitNum)
-            add_dict[domain] = ''
+            if domain not in latest_mins_update_dict_black.keys():
+                add_dict[domain] = ''
+                latest_mins_update_dict_black[domain] = str(time.time())
         if not white_list_simple_nameserver_policy_queue.empty():
             domain2 = white_list_simple_nameserver_policy_queue.get()
             domain2 = stupidThink(domain2, limitNum)
             if domain2 not in total_black.keys():
-                add_dict2[domain2] = ''
+                if domain2 not in latest_mins_update_dict_white.keys():
+                    add_dict2[domain2] = ''
+                    latest_mins_update_dict_white[domain2] = str(time.time())
     if len(add_dict) > 0:
-        redis_add_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST, add_dict)
+        # redis_add_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST, add_dict)
         for key in add_dict.keys():
             updateSpData(key, black_list_simple_policy, num)
     add_dict3 = {}
@@ -1258,9 +1309,35 @@ def deal_black_list_simple_policy_queue():
         if key not in add_dict.keys():
             add_dict3[key] = ''
     if len(add_dict3) > 0:
-        redis_add_map(REDIS_KEY_DNS_SIMPLE_WHITELIST, add_dict3)
+        # redis_add_map(REDIS_KEY_DNS_SIMPLE_WHITELIST, add_dict3)
         for key in add_dict3.keys():
             updateSpData(key, white_list_simple_nameserver_policy, num)
+    # 避免大量二级域名(测试/临时)入库
+    if len(add_dict) > 0:
+        dict_black = get_last_level_keys(black_list_simple_policy)
+        if len(dict_black) > 0:
+            redis_del_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST)
+            redis_add_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST, dict_black)
+    if len(add_dict3) > 0:
+        dict_white = get_last_level_keys(white_list_simple_nameserver_policy)
+        if len(dict_white) > 0:
+            redis_del_map(REDIS_KEY_DNS_SIMPLE_WHITELIST)
+            redis_add_map(REDIS_KEY_DNS_SIMPLE_WHITELIST, dict_white)
+
+
+def get_last_level_keys(dictionary):
+    try:
+        keys = {}
+        for key, value in dictionary.items():
+            if isinstance(value, dict):
+                updatedict = get_last_level_keys(value)
+                if len(updatedict) > 0:
+                    keys.update(updatedict)
+            else:
+                keys[key] = ''
+        return keys
+    except:
+        return {}
 
 
 china_top_domain_list = []
@@ -1269,11 +1346,11 @@ REDIS_KEY_FILE_NAME = "redisKeyFileName"
 
 file_name_dict = {'chinaTopDomain': 'cn,中国', 'foreignTopDomain':
     'xyz,club,online,site,top,win', 'dnsMode': '0', 'dnsLimitRecordSecondDomain': '15',
-                  'dnsLimitRecordSecondLenDomain': '20'}
+                  'dnsLimitRecordSecondLenDomain': '15'}
 
 file_name_dict_default = {'chinaTopDomain': 'cn,中国', 'foreignTopDomain':
     'xyz,club,online,site,top,win', 'dnsMode': '0', 'dnsLimitRecordSecondDomain': '15',
-                          'dnsLimitRecordSecondLenDomain': '20'}
+                          'dnsLimitRecordSecondLenDomain': '15'}
 
 
 def getFileNameByTagName(tagname):

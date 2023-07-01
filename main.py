@@ -150,7 +150,7 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'proxySubscriberClock': '3600', 'spM3uClock': '3700', 'autoDnsSwitchClock': '600', 'syncClock': '10',
                   'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国', 'foreignTopDomain':
                       'xyz,club,online,site,top,win', 'dnsMode': '0', 'dnsLimitRecordSecondDomain': '15',
-                  'dnsLimitRecordSecondLenDomain': '20'}
+                  'dnsLimitRecordSecondLenDomain': '15'}
 
 # 单独导入导出使用一个配置,需特殊处理:{{url:{pass,name}}}
 # 下载网络配置并且加密后上传:url+加密密钥+加密文件名字
@@ -585,20 +585,6 @@ def serve_files_normal(filename):
     elif id == 'longzhu,':
         chaoronghe31_single('longzhu,')
         return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
-    elif id.startswith('jstv,'):
-        id = id.split(',')[1]
-        e = f"https://live-hls.jstv.com/livezhuzhan/{id}.m3u8"
-        a = f"/livezhuzhan/{id}.m3u8"
-        r = "jstvlivezhuzhan@2022cdn!@#124gg"
-        i = int(time.time()) + 5
-        d = f"{hashlib.md5((r + '&' + str(i) + '&' + a).encode()).hexdigest()[12:20]}{i}"
-        m3u8 = f"{e}?upt={d}"
-        headers = {
-            'Referer': 'http://live.jstv.com/',
-        }
-        response = requests.get(m3u8, headers=headers, verify=False)
-        return response.content.replace(b"/livezhuzhan:livezhuzhan/",
-                                        b"https://live-hls.jstv.com/livezhuzhan:livezhuzhan/").decode()
     url = tv_dict_normal.get(id)
     if not url:
         url = redisKeyNormalM3U.get(id)
@@ -4341,7 +4327,7 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'syncClock': '10', 'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国',
                           'foreignTopDomain':
                               'xyz,club,online,site,top,win', 'dnsMode': '0', 'dnsLimitRecordSecondDomain': '15',
-                          'dnsLimitRecordSecondLenDomain': '20'}
+                          'dnsLimitRecordSecondLenDomain': '15'}
 
 
 def init_file_name():
@@ -5811,6 +5797,8 @@ async def download_files_normal_single():
         try:
             tasks = []
             for id in chongqing_ids:
+                if id == 'cq,':
+                    continue
                 task = asyncio.ensure_future(grab_normal_chongqin(session, id, m3u_dict, mintimeout, maxTimeout, 'cq'))
                 tasks.append(task)
             await asyncio.gather(*tasks)
@@ -5819,6 +5807,8 @@ async def download_files_normal_single():
         try:
             tasks = []
             for id in migu_ids.keys():
+                if id == 'migu,':
+                    continue
                 task = asyncio.ensure_future(
                     grab_normal_migu(session, id, m3u_dict, mintimeout, maxTimeout, 'migu', migu_ids.get(id)))
                 tasks.append(task)
@@ -7593,6 +7583,12 @@ def update_by_type_normal(type):
     elif type == 'longzhu,':
         # 有效直播源,名字/id
         m3u_dict = loop.run_until_complete(download_files_normal_single_longzhu())
+    elif type == 'migu,':
+        # 有效直播源,名字/id
+        m3u_dict = loop.run_until_complete(download_files_normal_single_migu())
+    elif type == 'cq,':
+        # 有效直播源,名字/id
+        m3u_dict = loop.run_until_complete(download_files_normal_single_cq())
     return m3u_dict
 
 
@@ -7621,6 +7617,57 @@ async def download_files_normal_single_longzhu():
     return m3u_dict
 
 
+async def download_files_normal_single_migu():
+    global redisKeyNormal
+    ids = redisKeyNormal.keys()
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
+    m3u_dict = {}
+    migu_ids = {}
+    for key in ids:
+        id_arr = key.split(',')
+        if id_arr[0] == 'migu':
+            migu_ids[id_arr[1]] = [id_arr[2], id_arr[3]]
+    async with aiohttp.ClientSession() as session:
+        try:
+            tasks = []
+            for id in migu_ids.keys():
+                if id == 'migu,':
+                    continue
+                task = asyncio.ensure_future(
+                    grab_normal_migu(session, id, m3u_dict, mintimeout, maxTimeout, 'migu', migu_ids.get(id)))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f"migu Failed to fetch files. Error: {e}")
+    return m3u_dict
+
+
+async def download_files_normal_single_cq():
+    global redisKeyNormal
+    ids = redisKeyNormal.keys()
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
+    m3u_dict = {}
+    chongqing_ids = []
+    for key in ids:
+        id_arr = key.split(',')
+        if id_arr[0] == 'cq':
+            chongqing_ids.append(id_arr[1])
+    async with aiohttp.ClientSession() as session:
+        try:
+            tasks = []
+            for id in chongqing_ids:
+                if id == 'cq,':
+                    continue
+                task = asyncio.ensure_future(grab_normal_chongqin(session, id, m3u_dict, mintimeout, maxTimeout, 'cq'))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f"normal Failed to fetch files. Error: {e}")
+    return m3u_dict
+
+
 def chaoronghe31_single(type):
     try:
         global redisKeyNormalM3U
@@ -7643,7 +7690,7 @@ def chaoronghe31_single(type):
             return "empty"
         ip = init_IP()
         redisKeyM3uFake = {}
-        # fakeurl = f"http://127.0.0.1:5000/normal/"
+        # fakeurl = f"http://127.0.0.1:22771/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
         for id, url in redisKeyNormalM3U.items():
             try:
@@ -7706,13 +7753,24 @@ def chaoronghe31_single(type):
                         link = f'#EXTINF:-1 group-title="龙珠直播"  tvg-name="{name}",{name}\n'
                     else:
                         link = f'#EXTINF:-1 group-title="龙珠直播" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                elif id.startswith('migu,'):
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="咪咕源"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="咪咕源" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                elif id.startswith('cq,'):
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="重庆源"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="重庆源" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 if link:
                     redisKeyM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except Exception as e:
                 pass
         add_update_live('qiumihui,', '球迷汇体育', '更新球迷汇', redisKeyM3uFake, fakeurl)
         add_update_live('longzhu,', '龙珠直播', '更新龙珠直播', redisKeyM3uFake, fakeurl)
-
+        add_update_live('migu,', '咪咕源', '更新咪咕源', redisKeyM3uFake, fakeurl)
+        add_update_live('cq,', '重庆源', '更新重庆源', redisKeyM3uFake, fakeurl)
         # 同步方法写出全部配置
         distribute_data(redisKeyM3uFake, f"{secret_path}normal.m3u", 10)
         fuck_m3u_to_txt(f"{secret_path}normal.m3u", f"{secret_path}normal.txt")
@@ -7740,18 +7798,6 @@ def chaoronghe31():
         redis_del_map(REDIS_KEY_NORMAL_M3U)
         # fakeurl = f"http://127.0.0.1:22771/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
-        for id, name in redisKeyNormal.items():
-            if id.startswith('jstv,'):
-                try:
-                    name, logo = name.split(',')
-                except Exception as e:
-                    logo = None
-                if logo is None:
-                    link = f'#EXTINF:-1 group-title="国内"  tvg-name="{name}",{name}\n'
-                else:
-                    link = f'#EXTINF:-1 group-title="国内" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
-                redisKeyM3uFake[f'{fakeurl}{id}.m3u8'] = link
-                redisKeyNormalM3U[id] = ''
         for id, url in m3u_dict.items():
             try:
                 redisKeyNormalM3U[id] = url
@@ -7795,6 +7841,8 @@ def chaoronghe31():
                 pass
         add_update_live('qiumihui,', '球迷汇体育', '更新球迷汇', redisKeyM3uFake, fakeurl)
         add_update_live('longzhu,', '龙珠直播', '更新龙珠直播', redisKeyM3uFake, fakeurl)
+        add_update_live('migu,', '咪咕源', '更新咪咕源', redisKeyM3uFake, fakeurl)
+        add_update_live('cq,', '重庆源', '更新重庆源', redisKeyM3uFake, fakeurl)
         # 同步方法写出全部配置
         distribute_data(redisKeyM3uFake, f"{secret_path}normal.m3u", 10)
         redis_add_map(REDIS_KEY_NORMAL_M3U, redisKeyNormalM3U)

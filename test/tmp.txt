@@ -1,2 +1,4 @@
-'youtube': '0',
-                          'bilibili': '0', 'huya': '0', 'yy': '0', 'twitch': '0', 'douyin': '0',
+# 最近查询的黑名单域名，目标是减少重复域名入库行为
+latest_mins_update_dict_black = {}
+# 最近查询的白名单域名，目标是减少重复域名入库行为
+latest_mins_update_dict_white = {}

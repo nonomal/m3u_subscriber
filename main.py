@@ -5787,9 +5787,15 @@ async def download_files_normal_single():
     for key in ids:
         id_arr = key.split(',')
         if id_arr[0] == 'cq':
-            chongqing_ids.append(id_arr[1])
+            try:
+                chongqing_ids.append(id_arr[1])
+            except:
+                pass
         elif id_arr[0] == 'migu':
-            migu_ids[id_arr[1]] = [id_arr[2], id_arr[3]]
+            try:
+                migu_ids[id_arr[1]] = [id_arr[2], id_arr[3]]
+            except:
+                pass
         elif id_arr[0] == 'ipanda':
             # channel,channel_id
             ipanda_ids[id_arr[1]] = id_arr[2]
@@ -5797,8 +5803,6 @@ async def download_files_normal_single():
         try:
             tasks = []
             for id in chongqing_ids:
-                if id == 'cq,':
-                    continue
                 task = asyncio.ensure_future(grab_normal_chongqin(session, id, m3u_dict, mintimeout, maxTimeout, 'cq'))
                 tasks.append(task)
             await asyncio.gather(*tasks)
@@ -5807,8 +5811,6 @@ async def download_files_normal_single():
         try:
             tasks = []
             for id in migu_ids.keys():
-                if id == 'migu,':
-                    continue
                 task = asyncio.ensure_future(
                     grab_normal_migu(session, id, m3u_dict, mintimeout, maxTimeout, 'migu', migu_ids.get(id)))
                 tasks.append(task)
@@ -7627,13 +7629,14 @@ async def download_files_normal_single_migu():
     for key in ids:
         id_arr = key.split(',')
         if id_arr[0] == 'migu':
-            migu_ids[id_arr[1]] = [id_arr[2], id_arr[3]]
+            try:
+                migu_ids[id_arr[1]] = [id_arr[2], id_arr[3]]
+            except:
+                pass
     async with aiohttp.ClientSession() as session:
         try:
             tasks = []
             for id in migu_ids.keys():
-                if id == 'migu,':
-                    continue
                 task = asyncio.ensure_future(
                     grab_normal_migu(session, id, m3u_dict, mintimeout, maxTimeout, 'migu', migu_ids.get(id)))
                 tasks.append(task)
@@ -7653,13 +7656,14 @@ async def download_files_normal_single_cq():
     for key in ids:
         id_arr = key.split(',')
         if id_arr[0] == 'cq':
-            chongqing_ids.append(id_arr[1])
+            try:
+                chongqing_ids.append(id_arr[1])
+            except:
+                pass
     async with aiohttp.ClientSession() as session:
         try:
             tasks = []
             for id in chongqing_ids:
-                if id == 'cq,':
-                    continue
                 task = asyncio.ensure_future(grab_normal_chongqin(session, id, m3u_dict, mintimeout, maxTimeout, 'cq'))
                 tasks.append(task)
             await asyncio.gather(*tasks)

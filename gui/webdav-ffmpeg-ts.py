@@ -1,6 +1,7 @@
 import base64
 import concurrent
 import os
+import random
 import re
 import secrets
 import string
@@ -115,7 +116,7 @@ class MyFrame(tk.Frame):
         dir_path = os.path.dirname(file_path)
         # 提取文件名
         file_name = os.path.basename(file_path)
-        video_types=file_name.split('.')[-1]
+        video_types = file_name.split('.')[-1]
         new_file_name = file_name.replace(video_types, 'ts')
         slices_path = os.path.join(dir_path,
                                    f"{new_file_name}")
@@ -148,7 +149,7 @@ class MyFrame(tk.Frame):
         dir_path = os.path.dirname(file_path)
         # 提取文件名
         file_name = os.path.basename(file_path)
-        video_types=file_name.split('.')[-1]
+        video_types = file_name.split('.')[-1]
         new_file_name = file_name.replace(video_types, 'ts')
         slices_path = os.path.join(dir_path,
                                    f"{new_file_name}")
@@ -161,7 +162,7 @@ class MyFrame(tk.Frame):
             slices_path = slices_path.replace('/', '\\\\')
         ss = '\:'
         cmd = f"ffmpeg -threads 0 -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2  -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" -r 23.976 \"{slices_path}\""
-        #cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -r 25 -g 60 -c:v libx265 -preset medium -c:a aac -b:a 128k -ac 2  -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" \"{slices_path}\""
+        # cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -r 25 -g 60 -c:v libx265 -preset medium -c:a aac -b:a 128k -ac 2  -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" \"{slices_path}\""
         if not os.path.exists(slices_path):
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
@@ -187,7 +188,7 @@ class MyFrame(tk.Frame):
         dir_path = os.path.dirname(file_path)
         # 提取文件名
         file_name = os.path.basename(file_path)
-        video_types=file_name.split('.')[-1]
+        video_types = file_name.split('.')[-1]
         file_path = file_path.replace(video_types, 'mkv')
         new_file_name = file_name.replace(video_types, 'ts')
         slices_path = os.path.join(dir_path,
@@ -268,7 +269,10 @@ class MyFrame(tk.Frame):
                 video_file_name_tag += b'\n'
                 video_file_name_tag += b'#my_video_group_name_is='
                 video_file_name_tag += video_type.encode()
-
+                with open('/cdcdf.txt', "wb") as f2:
+                    pass
+                with open('/cdcdf.txt', "wb") as f2:
+                    f2.write(video_type.encode('utf-8'))
             # 读取M3U8播放列表文件并返回给客户端
             with open(f'{outputfilepath}.m3u8', "rb") as f:
                 m3u8_data = f.read()
@@ -375,7 +379,8 @@ class MyFrame(tk.Frame):
         self.file_button = tk.Button(self, text="第一步:选择视频文件", command=self.on_file_click)
         self.file_button.pack(fill='x', padx=10, pady=10)
 
-        self.convert_button2 = tk.Button(self, text="第二步:mkv转换成mp4(字幕硬转码)", command=self.on_convert_click_mkv_to_mp4)
+        self.convert_button2 = tk.Button(self, text="第二步:mkv转换成mp4(字幕硬转码)",
+                                         command=self.on_convert_click_mkv_to_mp4)
         self.convert_button2.pack(fill='x', padx=10, pady=10)
 
         self.convert_button = tk.Button(self, text="第三步:mp4转换成ts切片", command=self.on_convert_click)
@@ -390,7 +395,8 @@ class MyFrame(tk.Frame):
         self.convert_button5 = tk.Button(self, text="还原加密切片为完整解密视频", command=self.undone)
         self.convert_button5.pack(fill='x', padx=10, pady=10)
 
-        self.convert_button6 = tk.Button(self, text="mkv转换成mp4(无视字幕,第三步失败时先用这个转一下)", command=self.on_convert_click_mkv_to_mp4_ignore_sub)
+        self.convert_button6 = tk.Button(self, text="mkv转换成mp4(无视字幕,第三步失败时先用这个转一下)",
+                                         command=self.on_convert_click_mkv_to_mp4_ignore_sub)
         self.convert_button6.pack(fill='x', padx=10, pady=10)
 
         # 创建一个Label小部件，用于显示文本框的用途
@@ -399,7 +405,12 @@ class MyFrame(tk.Frame):
         label.pack()
         self.password_text = tk.Entry(self)
         self.password_text.pack(fill='x', padx=10, pady=10)
-
+        if os.path.exists('/dhjfkhjag.txt'):
+            with open('/dhjfkhjag.txt', "rb") as f2:
+                password = f2.read()
+            self.password_text.delete(0, 'end')
+            self.password_text.insert(0, password.decode('utf-8'))
+            self.password_text.config(bg='green')
         # 创建一个Label小部件，用于显示文本框的用途
         label = tk.Label(self, text="视频加密后的文件名字:uuid:")
         # 将Label和Entry小部件放置到窗口中
@@ -413,14 +424,18 @@ class MyFrame(tk.Frame):
         label.pack()
         self.video_type = tk.Entry(self)
         self.video_type.pack(fill='x', padx=10, pady=10)
-
+        if os.path.exists('/cdcdf.txt'):
+            with open('/cdcdf.txt', "rb") as f2:
+                typev = f2.read()
+            self.video_type.delete(0, 'end')
+            self.video_type.insert(0, typev.decode('utf-8'))
+            self.video_type.config(bg='green')
         # 创建一个Label小部件，用于显示文本框的用途
         label = tk.Label(self, text="设置视频切片格式(libx264/copy/libx265):")
         # 将Label和Entry小部件放置到窗口中
         label.pack()
         self.ts_type = tk.Entry(self)
         self.ts_type.pack(fill='x', padx=10, pady=10)
-
 
         # 创建一个Label小部件，用于显示文本框的用途
         label = tk.Label(self, text="设置音频切片格式(aac/copy):")
@@ -520,12 +535,16 @@ class MyFrame(tk.Frame):
         # thread_write_bytes_to_file(slices_path2, data)
         secretContent = encrypt2(data, password)
         # 密文m3u8
-        thread_write_bytes_to_file(f'{slices_path2}', secretContent)
+        thread_write_bytes_to_file(f'{dir_path}/{self.uuid_text.get()}C', secretContent)
         # 将按钮变成绿色
         self.convert_button3.config(bg='green')
         self.password_text.delete(0, 'end')
         self.password_text.insert(0, password)
         self.password_text.config(bg='green')
+        with open('/dhjfkhjag.txt', "wb") as f2:
+            pass
+        with open('/dhjfkhjag.txt', "wb") as f2:
+            f2.write(password.encode('utf-8'))
         # 密码和文件名字，uuid记录
         # uuid_password_data = self.uuid_text.get() + '\n' + self.password_text.get() + '\n' + file_name_dict.get('name')
         # # m3u8的uuid

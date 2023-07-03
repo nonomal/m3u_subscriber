@@ -585,6 +585,12 @@ def serve_files_normal(filename):
     elif id == 'longzhu,':
         chaoronghe31_single('longzhu,')
         return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
+    if id == 'migu,':
+        chaoronghe31_single('migu,')
+        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
+    elif id == 'cq,':
+        chaoronghe31_single('cq,')
+        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
     url = tv_dict_normal.get(id)
     if not url:
         url = redisKeyNormalM3U.get(id)

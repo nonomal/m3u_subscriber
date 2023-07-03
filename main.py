@@ -7102,12 +7102,12 @@ def ping():
     return jsonify({'result': ''})
 
 
-# @app.route('/api/data', methods=['POST'])
-# def post_data():
-#     global message_dict
-#     message = request.form.get('message')
-#     message_dict[message] = ''
-#     return jsonify({'result': ''})
+@app.route('/api/data', methods=['POST'])
+def post_data():
+    global message_dict
+    message = request.form.get('message')
+    message_dict[message] = ''
+    return jsonify({'result': ''})
 
 
 @app.route('/api/data2', methods=['POST'])

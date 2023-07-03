@@ -7691,7 +7691,8 @@ def chaoronghe31_single(type):
         removeredisKeyNormalKeys = []
         for key in redisKeyNormal.keys():
             if key.startswith(type):
-                removeredisKeyNormalKeys.append(key)
+                if type != 'migu,' and type != 'cq,':
+                   removeredisKeyNormalKeys.append(key)
         map_remove_keys(redisKeyNormal, removeredisKeyNormalKeys)
         redis_del_map_keys(REDIS_KEY_NORMAL, removeredisKeyNormalKeys)
         m3u_dict = update_by_type_normal(type)
@@ -7700,7 +7701,7 @@ def chaoronghe31_single(type):
             return "empty"
         ip = init_IP()
         redisKeyM3uFake = {}
-        # fakeurl = f"http://127.0.0.1:22771/normal/"
+        #fakeurl = f"http://127.0.0.1:22771/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
         for id, url in redisKeyNormalM3U.items():
             try:
@@ -7806,7 +7807,7 @@ def chaoronghe31():
         redisKeyM3uFake = {}
         redisKeyNormalM3U.clear()
         redis_del_map(REDIS_KEY_NORMAL_M3U)
-        # fakeurl = f"http://127.0.0.1:22771/normal/"
+        #fakeurl = f"http://127.0.0.1:22771/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
         for id, url in m3u_dict.items():
             try:

@@ -35,14 +35,218 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from multidict import CIMultiDict
 
-app = Flask(__name__)
-app.config['TEMPLATES_AUTO_RELOAD'] = True  # 实时更新模板文件
-app.config['MAX_CONTENT_LENGTH'] = 1000 * 1024 * 1024  # 上传文件最大限制1000 MB
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # 静态文件缓存时间，默认值为 12 小时。可以通过将其设为 0 来禁止浏览器缓存静态文件
-app.config['JSONIFY_TIMEOUT'] = 6000  # 设置响应超时时间为 6000 秒
-app.config['PROXY_CONNECT_TIMEOUT'] = 6000
-app.config['PROXY_SEND_TIMEOUT'] = 6000
-app.config['PROXY_READ_TIMEOUT'] = 6000
+# 存放数据库文件的路径
+DB_PATH = "/app/db"
+
+
+def get_single(file_path):
+    try:
+        with open(file_path, "rb") as f:
+            data_bytes = f.read()
+        return jsonify({'result': data_bytes.decode('utf-8')})
+    except Exception as e:
+        return jsonify({'result': ''})
+
+
+def get_single_local(file_path):
+    try:
+        with open(file_path, "rb") as f:
+            data_bytes = f.read()
+        return data_bytes.decode('utf-8')
+    except Exception as e:
+        return ''
+
+
+def add_single(file_path, value):
+    try:
+        try:
+            # 如果文件存在，清除文件中的所有数据
+            with open(file_path, "wb") as f:
+                pass
+        except:
+            # 如果文件不存在，创建一个新文件
+            open(file_path, "wb").close()
+        # 复写数据
+        with open(file_path, "wb") as f:
+            f.write(value.encode('utf-8'))
+        return jsonify({'result': 1})
+    except Exception as e:
+        return jsonify({'result': 0})
+
+
+def add_single_local(file_path, value):
+    try:
+        try:
+            # 如果文件存在，清除文件中的所有数据
+            with open(file_path, "wb") as f:
+                pass
+        except:
+            # 如果文件不存在，创建一个新文件
+            open(file_path, "wb").close()
+        # 复写数据
+        with open(file_path, "wb") as f:
+            f.write(value.encode('utf-8'))
+    except Exception as e:
+        pass
+
+
+def add_map(file_path, add_dict):
+    try:
+        if len(add_dict) == 0:
+            return jsonify({'result': 0})
+        old_dict = {}
+        try:
+            with open(file_path, "rb") as f:
+                data_bytes = f.read()
+            old_dict = json.loads(data_bytes.decode('utf-8'))
+        except Exception as e:
+            # 如果文件不存在，创建一个新文件
+            open(file_path, "wb").close()
+        old_dict.update(add_dict)
+        # 清除文件中的所有数据
+        with open(file_path, "wb") as f:
+            pass
+        # 复写数据
+        with open(file_path, "wb") as f:
+            f.write(json.dumps(old_dict).encode('utf-8'))
+        return jsonify({'result': 1})
+    except Exception as e:
+        return jsonify({'result': 0})
+
+
+def add_map_local(file_path, add_dict):
+    try:
+        if len(add_dict) == 0:
+            return
+        old_dict = {}
+        try:
+            with open(file_path, "rb") as f:
+                data_bytes = f.read()
+            old_dict = json.loads(data_bytes.decode('utf-8'))
+        except Exception as e:
+            # 如果文件不存在，创建一个新文件
+            open(file_path, "wb").close()
+        old_dict.update(add_dict)
+        # 清除文件中的所有数据
+        with open(file_path, "wb") as f:
+            pass
+        # 复写数据
+        with open(file_path, "wb") as f:
+            f.write(json.dumps(old_dict).encode('utf-8'))
+    except Exception as e:
+        pass
+
+
+def delete_cache(file_path):
+    try:
+        os.remove(file_path)
+        return jsonify({'result': 1})
+    except Exception as e:
+        return jsonify({'result': 0})
+
+
+def delete_cache_local(file_path):
+    try:
+        os.remove(file_path)
+    except Exception as e:
+        pass
+
+
+def delete_keys(file_path, dict_data):
+    try:
+        with open(file_path, "rb") as f:
+            data_bytes = f.read()
+        dict = json.loads(data_bytes.decode('utf-8'))
+        new_dict = {}
+        for key, value in dict.items():
+            if key in dict_data:
+                continue
+            new_dict[key] = value
+        # 清除文件中的所有数据
+        with open(file_path, "wb") as f:
+            pass
+        # 复写数据
+        with open(file_path, "wb") as f:
+            f.write(json.dumps(new_dict).encode('utf-8'))
+        return jsonify({'result': 1})
+    except Exception as e:
+        return jsonify({'result': 0})
+
+
+def delete_keys_local(file_path, dict_data):
+    try:
+        with open(file_path, "rb") as f:
+            data_bytes = f.read()
+        dict = json.loads(data_bytes.decode('utf-8'))
+        new_dict = {}
+        for key, value in dict.items():
+            if key in dict_data:
+                continue
+            new_dict[key] = value
+        # 清除文件中的所有数据
+        with open(file_path, "wb") as f:
+            pass
+        # 复写数据
+        with open(file_path, "wb") as f:
+            f.write(json.dumps(new_dict).encode('utf-8'))
+    except Exception as e:
+        pass
+
+
+def get_map(file_path):
+    try:
+        with open(file_path, "rb") as f:
+            data_bytes = f.read()
+        return jsonify(json.loads(data_bytes.decode('utf-8')))
+    except Exception as e:
+        return jsonify({})
+
+
+def get_map_local(file_path):
+    try:
+        with open(file_path, "rb") as f:
+            data_bytes = f.read()
+        return json.loads(data_bytes.decode('utf-8'))
+    except Exception as e:
+        return {}
+
+
+def init_db():
+    try:
+        # 把数据库直播源logo数据导入内存
+        CHANNEL_LOGO.update(redis_get_map(REDIS_KEY_M3U_EPG_LOGO))
+    except:
+        print("no logo in redis")
+    try:
+        # 把直播源分组数据导入内存
+        CHANNEL_GROUP.update(redis_get_map(REDIS_KEY_M3U_EPG_GROUP))
+    except:
+        print("no group in redis")
+    initProxyModel()
+    initProxyServer()
+    init_threads_num()
+    init_china_dns_port()
+    init_china_dns_server()
+    init_extra_dns_server()
+    init_extra_dns_port()
+    init_m3u_whitelist()
+    init_m3u_blacklist()
+    init_IP()
+    init_pass('proxy')
+    init_pass('ipv6')
+    init_pass('ipv4')
+    init_pass('blacklist')
+    init_pass('whitelist')
+    init_pass('m3u')
+    initReloadCacheForSpecial()
+    initReloadCacheForNormal()
+
+
+def main():
+    init_db()
+    timer_thread1 = threading.Thread(target=clock_thread, daemon=True)
+    timer_thread1.start()
+
 
 ##########################################################redis key#############################################
 REDIS_KEY_M3U_LINK = "m3ulink"
@@ -371,240 +575,24 @@ def authenticate():
     return resp
 
 
-# 针对已登录用户的受保护视图函数
-@app.route('/')
-@requires_auth
-def index():
-    return render_template('index.html')
-
-
 # 公共路径，放的全部是加密文件，在公共服务器开放这个路径访问
 public_path = '/app/ini/'
 # 隐私路径，放的全部是明文文件，在公共服务器不要开放这个路径访问
 secret_path = '/app/secret/'
 
-
-# 路由隐藏真实路径-公共路径
-@app.route('/url/<path:filename>')
-def serve_files(filename):
-    root_dir = public_path  # 根目录
-    return send_from_directory(root_dir, filename, as_attachment=True)
-
-
-# 路由隐藏真实路径-隐私路径
-@app.route('/secret/<path:filename>')
-def serve_files2(filename):
-    root_dir = secret_path  # 根目录
-    return send_from_directory(root_dir, filename, as_attachment=True)
-
-
 tv_dict_youtube = {}
-
-
-# 路由youtube
-@app.route('/youtube/<path:filename>')
-def serve_youtube(filename):
-    id = filename.split('.')[0]
-    if id == 'youtube':
-        if is_update_clock_live('youtube'):
-            chaoronghe24()
-            chaoronghe()
-            update_clock('normalM3uClock')
-        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
-    url = tv_dict_youtube.get(id)
-    if not url:
-        url = redisKeyYoutubeM3u.get(id)
-        tv_dict_youtube.clear()
-        tv_dict_youtube[id] = url
-
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Content-Type'] = 'text/html; charset=utf-8'
-        return response
-
-    return redirect(url)
-
 
 tv_dict_bilibili = {}
 
-
-# 路由bilibili
-@app.route('/bilibili/<path:filename>')
-def serve_files4(filename):
-    id = filename.split('.')[0]
-    if id == 'bilibili':
-        if is_update_clock_live('bilibili'):
-            chaoronghe25()
-            chaoronghe()
-            update_clock('normalM3uClock')
-        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
-    url = tv_dict_bilibili.get(id)
-    if not url:
-        url = redisKeyBililiM3u.get(id)
-        tv_dict_bilibili.clear()
-        tv_dict_bilibili[id] = url
-
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Content-Type'] = 'text/html; charset=utf-8'
-        return response
-
-    return redirect(url)
-
-
 tv_dict_huya = {}
-
-
-# 路由huya
-@app.route('/huya/<path:filename>')
-def serve_files5(filename):
-    id = filename.split('.')[0]
-    if id == 'huya':
-        if is_update_clock_live('huya'):
-            chaoronghe26()
-            chaoronghe()
-            update_clock('normalM3uClock')
-        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
-    url = tv_dict_huya.get(id)
-    if not url:
-        url = redisKeyHuyaM3u.get(id)
-        tv_dict_huya.clear()
-        tv_dict_huya[id] = url
-
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Content-Type'] = 'text/html; charset=utf-8'
-        return response
-
-    return redirect(url)
-
 
 tv_dict_yy = {}
 
-
-# 路由YY
-@app.route('/YY/<path:filename>')
-def serve_files6(filename):
-    id = filename.split('.')[0]
-    if id == 'YY':
-        if is_update_clock_live('yy'):
-            chaoronghe27()
-            chaoronghe()
-            update_clock('normalM3uClock')
-        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
-    url = tv_dict_yy.get(id)
-    if not url:
-        url = redisKeyYYM3u.get(id)
-        tv_dict_yy.clear()
-        tv_dict_yy[id] = url
-
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Content-Type'] = 'text/html; charset=utf-8'
-        return response
-
-    return redirect(url)
-
-
 tv_dict_douyin = {}
-
-
-# 路由DOUYIN
-@app.route('/DOUYIN/<path:filename>')
-def serve_files_DOUYIN(filename):
-    id = filename.split('.')[0]
-    if id == 'Douyin':
-        if is_update_clock_live('douyin'):
-            chaoronghe29()
-            chaoronghe()
-            update_clock('normalM3uClock')
-        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
-    url = tv_dict_douyin.get(id)
-    if not url:
-        url = redisKeyDOUYINM3u.get(id)
-        tv_dict_douyin.clear()
-        tv_dict_douyin[id] = url
-
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Content-Type'] = 'text/html; charset=utf-8'
-        return response
-
-    return redirect(url)
-
 
 tv_dict_twitch = {}
 
-
-# 路由twitch
-@app.route('/TWITCH/<path:filename>')
-def serve_files7(filename):
-    id = filename.split('.')[0]
-    if id == 'Twitch':
-        if is_update_clock_live('twitch'):
-            chaoronghe28()
-            chaoronghe()
-            update_clock('normalM3uClock')
-        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
-    url = tv_dict_twitch.get(id)
-    if not url:
-        url = redisKeyTWITCHM3u.get(id)
-        tv_dict_twitch.clear()
-        tv_dict_twitch[id] = url
-
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Content-Type'] = 'text/html; charset=utf-8'
-        return response
-
-    return redirect(url)
-
-
 tv_dict_normal = {}
-
-
-# 路由normal
-@app.route('/normal/<path:filename>')
-def serve_files_normal(filename):
-    id = filename.split('.')[0]
-    if id == 'qiumihui,':
-        chaoronghe31_single('qiumihui,')
-        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
-    elif id == 'longzhu,':
-        chaoronghe31_single('longzhu,')
-        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
-    if id == 'migu,':
-        chaoronghe31_single('migu,')
-        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
-    elif id == 'cq,':
-        chaoronghe31_single('cq,')
-        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
-    url = tv_dict_normal.get(id)
-    if not url:
-        url = redisKeyNormalM3U.get(id)
-        tv_dict_normal.clear()
-        tv_dict_normal[id] = url
-
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Content-Type'] = 'text/html; charset=utf-8'
-        return response
-
-    return redirect(url)
 
 
 ##############################################################bilibili############################################
@@ -631,68 +619,101 @@ url_flask = '/api/data2'
 
 
 def redis_add(key, value):
-    try:
-        data = {
-            'cacheKey': key,
-            'action': 'add_single',
-            'dict_data': value
-        }
-        with app.test_client() as client:
-            response = client.post(url_flask, data=data)
-            if response.status_code == 200:
-                return 1
-            return 0
-    except Exception as e:
-        return 0
+    count = 0
+    while count < 3:
+        try:
+            data = {
+                'cacheKey': key,
+                'action': 'add_single',
+                'dict_data': value
+            }
+            with app.test_client() as client:
+                response = client.post(url_flask, data=data)
+                if response.status_code == 200:
+                    break
+            count += 1
+            time.sleep(1)
+        except Exception as e:
+            count += 1
+            time.sleep(1)
+    # file_path = os.path.join(DB_PATH, f'{key}.txt')
+    # add_single_local(file_path, value)
 
 
 # redis查询
 def redis_get(key):
-    try:
-        data = {
-            'cacheKey': key,
-            'action': 'get_single',
-        }
-        with app.test_client() as client:
-            response = client.post(url_flask, data=data)
-            # 字符串格式的json数据
-            response_data = response.get_json()
-            return response_data['result']
-    except:
-        return None
+    count = 0
+    while count < 3:
+        try:
+            data = {
+                'cacheKey': key,
+                'action': 'get_single',
+            }
+            with app.test_client() as client:
+                response = client.post(url_flask, data=data)
+                # 字符串格式的json数据
+                response_data = response.get_json()
+                return response_data['result']
+        except:
+            count += 1
+            time.sleep(1)
+    return None
+    # file_path = os.path.join(DB_PATH, f'{key}.txt')
+    # count = 0
+    # while count < 3:
+    #     try:
+    #         return get_single_local(file_path)
+    #     except:
+    #         count += 1
+    # return None
 
 
 # redis存储map字典，字典主键唯一，重复主键只会复写
 def redis_add_map(key, my_dict):
-    try:
-        data = {
-            'cacheKey': key,
-            'action': 'add_map',
-            'dict_data': json.dumps(my_dict).encode('utf-8')
-        }
-        with app.test_client() as client:
-            response = client.post(url_flask, data=data)
-            if response.status_code == 200:
-                return 1
-            return 0
-    except Exception as e:
-        return 0
+    count = 0
+    while count < 3:
+        try:
+            data = {
+                'cacheKey': key,
+                'action': 'add_map',
+                'dict_data': json.dumps(my_dict).encode('utf-8')
+            }
+            with app.test_client() as client:
+                response = client.post(url_flask, data=data)
+                if response.status_code == 200:
+                    break
+            count += 1
+            time.sleep(1)
+        except Exception as e:
+            count += 1
+            time.sleep(1)
+    # file_path = os.path.join(DB_PATH, f'{key}.txt')
+    # add_map_local(file_path, my_dict)
 
 
 # redis取出map字典
 def redis_get_map(key):
-    try:
-        data = {
-            'cacheKey': key,
-            'action': 'get_map'
-        }
-        with app.test_client() as client:
-            response = client.post(url_flask, data=data)
-            # 字符串格式的json数据
-            response_data = response.get_json()
-            return response_data
-    except Exception as e:
-        return {}
+    count = 0
+    while count < 3:
+        try:
+            data = {
+                'cacheKey': key,
+                'action': 'get_map'
+            }
+            with app.test_client() as client:
+                response = client.post(url_flask, data=data)
+                # 字符串格式的json数据
+                response_data = response.get_json()
+                return response_data
+        except Exception as e:
+            count += 1
+            time.sleep(1)
+    return {}
+    # file_path = os.path.join(DB_PATH, f'{key}.txt')
+    # dict = get_map_local(file_path)
+    # if len(dict) == 0:
+    #     return {}
+    # return dict
 
 
 # redis取出map字典key
@@ -707,18 +728,24 @@ def redis_get_map_keys(key):
 
 # redis删除map字典
 def redis_del_map(key):
-    try:
-        data = {
-            'cacheKey': key,
-            'action': 'delete'
-        }
-        with app.test_client() as client:
-            response = client.post(url_flask, data=data)
-            if response.status_code == 200:
-                return 1
-            return 0
-    except Exception as e:
-        return 0
+    count = 0
+    while count < 3:
+        try:
+            data = {
+                'cacheKey': key,
+                'action': 'delete'
+            }
+            with app.test_client() as client:
+                response = client.post(url_flask, data=data)
+                if response.status_code == 200:
+                    break
+            count += 1
+            time.sleep(1)
+        except Exception as e:
+            count += 1
+            time.sleep(1)
+    # file_path = os.path.join(DB_PATH, f'{key}.txt')
+    # delete_cache_local(file_path)
 
 
 # redis删除字典单个键值对
@@ -731,34 +758,46 @@ def redis_del_map_key(key, map_key):
 
 # redis删除字典多个键值对
 def redis_del_map_keys(key, map_keys):
-    try:
-        data = {
-            'cacheKey': key,
-            'action': 'delete_keys',
-            'dict_data': json.dumps(map_keys).encode('utf-8')
-        }
-        with app.test_client() as client:
-            response = client.post(url_flask, data=data)
-            if response.status_code == 200:
-                return 1
-            return 0
-    except Exception as e:
-        return 0
+    count = 0
+    while count < 3:
+        try:
+            data = {
+                'cacheKey': key,
+                'action': 'delete_keys',
+                'dict_data': json.dumps(map_keys).encode('utf-8')
+            }
+            with app.test_client() as client:
+                response = client.post(url_flask, data=data)
+                if response.status_code == 200:
+                    break
+            count += 1
+            time.sleep(1)
+        except Exception as e:
+            count += 1
+            time.sleep(1)
+    # file_path = os.path.join(DB_PATH, f'{key}.txt')
+    # delete_keys_local(file_path, map_keys)
 
 
 def redis_public_message(message):
-    try:
-        url = 'http://localhost:22772/api/data'
-        data = {
-            'message': message
-        }
-        with app.test_client() as client:
-            response = client.post(url, data=data)
-            if response.status_code == 200:
-                return 1
-            return 0
-    except Exception as e:
-        return 0
+    count = 0
+    while count < 3:
+        try:
+            url = 'http://localhost:22772/api/data'
+            data = {
+                'message': message
+            }
+            with app.test_client() as client:
+                response = client.post(url, data=data)
+                if response.status_code == 200:
+                    break
+            count += 1
+            time.sleep(1)
+        except Exception as e:
+            count += 1
+            time.sleep(1)
+    # global message_dict
+    # message_dict[message] = ''
 
 
 #########################################################通用工具区#################################################
@@ -883,7 +922,7 @@ def clock_thread():
         if is_update_clock('syncClock'):
             worker_github()
             update_clock('syncClock')
-        time.sleep(10)
+        time.sleep(15)
 
 
 def worker_github():
@@ -1838,37 +1877,6 @@ def thread_write_bytes_to_file(filename, bytesContent):
 def write_bytes_to_file(filename, plaintext):
     with open(filename, 'wb') as f:
         f.write(plaintext)
-
-
-def init_db():
-    try:
-        # 把数据库直播源logo数据导入内存
-        CHANNEL_LOGO.update(redis_get_map(REDIS_KEY_M3U_EPG_LOGO))
-    except:
-        print("no logo in redis")
-    try:
-        # 把直播源分组数据导入内存
-        CHANNEL_GROUP.update(redis_get_map(REDIS_KEY_M3U_EPG_GROUP))
-    except:
-        print("no group in redis")
-    initProxyModel()
-    initProxyServer()
-    init_threads_num()
-    init_china_dns_port()
-    init_china_dns_server()
-    init_extra_dns_server()
-    init_extra_dns_port()
-    init_m3u_whitelist()
-    init_m3u_blacklist()
-    init_IP()
-    init_pass('proxy')
-    init_pass('ipv6')
-    init_pass('ipv4')
-    init_pass('blacklist')
-    init_pass('whitelist')
-    init_pass('m3u')
-    initReloadCacheForSpecial()
-    initReloadCacheForNormal()
 
 
 def init_function_dict():
@@ -4181,7 +4189,7 @@ def init_m3u_blacklist():
     global m3u_blacklist
     dict = redis_get_map(REDIS_KEY_M3U_BLACKLIST)
     if not dict or len(dict) == 0:
-        dict = {'车载': '', "DJ音乐": '', '舞曲': ''}
+        dict = {"DJ音乐": ''}
         redis_add_map(REDIS_KEY_M3U_BLACKLIST, dict)
         m3u_blacklist = dict.copy()
     m3u_blacklist = dict.copy()
@@ -4337,12 +4345,19 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
 
 
 def init_file_name():
-    dict = redis_get_map(REDIS_KEY_FILE_NAME)
-    if dict and len(dict.keys()) > 0:
-        global file_name_dict
-        file_name_dict.clear()
-        file_name_dict = dict.copy()
-    else:
+    count = 0
+    success = False
+    while count < 3:
+        dict = redis_get_map(REDIS_KEY_FILE_NAME)
+        if dict and len(dict.keys()) > 0:
+            global file_name_dict
+            file_name_dict.clear()
+            file_name_dict.update(dict)
+            success = True
+            break
+        else:
+            count += 1
+    if not success:
         redis_add_map(REDIS_KEY_FILE_NAME, file_name_dict_default)
 
 
@@ -4372,115 +4387,9 @@ def getFileNameByTagName(tagname):
 ############################################################协议区####################################################
 
 
-# 获取节点订阅密码
-@app.route('/api/getExtraDnsPort3', methods=['GET'])
-@requires_auth
-def getExtraDnsPort3():
-    num = init_pass('proxy')
-    return jsonify({'button': num})
-
-
-# 获取IPV6订阅密码
-@app.route('/api/getExtraDnsPort2', methods=['GET'])
-@requires_auth
-def getExtraDnsPort2():
-    num = init_pass('ipv6')
-    return jsonify({'button': num})
-
-
-# 获取IPV4订阅密码
-@app.route('/api/getExtraDnsServer2', methods=['GET'])
-@requires_auth
-def getExtraDnsServer2():
-    num = init_pass('ipv4')
-    return jsonify({'button': num})
-
-
-# 获取域名黑名单订阅密码
-@app.route('/api/getChinaDnsPort2', methods=['GET'])
-@requires_auth
-def getChinaDnsPort2():
-    num = init_pass('blacklist')
-    return jsonify({'button': num})
-
-
-# 获取域名白名单订阅密码
-@app.route('/api/getChinaDnsServer2', methods=['GET'])
-@requires_auth
-def getChinaDnsServer2():
-    num = init_pass('whitelist')
-    return jsonify({'button': num})
-
-
-# 获取直播源订阅密码
-@app.route('/api/getThreadNum2', methods=['GET'])
-@requires_auth
-def getThreadNum2():
-    num = init_pass('m3u')
-    return jsonify({'button': num})
-
-
-# 删除加密订阅密码历史记录
-@app.route('/api/deletewm3u14', methods=['POST'])
-@requires_auth
-def deletewm3u14():
-    return dellist(request, REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS)
-
-
-# 拉取全部加密订阅密码历史记录
-@app.route('/api/getall14', methods=['GET'])
-@requires_auth
-def getall14():
-    return jsonify(redis_get_map(REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS))
-
-
-@app.route('/api/upload_json', methods=['POST'])
-@requires_auth
-def upload_json():
-    # 从请求体中获取 rediskey 和文件内容
-    data = request.get_json()
-    rediskey = data.get('rediskey')
-    file_content = data.get('content')
-    return upload_json_base(rediskey, file_content)
-
-
-# 一键上传全部配置集合文件
-@app.route('/api/upload_json_file7', methods=['POST'])
-@requires_auth
-def upload_json_file7():
-    return upload_oneKey_json(request)
-
-
-# 赞助-比特币
-@app.route('/api/get_image')
-def get_image():
-    filename = '/app/img/bitcoin.png'
-    return send_file(filename, mimetype='image/png')
-
-
-# 查询功能开启状态
-@app.route("/api/getSwitchstate", methods=['POST'])
-@requires_auth
-def getSwitchstate():
-    id = request.json['id']
-    global function_dict
-    status = function_dict[id]
-    return jsonify({"checkresult": status})
-
-
 # 需要额外操作的
 clockArr = ['switch25', 'switch26', 'switch27', 'switch28', 'switch13', 'switch25', 'switch33', 'switch34',
             'switch35']
-
-
-# 切换功能开关
-@app.route('/api/switchstate', methods=['POST'])
-@requires_auth
-def switchFunction():
-    state = request.json['state']
-    id = request.json['id']
-    switchSingleFunction(id, state)
-    return 'success'
 
 
 def switchSingleFunction(id, state):
@@ -4492,286 +4401,6 @@ def switchSingleFunction(id, state):
         redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
 
 
-# 批量切换功能开关
-@app.route('/api/serverMode', methods=['POST'])
-@requires_auth
-def serverMode():
-    mode = request.json['mode']
-    if mode == 'server':
-        switchSingleFunction('switch2', '1')
-        switchSingleFunction('switch3', '1')
-        switchSingleFunction('switch', '1')
-        switchSingleFunction('switch4', '1')
-        switchSingleFunction('switch5', '1')
-        switchSingleFunction('switch6', '0')
-        switchSingleFunction('switch7', '1')
-        switchSingleFunction('switch8', '1')
-        switchSingleFunction('switch9', '1')
-        switchSingleFunction('switch10', '1')
-        switchSingleFunction('switch11', '1')
-        switchSingleFunction('switch12', '1')
-        switchSingleFunction('switch13', '1')
-        switchSingleFunction('switch14', '1')
-        switchSingleFunction('switch15', '1')
-        switchSingleFunction('switch16', '1')
-        switchSingleFunction('switch17', '1')
-        switchSingleFunction('switch18', '1')
-        switchSingleFunction('switch19', '1')
-        switchSingleFunction('switch20', '1')
-        switchSingleFunction('switch21', '1')
-        switchSingleFunction('switch22', '1')
-        switchSingleFunction('switch23', '1')
-        switchSingleFunction('switch24', '1')
-        switchSingleFunction('switch25', '1')
-        switchSingleFunction('switch26', '1')
-        switchSingleFunction('switch27', '1')
-        switchSingleFunction('switch28', '1')
-        switchSingleFunction('switch30', '1')
-        switchSingleFunction('switch31', '1')
-        switchSingleFunction('switch32', '1')
-        switchSingleFunction('switch33', '0')
-        switchSingleFunction('switch34', '0')
-        switchSingleFunction('switch35', '0')
-    elif mode == 'client':
-        switchSingleFunction('switch2', '0')
-        switchSingleFunction('switch3', '0')
-        switchSingleFunction('switch', '0')
-        switchSingleFunction('switch4', '0')
-        switchSingleFunction('switch5', '0')
-        switchSingleFunction('switch6', '0')
-        switchSingleFunction('switch7', '0')
-        switchSingleFunction('switch8', '0')
-        switchSingleFunction('switch9', '0')
-        switchSingleFunction('switch10', '0')
-        switchSingleFunction('switch11', '0')
-        switchSingleFunction('switch12', '0')
-        switchSingleFunction('switch13', '0')
-        switchSingleFunction('switch14', '0')
-        switchSingleFunction('switch15', '0')
-        switchSingleFunction('switch16', '0')
-        switchSingleFunction('switch17', '0')
-        switchSingleFunction('switch18', '0')
-        switchSingleFunction('switch19', '0')
-        switchSingleFunction('switch20', '0')
-        switchSingleFunction('switch21', '0')
-        switchSingleFunction('switch22', '0')
-        switchSingleFunction('switch23', '0')
-        switchSingleFunction('switch24', '1')
-        switchSingleFunction('switch25', '0')
-        switchSingleFunction('switch26', '1')
-        switchSingleFunction('switch27', '1')
-        switchSingleFunction('switch28', '1')
-        switchSingleFunction('switch30', '0')
-        switchSingleFunction('switch31', '0')
-        switchSingleFunction('switch32', '0')
-        switchSingleFunction('switch33', '0')
-        switchSingleFunction('switch34', '0')
-        switchSingleFunction('switch35', '0')
-    return 'success'
-
-
-# 修改DNS超时时间戳
-@app.route('/api/savetimeout', methods=['POST'])
-@requires_auth
-def savetimeout():
-    data = request.json['selected_button']
-    redis_add(REDIS_KEY_DNS_TIMEOUT, int(data))
-    dnstimeout[REDIS_KEY_DNS_TIMEOUT] = int(data)
-    return "数据已经保存"
-
-
-# DNS并发查询数
-@app.route('/api/gettimeout', methods=['GET'])
-@requires_auth
-def gettimeout():
-    num = init_dns_timeout()
-    return jsonify({'button': num})
-
-
-# 修改DNS并发查询数量
-@app.route('/api/savequeryThreadNum', methods=['POST'])
-@requires_auth
-def savequeryThreadNum():
-    data = request.json['selected_button']
-    redis_add(REDIS_KEY_DNS_QUERY_NUM, int(data))
-    dnsquerynum[REDIS_KEY_DNS_QUERY_NUM] = int(data)
-    return "数据已经保存"
-
-
-# 获取DNS并发查询数量
-@app.route('/api/getQueryThreadNum', methods=['GET'])
-@requires_auth
-def getQueryThreadNum():
-    num = init_dns_query_num()
-    return jsonify({'button': num})
-
-
-# 删除DNS简易黑名单
-@app.route('/api/deletewm3u13', methods=['POST'])
-@requires_auth
-def deletewm3u13():
-    return_value = dellist(request, REDIS_KEY_DNS_SIMPLE_BLACKLIST)
-    redis_public_message(f'{REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG}_3_1')
-    return return_value
-
-
-# 删除youtube直播源
-@app.route('/api/deletewm3u24', methods=['POST'])
-@requires_auth
-def deletewm3u24():
-    deleteurl = request.json.get('deleteurl')
-    del redisKeyYoutube[deleteurl]
-    return dellist(request, REDIS_KEY_YOUTUBE)
-
-
-# 删除bilibili直播源
-@app.route('/api/deletewm3u25', methods=['POST'])
-@requires_auth
-def deletewm3u25():
-    deleteurl = request.json.get('deleteurl')
-    del redisKeyBilili[deleteurl]
-    return dellist(request, REDIS_KEY_BILIBILI)
-
-
-# 删除huya直播源
-@app.route('/api/deletewm3u26', methods=['POST'])
-@requires_auth
-def deletewm3u26():
-    deleteurl = request.json.get('deleteurl')
-    del redisKeyHuya[deleteurl]
-    return dellist(request, REDIS_KEY_HUYA)
-
-
-# 删除YY直播源
-@app.route('/api/deletewm3u27', methods=['POST'])
-@requires_auth
-def deletewm3u27():
-    deleteurl = request.json.get('deleteurl')
-    del redisKeyYY[deleteurl]
-    return dellist(request, REDIS_KEY_YY)
-
-
-# 删除DOUYIN直播源
-@app.route('/api/deletewm3u29', methods=['POST'])
-@requires_auth
-def deletewm3u29():
-    deleteurl = request.json.get('deleteurl')
-    del redisKeyDOUYIN[deleteurl]
-    return dellist(request, REDIS_KEY_DOUYIN)
-
-
-# 删除alist直播源
-@app.route('/api/deletewm3u30', methods=['POST'])
-@requires_auth
-def deletewm3u30():
-    deleteurl = request.json.get('deleteurl')
-    del redisKeyAlist[deleteurl]
-    return dellist(request, REDIS_KEY_ALIST)
-
-
-# 删除TWITCH直播源
-@app.route('/api/deletewm3u28', methods=['POST'])
-@requires_auth
-def deletewm3u28():
-    deleteurl = request.json.get('deleteurl')
-    del redisKeyTWITCH[deleteurl]
-    return dellist(request, REDIS_KEY_TWITCH)
-
-
-# 删除NORMAL直播源
-@app.route('/api/deletewm3u31', methods=['POST'])
-@requires_auth
-def deletewm3u31():
-    deleteurl = request.json.get('deleteurl')
-    del redisKeyNormal[deleteurl]
-    return dellist(request, REDIS_KEY_NORMAL)
-
-
-# 添加DNS简易黑名单
-@app.route('/api/addnewm3u13', methods=['POST'])
-@requires_auth
-def addnewm3u13():
-    # 获取 HTML 页面发送的 POST 请求参数
-    addurl = request.json.get('addurl')
-    name = request.json.get('name')
-    addurl = stupidThink(addurl)
-    my_dict = {addurl: name}
-    redis_add_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST, my_dict)
-    redis_public_message(f'{REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG}_0_{addurl}')
-    return jsonify({'addresult': "add success"})
-
-
-# 拉取全部DNS简易黑名单
-@app.route('/api/getall13', methods=['GET'])
-@requires_auth
-def getall13():
-    return jsonify(redis_get_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST))
-
-
-# 拉取全部youtube
-@app.route('/api/getall24', methods=['GET'])
-@requires_auth
-def getall24():
-    global redisKeyYoutube
-    return returnDictCache(REDIS_KEY_YOUTUBE, redisKeyYoutube)
-
-
-# 拉取全部bilibili
-@app.route('/api/getall25', methods=['GET'])
-@requires_auth
-def getall25():
-    global redisKeyBilili
-    return returnDictCache(REDIS_KEY_BILIBILI, redisKeyBilili)
-
-
-# 拉取全部huya
-@app.route('/api/getall26', methods=['GET'])
-@requires_auth
-def getall26():
-    global redisKeyHuya
-    return returnDictCache(REDIS_KEY_HUYA, redisKeyHuya)
-
-
-# 拉取全部YY
-@app.route('/api/getall27', methods=['GET'])
-@requires_auth
-def getall27():
-    global redisKeyYY
-    return returnDictCache(REDIS_KEY_YY, redisKeyYY)
-
-
-# 拉取全部DOUYIN
-@app.route('/api/getall29', methods=['GET'])
-@requires_auth
-def getall29():
-    global redisKeyDOUYIN
-    return returnDictCache(REDIS_KEY_DOUYIN, redisKeyDOUYIN)
-
-
-# 拉取全部alist
-@app.route('/api/getall30', methods=['GET'])
-@requires_auth
-def getall30():
-    global redisKeyAlist
-    return returnDictCache(REDIS_KEY_ALIST, redisKeyAlist)
-
-
-# 拉取全部TWITCH
-@app.route('/api/getall28', methods=['GET'])
-@requires_auth
-def getall28():
-    global redisKeyTWITCH
-    return returnDictCache(REDIS_KEY_TWITCH, redisKeyTWITCH)
-
-
-# 拉取全部normal
-@app.route('/api/getall31', methods=['GET'])
-@requires_auth
-def getall31():
-    global redisKeyNormal
-    return returnDictCache(REDIS_KEY_NORMAL, redisKeyNormal)
-
-
 def returnDictCache(redisKey, cacheDict):
     if len(cacheDict.keys()) > 0:
         return jsonify(cacheDict)
@@ -4779,85 +4408,6 @@ def returnDictCache(redisKey, cacheDict):
     if dict and len(dict.keys()) > 0:
         cacheDict.update(dict)
     return jsonify(cacheDict)
-
-
-# 删除DNS简易白名单
-@app.route('/api/deletewm3u12', methods=['POST'])
-@requires_auth
-def deletewm3u12():
-    return_value = dellist(request, REDIS_KEY_DNS_SIMPLE_WHITELIST)
-    redis_public_message(f'{REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG}_3_1')
-    return return_value
-
-
-# 添加DNS简易白名单
-@app.route('/api/addnewm3u12', methods=['POST'])
-@requires_auth
-def addnewm3u12():
-    # 获取 HTML 页面发送的 POST 请求参数
-    addurl = request.json.get('addurl')
-    name = request.json.get('name')
-    addurl = stupidThink(addurl)
-    my_dict = {addurl: name}
-    redis_add_map(REDIS_KEY_DNS_SIMPLE_WHITELIST, my_dict)
-    redis_public_message(f'{REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG}_0_{addurl}')
-    return jsonify({'addresult': "add success"})
-
-
-# 拉取全部DNS简易白名单
-@app.route('/api/getall12', methods=['GET'])
-@requires_auth
-def getall12():
-    return jsonify(redis_get_map(REDIS_KEY_DNS_SIMPLE_WHITELIST))
-
-
-# 获取主机IP
-@app.route('/api/getIP', methods=['GET'])
-@requires_auth
-def getIP():
-    num = init_IP()
-    return jsonify({'button': num})
-
-
-# 修改主机IP
-@app.route('/api/changeIP', methods=['POST'])
-@requires_auth
-def changeIP():
-    data = request.json['selected_button']
-    if data == "":
-        data = getMasterIp()
-    redis_add(REDIS_KEY_IP, data)
-    ip[REDIS_KEY_IP] = data
-    return "数据已经保存"
-
-
-@app.route('/api/download_config', methods=['POST'])
-@requires_auth
-def handle_post_request():
-    protocol = request.json.get('protocol')
-    return download_json_file_base(protocol)
-
-
-# 删除M3U白名单
-@app.route('/api/deletewm3u11', methods=['POST'])
-@requires_auth
-def deletewm3u11():
-    deleteurl = request.json.get('deleteurl')
-    group = m3u_whitlist.get(deleteurl)
-    del m3u_whitlist[deleteurl]
-    checkAndRemoveM3uRank(group)
-    return dellist(request, REDIS_KEY_M3U_WHITELIST)
-
-
-# 删除M3U白名单分组优先级
-@app.route('/api/deletewm3u16', methods=['POST'])
-@requires_auth
-def deletewm3u16():
-    deleteurl = request.json.get('deleteurl')
-    rank = m3u_whitlist_rank.get(deleteurl)
-    del m3u_whitlist_rank[deleteurl]
-    dealRemoveRankGroup(rank)
-    return dellist(request, REDIS_KEY_M3U_WHITELIST_RANK)
 
 
 def dealRemoveRankGroup(rank):
@@ -4895,196 +4445,6 @@ def checkAndRemoveM3uRank(group):
             if len(updateDict) > 0:
                 redis_add_map(REDIS_KEY_M3U_WHITELIST_RANK, updateDict)
     getRankWhiteList()
-
-
-# 删除M3U黑名单
-@app.route('/api/deletewm3u15', methods=['POST'])
-@requires_auth
-def deletewm3u15():
-    deleteurl = request.json.get('deleteurl')
-    del m3u_blacklist[deleteurl]
-    return dellist(request, REDIS_KEY_M3U_BLACKLIST)
-
-
-# 删除单个下载加密上传
-@app.route('/api/deletewm3u17', methods=['POST'])
-@requires_auth
-def deletewm3u17():
-    deleteurl = request.json.get('deleteurl')
-    del downAndSecUploadUrlPassAndName[deleteurl]
-    # 序列化成JSON字符串
-    json_string = json.dumps(downAndSecUploadUrlPassAndName)
-    # 将JSON字符串存储到Redis中
-    redis_add(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME, json_string)
-    return jsonify({'deleteresult': "delete success"})
-
-
-# 删除单个下载解密
-@app.route('/api/deletewm3u18', methods=['POST'])
-@requires_auth
-def deletewm3u18():
-    deleteurl = request.json.get('deleteurl')
-    del downAndDeSecUrlPassAndName[deleteurl]
-    # 序列化成JSON字符串
-    json_string = json.dumps(downAndDeSecUrlPassAndName)
-    # 将JSON字符串存储到Redis中
-    redis_add(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME, json_string)
-    return jsonify({'deleteresult': "delete success"})
-
-
-# 添加M3U白名单
-@app.route('/api/addnewm3u11', methods=['POST'])
-@requires_auth
-def addnewm3u11():
-    addurl = request.json.get('addurl')
-    name = request.json.get('name')
-    checkAndUpdateM3uRank(name, -99)
-    addurl_tw = convert(addurl, 'zh-tw')
-    addurl_cn = convert(addurl, 'zh-cn')
-    m3u_whitlist[addurl_tw] = name
-    m3u_whitlist[addurl_cn] = name
-    my_dict = {addurl_tw: name, addurl_cn: name}
-    redis_add_map(REDIS_KEY_M3U_WHITELIST, my_dict)
-    return jsonify({'addresult': "add success"})
-
-
-# 添加youtube直播源
-@app.route('/api/addnewm3u24', methods=['POST'])
-@requires_auth
-def addnewm3u24():
-    addurl = request.json.get('addurl')
-    name = request.json.get('name')
-    redisKeyYoutube[addurl] = name
-    return addlist(request, REDIS_KEY_YOUTUBE)
-
-
-# 添加bilibili直播源
-@app.route('/api/addnewm3u25', methods=['POST'])
-@requires_auth
-def addnewm3u25():
-    addurl = request.json.get('addurl')
-    name = request.json.get('name')
-    global redisKeyBilili
-    redisKeyBilili[addurl] = name
-    return addlist(request, REDIS_KEY_BILIBILI)
-
-
-# 添加huya直播源
-@app.route('/api/addnewm3u26', methods=['POST'])
-@requires_auth
-def addnewm3u26():
-    addurl = request.json.get('addurl')
-    name = request.json.get('name')
-    global redisKeyHuya
-    redisKeyHuya[addurl] = name
-    return addlist(request, REDIS_KEY_HUYA)
-
-
-# 添加YY直播源
-@app.route('/api/addnewm3u27', methods=['POST'])
-@requires_auth
-def addnewm3u27():
-    addurl = request.json.get('addurl')
-    name = request.json.get('name')
-    global redisKeyYY
-    redisKeyYY[addurl] = name
-    return addlist(request, REDIS_KEY_YY)
-
-
-# 添加DOUYIN直播源
-@app.route('/api/addnewm3u29', methods=['POST'])
-@requires_auth
-def addnewm3u29():
-    addurl = request.json.get('addurl')
-    name = request.json.get('name')
-    global redisKeyDOUYIN
-    redisKeyDOUYIN[addurl] = name
-    return addlist(request, REDIS_KEY_DOUYIN)
-
-
-# 添加alist直播源
-@app.route('/api/addnewm3u30', methods=['POST'])
-@requires_auth
-def addnewm3u30():
-    addurl = request.json.get('addurl')
-    name = request.json.get('name')
-    global redisKeyAlist
-    redisKeyAlist[addurl] = name
-    return addlist(request, REDIS_KEY_ALIST)
-
-
-# 添加TWITCH直播源
-@app.route('/api/addnewm3u28', methods=['POST'])
-@requires_auth
-def addnewm3u28():
-    addurl = request.json.get('addurl')
-    name = request.json.get('name')
-    global redisKeyTWITCH
-    redisKeyTWITCH[addurl] = name
-    return addlist(request, REDIS_KEY_TWITCH)
-
-
-# 添加normal直播源
-@app.route('/api/addnewm3u31', methods=['POST'])
-@requires_auth
-def addnewm3u31():
-    addurl = request.json.get('addurl')
-    name = request.json.get('name')
-    global redisKeyNormal
-    redisKeyNormal[addurl] = name
-    return addlist(request, REDIS_KEY_NORMAL)
-
-
-# 添加M3U白名单分组优先级
-@app.route('/api/addnewm3u16', methods=['POST'])
-@requires_auth
-def addnewm3u16():
-    addurl = request.json.get('addurl')
-    name = request.json.get('name')
-    checkAndUpdateM3uRank(addurl, name)
-    return jsonify({'addresult': "add success"})
-
-
-# 添加下载加密上传-特殊字典结构保存到redis
-@app.route('/api/addnewm3u17', methods=['POST'])
-@requires_auth
-def addnewm3u17():
-    addurl = request.json.get('url')
-    password = request.json.get('password')
-    name = request.json.get('secretName')
-    if len(downAndSecUploadUrlPassAndName.items()) == 0:
-        # 从Redis中读取JSON字符串
-        json_string_redis = redis_get(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME)
-        # 反序列化成Python对象
-        my_dict_redis = json.loads(json_string_redis)
-        downAndSecUploadUrlPassAndName.update(my_dict_redis)
-    downAndSecUploadUrlPassAndName[addurl] = {'password': password, 'secretName': name}
-    # 序列化成JSON字符串
-    json_string = json.dumps(downAndSecUploadUrlPassAndName)
-    # 将JSON字符串存储到Redis中
-    redis_add(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME, json_string)
-    return jsonify({'addresult': "add success"})
-
-
-# 添加下载解密-特殊字典结构保存到redis
-@app.route('/api/addnewm3u18', methods=['POST'])
-@requires_auth
-def addnewm3u18():
-    addurl = request.json.get('url')
-    password = request.json.get('password')
-    name = request.json.get('secretName')
-    if len(downAndDeSecUrlPassAndName.items()) == 0:
-        # 从Redis中读取JSON字符串
-        json_string_redis = redis_get(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME)
-        # 反序列化成Python对象
-        my_dict_redis = json.loads(json_string_redis)
-        downAndDeSecUrlPassAndName.update(my_dict_redis)
-    downAndDeSecUrlPassAndName[addurl] = {'password': password, 'secretName': name}
-    # 序列化成JSON字符串
-    json_string = json.dumps(downAndDeSecUrlPassAndName)
-    # 将JSON字符串存储到Redis中
-    redis_add(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME, json_string)
-    return jsonify({'addresult': "add success"})
 
 
 def checkAndUpdateM3uRank(group, rank):
@@ -5167,425 +4527,11 @@ def getMaxRank():
 #     getRankWhiteList()
 
 
-# 添加M3U黑名单
-@app.route('/api/addnewm3u15', methods=['POST'])
-@requires_auth
-def addnewm3u15():
-    addurl = request.json.get('addurl')
-    name = request.json.get('name')
-    m3u_blacklist[addurl] = name
-    return addlist(request, REDIS_KEY_M3U_BLACKLIST)
-
-
-# 拉取全部m3u白名单配置
-@app.route('/api/getall11', methods=['GET'])
-@requires_auth
-def getall11():
-    init_m3u_whitelist()
-    return jsonify(m3u_whitlist)
-
-
-# 拉取全部m3u白名单分组优先级配置
-@app.route('/api/getall16', methods=['GET'])
-@requires_auth
-def getall16():
-    init_m3u_whitelist()
-    return jsonify(m3u_whitlist_rank)
-
-
-# 拉取全部下载加密上传
-@app.route('/api/getall17', methods=['GET'])
-@requires_auth
-def getall17():
-    return jsonify(downAndSecUploadUrlPassAndName)
-
-
-# 拉取全部下载解密
-@app.route('/api/getall18', methods=['GET'])
-@requires_auth
-def getall18():
-    return jsonify(downAndDeSecUrlPassAndName)
-
-
-# 拉取全部m3u黑名单配置
-@app.route('/api/getall15', methods=['GET'])
-@requires_auth
-def getall15():
-    init_m3u_blacklist()
-    return jsonify(m3u_blacklist)
-
-
-# 通用获取同步账户数据-cachekey,flag(bbs-gitee,pps-github,lls-webdav)
-@app.route('/api/getSyncAccountData', methods=['POST'])
-@requires_auth
-def getSyncAccountData():
-    cacheKey = request.json['cacheKey']
-    type = request.json['inputvalue']
-    if type == 'bbs':
-        global redisKeyGitee
-        num = init_gitee(cacheKey, REDIS_KEY_GITEE, redisKeyGitee)
-        return jsonify({'password': num})
-    elif type == 'pps':
-        global redisKeyGithub
-        num = init_gitee(cacheKey, REDIS_KEY_GITHUB, redisKeyGithub)
-        return jsonify({'password': num})
-    elif type == 'lls':
-        global redisKeyWebDav
-        num = init_gitee(cacheKey, REDIS_KEY_WEBDAV, redisKeyWebDav)
-        return jsonify({'password': num})
-
-
-# 修改同步账户数据    gitee-bbs github-pps webdav-lls
-@app.route('/api/changeSyncData', methods=['POST'])
-@requires_auth
-def changeSyncData():
-    cacheKey = request.json['cacheKey']
-    type = request.json['type']
-    value = request.json['inputvalue']
-    if type == 'bbs':
-        global redisKeyGitee
-        update_gitee(cacheKey, value, REDIS_KEY_GITEE, redisKeyGitee)
-    elif type == 'pps':
-        global redisKeyGithub
-        update_gitee(cacheKey, value, REDIS_KEY_GITHUB, redisKeyGithub)
-    elif type == 'lls':
-        global redisKeyWebDav
-        update_gitee(cacheKey, value, REDIS_KEY_WEBDAV, redisKeyWebDav)
-    return "数据已经保存"
-
-
-# 通用随机订阅密码切换
-@app.route("/api/changeSubscribePassword", methods=['POST'])
-@requires_auth
-def changeSubscribePassword():
-    cacheKey = request.json['cacheKey']
-    num = update_m3u_subscribe_pass(cacheKey)
-    return jsonify({"password": num})
-
-
-# 通用随机订阅密码切换-下载加密上传功能
-@app.route("/api/changeSubscribePassword2", methods=['POST'])
-@requires_auth
-def changeSubscribePassword2():
-    url = request.json['cacheKey']
-    password = generateEncryptPassword()
-    global downAndSecUploadUrlPassAndName
-    myDict = downAndSecUploadUrlPassAndName.get(url)
-    if myDict:
-        myDict['password'] = password
-        # 序列化成JSON字符串
-        json_string = json.dumps(downAndSecUploadUrlPassAndName)
-        # 将JSON字符串存储到Redis中
-        redis_add(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME, json_string)
-    return jsonify({"password": password})
-
-
-# 查询订阅文件名字
-@app.route("/api/getFileName", methods=['POST'])
-@requires_auth
-def getFileName():
-    cacheKey = request.json['cacheKey']
-    num = getFileNameByTagName(cacheKey)
-    return jsonify({"password": num})
-
-
-# 通用订阅文件名字手动修改
-@app.route("/api/changeFileName", methods=['POST'])
-@requires_auth
-def changeFileName():
-    cacheKey = request.json['cacheKey']
-    newName = request.json['inputvalue']
-    num = changeFileName2(cacheKey, newName)
-    return jsonify({"password": num})
-
-
-# 通用订阅密码手动修改
-@app.route("/api/changeSubscribePasswordByHand", methods=['POST'])
-@requires_auth
-def changeSubscribePasswordByHand():
-    cacheKey = request.json['cacheKey']
-    password = request.json['inputvalue']
-    num = update_m3u_subscribe_pass_by_hand(cacheKey, password)
-    return jsonify({"password": num})
-
-
-# 获取外国DNS端口
-@app.route('/api/getExtraDnsPort', methods=['GET'])
-@requires_auth
-def getExtraDnsPort():
-    num = init_extra_dns_port()
-    return jsonify({'button': num})
-
-
-# 修改外国DNS端口
-@app.route('/api/saveExtraDnsPort', methods=['POST'])
-@requires_auth
-def saveExtraDnsPort():
-    data = request.json['selected_button']
-    redis_add(REDIS_KEY_EXTRA_DNS_PORT, int(data))
-    extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = int(data)
-    redis_public_message(REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG)
-    return "数据已经保存"
-
-
-# 获取外国DNS服务器
-@app.route('/api/getExtraDnsServer', methods=['GET'])
-@requires_auth
-def getExtraDnsServer():
-    num = init_extra_dns_server()
-    return jsonify({'button': num})
-
-
-# 修改外国DNS服务器
-@app.route('/api/saveExtraDnsServer', methods=['POST'])
-@requires_auth
-def saveExtraDnsServer():
-    data = request.json['selected_button']
-    if data == "":
-        data = "127.0.0.1"
-    redis_add(REDIS_KEY_EXTRA_DNS_SERVER, data)
-    extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = data
-    redis_public_message(REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG)
-    return "数据已经保存"
-
-
-# 获取中国DNS端口
-@app.route('/api/getChinaDnsPort', methods=['GET'])
-@requires_auth
-def getChinaDnsPort():
-    num = init_china_dns_port()
-    return jsonify({'button': num})
-
-
-# 修改中国DNS端口
-@app.route('/api/savechinaDnsPort', methods=['POST'])
-@requires_auth
-def savechinaDnsPort():
-    data = request.json['selected_button']
-    redis_add(REDIS_KEY_CHINA_DNS_PORT, int(data))
-    chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = int(data)
-    redis_public_message(REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG)
-    return "数据已经保存"
-
-
-# 获取中国DNS服务器
-@app.route('/api/getChinaDnsServer', methods=['GET'])
-@requires_auth
-def getChinaDnsServer():
-    num = init_china_dns_server()
-    return jsonify({'button': num})
-
-
-# 修改中国DNS服务器
-@app.route('/api/savechinaDnsServer', methods=['POST'])
-@requires_auth
-def savechinaDnsServer():
-    data = request.json['selected_button']
-    if data == "":
-        data = "127.0.0.1"
-    redis_add(REDIS_KEY_CHINA_DNS_SERVER, data)
-    chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = data
-    redis_public_message(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG)
-    return "数据已经保存"
-
-
-# 获取黑白名单并发检测线程数
-@app.route('/api/getThreadNum', methods=['GET'])
-@requires_auth
-def getThreadNum():
-    num = init_threads_num()
-    return jsonify({'button': num})
-
-
-# 修改黑白名单并发检测线程数
-@app.route('/api/saveThreadS', methods=['POST'])
-@requires_auth
-def saveThreadS():
-    data = request.json['selected_button']
-    redis_add(REDIS_KEY_THREADS, min(int(data), 1000))
-    threadsNum[REDIS_KEY_THREADS] = min(int(data), 1000)
-    redis_public_message(f'{REDIS_KEY_UPDATE_THREAD_NUM_FLAG}_{data}')
-    return "数据已经保存"
-
-
-# 选择目标转换的远程配置
-@app.route('/api/chooseProxyModel', methods=['POST'])
-@requires_auth
-def chooseProxyModel():
-    button = request.json.get('selected_button')
-    dict = {}
-    dict[REDIS_KEY_PROXIES_MODEL_CHOSEN] = button
-    redis_add_map(REDIS_KEY_PROXIES_MODEL_CHOSEN, dict)
-    return "success"
-
-
-# 选择目标转换的远程服务器
-@app.route('/api/chooseProxyServer', methods=['POST'])
-@requires_auth
-def chooseProxyServer():
-    button = request.json.get('selected_button')
-    dict = {}
-    dict[REDIS_KEY_PROXIES_SERVER_CHOSEN] = button
-    redis_add_map(REDIS_KEY_PROXIES_SERVER_CHOSEN, dict)
-    return "success"
-
-
-# 服务器启动时加载选择的配置
-@app.route('/api/getSelectedModel', methods=['GET'])
-@requires_auth
-def getSelectedModel():
-    dict = redis_get_map(REDIS_KEY_PROXIES_MODEL_CHOSEN)
-    if dict and len(dict.keys()) > 0:
-        value = dict[REDIS_KEY_PROXIES_MODEL_CHOSEN]
-        if value:
-            return jsonify({'button': value})
-        else:
-            tmp_dict = {}
-            tmp_dict[REDIS_KEY_PROXIES_MODEL_CHOSEN] = "ACL4SSR_Online 默认版 分组比较全(本地离线模板)"
-            # 设定默认选择的模板
-            redis_add_map(REDIS_KEY_PROXIES_MODEL_CHOSEN, tmp_dict)
-            return jsonify({'button': tmp_dict[REDIS_KEY_PROXIES_MODEL_CHOSEN]})
-    else:
-        tmp_dict = {}
-        tmp_dict[REDIS_KEY_PROXIES_MODEL_CHOSEN] = "ACL4SSR_Online 默认版 分组比较全(本地离线模板)"
-        # 设定默认选择的模板
-        redis_add_map(REDIS_KEY_PROXIES_MODEL_CHOSEN, tmp_dict)
-        return jsonify({'button': tmp_dict[REDIS_KEY_PROXIES_MODEL_CHOSEN]})
-
-
-# 服务器启动时加载选择的服务器
-@app.route('/api/getSelectedServer', methods=['GET'])
-@requires_auth
-def getSelectedServer():
-    dict = redis_get_map(REDIS_KEY_PROXIES_SERVER_CHOSEN)
-    if dict and len(dict.keys()) > 0:
-        value = dict[REDIS_KEY_PROXIES_SERVER_CHOSEN]
-        if value:
-            return jsonify({'button': value})
-        else:
-            tmp_dict = {}
-            tmp_dict[REDIS_KEY_PROXIES_SERVER_CHOSEN] = "bridge模式:本地服务器"
-            redis_add_map(REDIS_KEY_PROXIES_SERVER_CHOSEN, tmp_dict)
-            return jsonify({'button': tmp_dict[REDIS_KEY_PROXIES_SERVER_CHOSEN]})
-    else:
-        tmp_dict = {}
-        tmp_dict[REDIS_KEY_PROXIES_SERVER_CHOSEN] = "bridge模式:本地服务器"
-        redis_add_map(REDIS_KEY_PROXIES_SERVER_CHOSEN, tmp_dict)
-        return jsonify({'button': tmp_dict[REDIS_KEY_PROXIES_SERVER_CHOSEN]})
-
-
-# 拉取列表-代理模板
-@app.route('/api/reloadProxyModels', methods=['GET'])
-@requires_auth
-def reloadProxyModels():
-    return jsonify(redis_get_map(REDIS_KEY_PROXIES_SERVER))
-
-
-# 删除节点远程后端服务器订阅
-@app.route('/api/deletewm3u10', methods=['POST'])
-@requires_auth
-def deletewm3u10():
-    returnJson = dellist(request, REDIS_KEY_PROXIES_SERVER)
-    setRandomValueChosen(REDIS_KEY_PROXIES_SERVER, REDIS_KEY_PROXIES_SERVER_CHOSEN)
-    return returnJson
-
-
-# 添加节点后端订阅
-@app.route('/api/addnewm3u10', methods=['POST'])
-@requires_auth
-def addnewm3u10():
-    return addlist(request, REDIS_KEY_PROXIES_SERVER)
-
-
-# 拉取全部后端服务器配置
-@app.route('/api/getall10', methods=['GET'])
-@requires_auth
-def getall10():
-    return jsonify(redis_get_map(REDIS_KEY_PROXIES_SERVER))
-
-
-# 删除节点远程配置订阅
-@app.route('/api/deletewm3u9', methods=['POST'])
-@requires_auth
-def deletewm3u9():
-    returnJson = dellist(request, REDIS_KEY_PROXIES_MODEL)
-    setRandomValueChosen(REDIS_KEY_PROXIES_MODEL, REDIS_KEY_PROXIES_MODEL_CHOSEN)
-    return returnJson
-
-
-# 添加节点远程配置订阅
-@app.route('/api/addnewm3u9', methods=['POST'])
-@requires_auth
-def addnewm3u9():
-    return addlist(request, REDIS_KEY_PROXIES_MODEL)
-
-
-# 拉取全部节点订阅远程配置
-@app.route('/api/getall9', methods=['GET'])
-@requires_auth
-def getall9():
-    return jsonify(redis_get_map(REDIS_KEY_PROXIES_MODEL))
-
-
-# 服务器启动时加载选择的节点类型id
-@app.route('/api/getSelectedButtonId', methods=['GET'])
-@requires_auth
-def getSelectedButtonId():
-    button = getProxyButton()
-    return jsonify({'button': button})
-
-
-# 选择目标转换的节点类型id
-@app.route('/api/chooseProxy', methods=['POST'])
-@requires_auth
-def chooseProxy():
-    button = request.json.get('selected_button')
-    dict = {}
-    dict[REDIS_KEY_PROXIES_TYPE] = button
-    redis_add_map(REDIS_KEY_PROXIES_TYPE, dict)
-    return "success"
-
-
-# 删除节点订阅
-@app.route('/api/deletewm3u8', methods=['POST'])
-@requires_auth
-def deletewm3u8():
-    return dellist(request, REDIS_KEY_PROXIES_LINK)
-
-
-# 添加节点订阅
-@app.route('/api/addnewm3u8', methods=['POST'])
-@requires_auth
-def addnewm3u8():
-    return addlist(request, REDIS_KEY_PROXIES_LINK)
-
-
-# 拉取全部节点订阅
-@app.route('/api/getall8', methods=['GET'])
-@requires_auth
-def getall8():
-    return jsonify(redis_get_map(REDIS_KEY_PROXIES_LINK))
-
-
-# 全部节点订阅链接超融合
-@app.route('/api/chaoronghe6', methods=['GET'])
-@requires_auth
-def chaoronghe_proxy():
-    return chaoronghe6()
-
-
 def chaoronghe6():
     try:
         return chaorongheProxies(f"{secret_path}{getFileNameByTagName('proxyConfig')}.yaml")
     except:
         return "empty"
-
-
-# 简易DNS黑名单超融合：op黑名单代理域名+代理规则
-@app.route('/api/chaoronghe7', methods=['GET'])
-@requires_auth
-def chaoronghe_simpleBlacklist():
-    return chaoronghe7()
 
 
 def chaoronghe7():
@@ -5600,13 +4546,6 @@ def chaoronghe7():
                                PROXY_RULE_LEFT)
     except Exception as e:
         return "empty"
-
-
-# 简易DNS白名单超融合:白名单dnsmasq配置+白名单代理规则
-@app.route('/api/chaoronghe8', methods=['GET'])
-@requires_auth
-def chaoronghe_simpleWhitelist():
-    return chaoronghe8()
 
 
 def chaoronghe8():
@@ -5626,13 +4565,6 @@ def chaoronghe8():
 def getUrlFileName(url):
     arr = url.split('/')
     return arr[len(arr) - 1]
-
-
-# 下载加密上传执行
-@app.route('/api/chaoronghe9', methods=['GET'])
-@requires_auth
-def chaoronghe_downAndUpload():
-    return chaoronghe9()
 
 
 def chaoronghe9():
@@ -5656,13 +4588,6 @@ def chaoronghe9():
         return "result"
     except Exception as e:
         return "empty"
-
-
-# 下载解密
-@app.route('/api/chaoronghe10', methods=['GET'])
-@requires_auth
-def chaoronghe_downAndDesecret():
-    return chaoronghe10()
 
 
 def chaoronghe10():
@@ -6879,13 +5804,6 @@ async def grab(session, id, m3u_dict, mintimeout, maxTimeout):
         print(f"youtube An error occurred while processing {id}. Error: {e}")
 
 
-# 生成全部bilibili直播源
-@app.route('/api/chaoronghe25', methods=['GET'])
-@requires_auth
-def chaoronghe_bilibili():
-    return chaoronghe25()
-
-
 def chaoronghe25():
     try:
         loop = asyncio.new_event_loop()
@@ -6922,13 +5840,6 @@ def chaoronghe25():
         return "result"
     except Exception as e:
         return "empty"
-
-
-# 生成全部huyta直播源
-@app.route('/api/chaoronghe26', methods=['GET'])
-@requires_auth
-def chaoronghe_huya():
-    return chaoronghe26()
 
 
 def chaoronghe26():
@@ -6970,13 +5881,6 @@ def chaoronghe26():
         return "empty"
 
 
-# 生成全部YY直播源
-@app.route('/api/chaoronghe27', methods=['GET'])
-@requires_auth
-def chaoronghe_yy():
-    return chaoronghe27()
-
-
 def chaoronghe27():
     try:
         loop = asyncio.new_event_loop()
@@ -7016,13 +5920,6 @@ def chaoronghe27():
         return "empty"
 
 
-# 生成全部douyin直播源
-@app.route('/api/chaoronghe29', methods=['GET'])
-@requires_auth
-def chaoronghe_douyin():
-    return chaoronghe29()
-
-
 def chaoronghe29():
     try:
         loop = asyncio.new_event_loop()
@@ -7060,13 +5957,6 @@ def chaoronghe29():
         return "result"
     except Exception as e:
         return "empty"
-
-
-# 生成全部alist直播源
-@app.route('/api/chaoronghe30', methods=['GET'])
-@requires_auth
-def chaoronghe_alist():
-    return chaoronghe30()
 
 
 def safe_del_alist_m3u8():
@@ -7494,41 +6384,6 @@ headers_default = {'Content-Type': 'application/vnd.apple.mpegurl',
 #                    }
 
 
-# 推流加密ts文件
-@app.route('/alist/<path:path>.ts')
-def video_m3u8_alist_ts(path):
-    uuid_ts = path
-    start_time = time.time()  # 获取当前时间戳
-    reliveAlistTsTime = int(getFileNameByTagName('reliveAlistTsTime'))
-    while (time.time() - start_time) < reliveAlistTsTime:
-        bytes_data_ts = get_true_alist_ts_url(uuid_ts)
-        if bytes_data_ts:
-            return Response(bytes_data_ts, mimetype='video/MP2T')
-    return
-
-
-# 推流加密m3u8列表
-@app.route('/alist/<path:path>.m3u8')
-def video_m3u8_alist(path):
-    if path not in redisKeyAlistM3u.keys():
-        return "Video not found", 404
-    m3u8_path = os.path.join(SLICES_ALIST_M3U8, f"{path}.m3u8")
-    # 读取M3U8播放列表文件并返回给客户端
-    with open(m3u8_path, "rb") as f:
-        m3u8_data = f.read()
-    if m3u8_data:
-        return Response(m3u8_data, headers=headers_default)
-    else:
-        return "Video not found", 404
-
-
-# 生成全部TWITCH直播源
-@app.route('/api/chaoronghe28', methods=['GET'])
-@requires_auth
-def chaoronghe_TWITCH():
-    return chaoronghe28()
-
-
 def chaoronghe28():
     try:
         loop = asyncio.new_event_loop()
@@ -7566,13 +6421,6 @@ def chaoronghe28():
         return "result"
     except Exception as e:
         return "empty"
-
-
-# 生成全部normal直播源
-@app.route('/api/chaoronghe31', methods=['GET'])
-@requires_auth
-def chaoronghe_normal():
-    return chaoronghe31()
 
 
 def map_remove_keys(map, keys):
@@ -7692,7 +6540,7 @@ def chaoronghe31_single(type):
         for key in redisKeyNormal.keys():
             if key.startswith(type):
                 if type != 'migu,' and type != 'cq,':
-                   removeredisKeyNormalKeys.append(key)
+                    removeredisKeyNormalKeys.append(key)
         map_remove_keys(redisKeyNormal, removeredisKeyNormalKeys)
         redis_del_map_keys(REDIS_KEY_NORMAL, removeredisKeyNormalKeys)
         m3u_dict = update_by_type_normal(type)
@@ -7701,7 +6549,7 @@ def chaoronghe31_single(type):
             return "empty"
         ip = init_IP()
         redisKeyM3uFake = {}
-        #fakeurl = f"http://127.0.0.1:22771/normal/"
+        # fakeurl = f"http://127.0.0.1:22771/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
         for id, url in redisKeyNormalM3U.items():
             try:
@@ -7807,7 +6655,7 @@ def chaoronghe31():
         redisKeyM3uFake = {}
         redisKeyNormalM3U.clear()
         redis_del_map(REDIS_KEY_NORMAL_M3U)
-        #fakeurl = f"http://127.0.0.1:22771/normal/"
+        # fakeurl = f"http://127.0.0.1:22771/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
         for id, url in m3u_dict.items():
             try:
@@ -7871,13 +6719,6 @@ def add_update_live(type, group_name, tvg_name, redisKeyM3uFake, fakeurl):
     redisKeyM3uFake[f'{fakeurl}{type}.m3u8'] = link2
 
 
-# 生成全部youtube直播源
-@app.route('/api/chaoronghe24', methods=['GET'])
-@requires_auth
-def chaoronghe_youtube():
-    return chaoronghe24()
-
-
 def chaoronghe24():
     try:
         loop = asyncio.new_event_loop()
@@ -7924,26 +6765,6 @@ def delete_all_items_in_db(file_paths):
             os.remove(path)
 
 
-@app.route('/api/download_json_file7', methods=['GET'])
-@requires_auth
-def download_json_file7():
-    file_paths = []
-    # 生成JSON文件数据
-    json_data = generate_multi_json_string(allListArr)
-    if os.path.exists(f"{secret_path}allData.json"):
-        os.remove(f"{secret_path}allData.json")
-    # 保存JSON数据到临时文件
-    with open(f"{secret_path}allData.json", 'w') as f:
-        f.write(json_data)
-    file_paths.append(f"{secret_path}allData.json")
-    getHugeDataList(file_paths)
-    # 发送所有JSON文件到前端
-    result = send_multiple_files(file_paths)
-    # 删除所有数据项
-    delete_all_items_in_db(file_paths)
-    return result
-
-
 def getHugeDataList(file_paths):
     for redisKey in hugeDataList:
         try:
@@ -7968,6 +6789,1632 @@ def send_multiple_files(file_paths):
             zip_file.write(file_path, arcname=os.path.basename(file_path))
     # 发送zip文件到前端
     return send_file(zip_path, as_attachment=True)
+
+
+def chaoronghe5():
+    try:
+        return chaorongheBase(REDIS_KEY_WHITELIST_IPV6_LINK, 'process_data_abstract6',
+                              REDIS_KEY_WHITELIST_IPV6_DATA, f"{secret_path}{getFileNameByTagName('ipv6')}.txt")
+    except:
+        return "empty"
+
+
+def chaoronghe4():
+    try:
+        return chaorongheBase(REDIS_KEY_WHITELIST_IPV4_LINK, 'process_data_abstract5',
+                              REDIS_KEY_WHITELIST_IPV4_DATA, f"{secret_path}{getFileNameByTagName('ipv4')}.txt")
+    except:
+        return "empty"
+
+
+def chaoronghe3():
+    try:
+        return chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract7',
+                              REDIS_KEY_BLACKLIST_OPENCLASH_FALLBACK_FILTER_DOMAIN_DATA,
+                              f"{secret_path}{getFileNameByTagName('openclashFallbackFilterDomain')}.conf")
+        # return chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract2',
+        #                       REDIS_KEY_BLACKLIST_DATA, "/C.txt")
+    except:
+        return "empty"
+
+
+def chaoronghe2():
+    try:
+        # chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract4',
+        #                REDIS_KEY_DOMAIN_DATA, "/WhiteDomain.txt")
+        return chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract3',
+                              REDIS_KEY_WHITELIST_DATA_DNSMASQ,
+                              f"{secret_path}{getFileNameByTagName('whiteListDnsmasq')}.conf")
+        # return chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract2',
+        #                       REDIS_KEY_WHITELIST_DATA, "/B.txt")
+    except:
+        return "empty"
+
+
+def chaoronghe():
+    try:
+        return chaorongheBase(REDIS_KEY_M3U_LINK, 'process_data_abstract', REDIS_KEY_M3U_DATA,
+                              f"{secret_path}{getFileNameByTagName('allM3u')}.m3u")
+    except:
+        return "empty"
+
+
+message_dict = {}
+
+
+# 根据年月日、当前时间、输入的字符串生成的绝对唯一uuid
+def generate_only_uuid(my_string):
+    now = datetime.now()
+    timestamp = now.strftime("%Y%m%d%H%M%S%f")
+    unique_str = f"{timestamp}-{my_string}"
+    serial_number = uuid.uuid5(uuid.NAMESPACE_URL, unique_str)
+    return str(serial_number)
+
+
+# 自定义flask程序，使其启动时后挂一个程序
+class FlaskApp(Flask):
+    def __init__(self, *args, **kwargs):
+        super(FlaskApp, self).__init__(*args, **kwargs)
+        self._activate_background_job()
+
+    def _activate_background_job(self):
+        def run_job():
+            while True:
+                print('执行后台任务')
+                time.sleep(3)
+
+        t1 = threading.Thread(target=main)
+        t1.start()
+
+
+app = FlaskApp(__name__)
+app.config['TEMPLATES_AUTO_RELOAD'] = True  # 实时更新模板文件
+app.config['MAX_CONTENT_LENGTH'] = 1000 * 1024 * 1024  # 上传文件最大限制1000 MB
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # 静态文件缓存时间，默认值为 12 小时。可以通过将其设为 0 来禁止浏览器缓存静态文件
+app.config['JSONIFY_TIMEOUT'] = 6000  # 设置响应超时时间为 6000 秒
+app.config['PROXY_CONNECT_TIMEOUT'] = 6000
+app.config['PROXY_SEND_TIMEOUT'] = 6000
+app.config['PROXY_READ_TIMEOUT'] = 6000
+
+
+# 针对已登录用户的受保护视图函数
+@app.route('/')
+@requires_auth
+def index():
+    return render_template('index.html')
+
+
+# 路由隐藏真实路径-公共路径
+@app.route('/url/<path:filename>')
+def serve_files(filename):
+    root_dir = public_path  # 根目录
+    return send_from_directory(root_dir, filename, as_attachment=True)
+
+
+# 路由隐藏真实路径-隐私路径
+@app.route('/secret/<path:filename>')
+def serve_files2(filename):
+    root_dir = secret_path  # 根目录
+    return send_from_directory(root_dir, filename, as_attachment=True)
+
+
+# 路由youtube
+@app.route('/youtube/<path:filename>')
+def serve_youtube(filename):
+    id = filename.split('.')[0]
+    if id == 'youtube':
+        if is_update_clock_live('youtube'):
+            chaoronghe24()
+            chaoronghe()
+            update_clock('normalM3uClock')
+        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
+    url = tv_dict_youtube.get(id)
+    if not url:
+        url = redisKeyYoutubeM3u.get(id)
+        tv_dict_youtube.clear()
+        tv_dict_youtube[id] = url
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        return response
+
+    return redirect(url)
+
+
+# 路由bilibili
+@app.route('/bilibili/<path:filename>')
+def serve_files4(filename):
+    id = filename.split('.')[0]
+    if id == 'bilibili':
+        if is_update_clock_live('bilibili'):
+            chaoronghe25()
+            chaoronghe()
+            update_clock('normalM3uClock')
+        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
+    url = tv_dict_bilibili.get(id)
+    if not url:
+        url = redisKeyBililiM3u.get(id)
+        tv_dict_bilibili.clear()
+        tv_dict_bilibili[id] = url
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        return response
+
+    return redirect(url)
+
+
+# 路由huya
+@app.route('/huya/<path:filename>')
+def serve_files5(filename):
+    id = filename.split('.')[0]
+    if id == 'huya':
+        if is_update_clock_live('huya'):
+            chaoronghe26()
+            chaoronghe()
+            update_clock('normalM3uClock')
+        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
+    url = tv_dict_huya.get(id)
+    if not url:
+        url = redisKeyHuyaM3u.get(id)
+        tv_dict_huya.clear()
+        tv_dict_huya[id] = url
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        return response
+
+    return redirect(url)
+
+
+# 路由YY
+@app.route('/YY/<path:filename>')
+def serve_files6(filename):
+    id = filename.split('.')[0]
+    if id == 'YY':
+        if is_update_clock_live('yy'):
+            chaoronghe27()
+            chaoronghe()
+            update_clock('normalM3uClock')
+        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
+    url = tv_dict_yy.get(id)
+    if not url:
+        url = redisKeyYYM3u.get(id)
+        tv_dict_yy.clear()
+        tv_dict_yy[id] = url
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        return response
+
+    return redirect(url)
+
+
+# 路由DOUYIN
+@app.route('/DOUYIN/<path:filename>')
+def serve_files_DOUYIN(filename):
+    id = filename.split('.')[0]
+    if id == 'Douyin':
+        if is_update_clock_live('douyin'):
+            chaoronghe29()
+            chaoronghe()
+            update_clock('normalM3uClock')
+        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
+    url = tv_dict_douyin.get(id)
+    if not url:
+        url = redisKeyDOUYINM3u.get(id)
+        tv_dict_douyin.clear()
+        tv_dict_douyin[id] = url
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        return response
+
+    return redirect(url)
+
+
+# 路由twitch
+@app.route('/TWITCH/<path:filename>')
+def serve_files7(filename):
+    id = filename.split('.')[0]
+    if id == 'Twitch':
+        if is_update_clock_live('twitch'):
+            chaoronghe28()
+            chaoronghe()
+            update_clock('normalM3uClock')
+        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
+    url = tv_dict_twitch.get(id)
+    if not url:
+        url = redisKeyTWITCHM3u.get(id)
+        tv_dict_twitch.clear()
+        tv_dict_twitch[id] = url
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        return response
+
+    return redirect(url)
+
+
+# 路由normal
+@app.route('/normal/<path:filename>')
+def serve_files_normal(filename):
+    id = filename.split('.')[0]
+    if id == 'qiumihui,':
+        chaoronghe31_single('qiumihui,')
+        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
+    elif id == 'longzhu,':
+        chaoronghe31_single('longzhu,')
+        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
+    if id == 'migu,':
+        chaoronghe31_single('migu,')
+        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
+    elif id == 'cq,':
+        chaoronghe31_single('cq,')
+        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
+    url = tv_dict_normal.get(id)
+    if not url:
+        url = redisKeyNormalM3U.get(id)
+        tv_dict_normal.clear()
+        tv_dict_normal[id] = url
+
+    @after_this_request
+    def add_header(response):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        return response
+
+    return redirect(url)
+
+
+###################################################模仿redis服务器############################################
+
+
+@app.route('/api/data', methods=['GET'])
+def get_data():
+    global message_dict
+    returndict = jsonify(message_dict)
+    message_dict.clear()
+    return returndict
+
+
+@app.route('/api/ping', methods=['GET'])
+def ping():
+    return jsonify({'result': ''})
+
+
+# @app.route('/api/data', methods=['POST'])
+# def post_data():
+#     global message_dict
+#     message = request.form.get('message')
+#     message_dict[message] = ''
+#     return jsonify({'result': ''})
+
+
+@app.route('/api/data2', methods=['POST'])
+def post_data_key_data():
+    cachekey = request.form.get('cacheKey')
+    action = request.form.get('action')
+    file_path = os.path.join(DB_PATH, f'{cachekey}.txt')
+    if action == 'get_single':
+        return get_single(file_path)
+    # 删除一个数据表
+    elif action == 'delete':
+        return delete_cache(file_path)
+    # map增加表中一些条数据
+    elif action == 'add_map':
+        # 字符串格式的json数据
+        add_dict = json.loads(request.form.get('dict_data'))
+        return add_map(file_path, add_dict)
+    # 增加/修改表中一条数据
+    elif action == 'add_single':
+        # 字符串格式的json数据
+        value = request.form.get('dict_data')
+        return add_single(file_path, value)
+    # 删除map里的单个key/多个key
+    elif action == 'delete_keys':
+        # 字符串格式的json数据
+        dict_data = json.loads(request.form.get('dict_data'))
+        return delete_keys(file_path, dict_data)
+    # 查询map
+    elif action == 'get_map':
+        return get_map(file_path)
+
+
+###################################################模仿redis服务器#############################################
+
+# 手动上传m3u文件格式化统一转换
+@app.route('/api/process-file', methods=['POST'])
+@requires_auth
+def process_file():
+    file = request.files['file']
+    # file_content = file.read().decode('utf-8')
+    file_content = file.read()
+    # file_content = read_file_with_encoding(file)
+    my_dict = formatdata_multithread(file_content.splitlines(), 10)
+    # my_dict = formattxt_multithread(file_content.splitlines(), 100)
+    # my_dict = formatdata_multithread(file.readlines(), 100)
+    distribute_data(my_dict, f"{secret_path}tmp.m3u", 10)
+    return send_file(f"{secret_path}tmp.m3u", as_attachment=True)
+
+
+# 手动上传m3u文件提取名字统一分组
+@app.route('/api/process-file2', methods=['POST'])
+@requires_auth
+def process_file2():
+    file = request.files['file']
+    file_content = file.read()
+    group = request.form.get('data')
+    datalist = []
+    for line in file_content.splitlines():
+        datalist.append(decode_bytes(line).strip())
+    file_content = "\n".join(datalist)
+    regex_pattern = r'tvg-name="(.*?)"'
+    all_matches = re.findall(regex_pattern, file_content)
+    group_dict = {}
+    for i in all_matches:
+        group_dict[convert(i, 'zh-tw')] = group
+        group_dict[convert(i, 'zh-cn')] = group
+    # 将字典转换为JSON字符串并返回
+    json_str = json.dumps(group_dict)
+    filename = f'{secret_path}group.json'
+    if os.path.exists(filename):
+        os.remove(filename)
+    # 保存JSON数据到临时文件
+    with open(filename, 'w') as f:
+        f.write(json_str)
+    return send_file(filename, as_attachment=True)
+
+
+# 手动上传m3u文件提取名字统一分组
+@app.route('/api/process-file3', methods=['POST'])
+@requires_auth
+def process_file3():
+    file = request.files['file']
+    file_content = file.read()
+    group = request.form.get('data')
+    group_dict = {}
+    # 数据源，字典（词库+新分组名字），新分组名字
+    find_m3u_name_txt(file_content.splitlines(), group_dict, group)
+    # 将字典转换为JSON字符串并返回
+    json_str = json.dumps(group_dict)
+    filename = f'{secret_path}group.json'
+    if os.path.exists(filename):
+        os.remove(filename)
+    # 保存JSON数据到临时文件
+    with open(filename, 'w') as f:
+        f.write(json_str)
+    return send_file(filename, as_attachment=True)
+
+
+# 手动上传m3u文件转换成txt文件
+@app.route('/api/process-file4', methods=['POST'])
+@requires_auth
+def process_file4():
+    file = request.files['file']
+    file_content = file.read()
+    # 数据源，字典（词库+新分组名字），新分组名字
+    resultContent = m3uToTxt(file_content.splitlines())
+    filename = f'{secret_path}source.txt'
+    if os.path.exists(filename):
+        os.remove(filename)
+    # 保存JSON数据到临时文件
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write(resultContent)
+    return send_file(filename, as_attachment=True)
+
+
+# 获取节点订阅密码
+@app.route('/api/getExtraDnsPort3', methods=['GET'])
+@requires_auth
+def getExtraDnsPort3():
+    num = init_pass('proxy')
+    return jsonify({'button': num})
+
+
+# 获取IPV6订阅密码
+@app.route('/api/getExtraDnsPort2', methods=['GET'])
+@requires_auth
+def getExtraDnsPort2():
+    num = init_pass('ipv6')
+    return jsonify({'button': num})
+
+
+# 获取IPV4订阅密码
+@app.route('/api/getExtraDnsServer2', methods=['GET'])
+@requires_auth
+def getExtraDnsServer2():
+    num = init_pass('ipv4')
+    return jsonify({'button': num})
+
+
+# 获取域名黑名单订阅密码
+@app.route('/api/getChinaDnsPort2', methods=['GET'])
+@requires_auth
+def getChinaDnsPort2():
+    num = init_pass('blacklist')
+    return jsonify({'button': num})
+
+
+# 获取域名白名单订阅密码
+@app.route('/api/getChinaDnsServer2', methods=['GET'])
+@requires_auth
+def getChinaDnsServer2():
+    num = init_pass('whitelist')
+    return jsonify({'button': num})
+
+
+# 获取直播源订阅密码
+@app.route('/api/getThreadNum2', methods=['GET'])
+@requires_auth
+def getThreadNum2():
+    num = init_pass('m3u')
+    return jsonify({'button': num})
+
+
+# 删除加密订阅密码历史记录
+@app.route('/api/deletewm3u14', methods=['POST'])
+@requires_auth
+def deletewm3u14():
+    return dellist(request, REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS)
+
+
+# 拉取全部加密订阅密码历史记录
+@app.route('/api/getall14', methods=['GET'])
+@requires_auth
+def getall14():
+    return jsonify(redis_get_map(REDIS_KEY_SECRET_SUBSCRIBE_HISTORY_PASS))
+
+
+@app.route('/api/upload_json', methods=['POST'])
+@requires_auth
+def upload_json():
+    # 从请求体中获取 rediskey 和文件内容
+    data = request.get_json()
+    rediskey = data.get('rediskey')
+    file_content = data.get('content')
+    return upload_json_base(rediskey, file_content)
+
+
+# 一键上传全部配置集合文件
+@app.route('/api/upload_json_file7', methods=['POST'])
+@requires_auth
+def upload_json_file7():
+    return upload_oneKey_json(request)
+
+
+# 赞助-比特币
+@app.route('/api/get_image')
+def get_image():
+    filename = '/app/img/bitcoin.png'
+    return send_file(filename, mimetype='image/png')
+
+
+# 查询功能开启状态
+@app.route("/api/getSwitchstate", methods=['POST'])
+@requires_auth
+def getSwitchstate():
+    id = request.json['id']
+    global function_dict
+    status = function_dict[id]
+    return jsonify({"checkresult": status})
+
+
+# 批量切换功能开关
+@app.route('/api/serverMode', methods=['POST'])
+@requires_auth
+def serverMode():
+    mode = request.json['mode']
+    if mode == 'server':
+        switchSingleFunction('switch2', '1')
+        switchSingleFunction('switch3', '1')
+        switchSingleFunction('switch', '1')
+        switchSingleFunction('switch4', '1')
+        switchSingleFunction('switch5', '1')
+        switchSingleFunction('switch6', '0')
+        switchSingleFunction('switch7', '1')
+        switchSingleFunction('switch8', '1')
+        switchSingleFunction('switch9', '1')
+        switchSingleFunction('switch10', '1')
+        switchSingleFunction('switch11', '1')
+        switchSingleFunction('switch12', '1')
+        switchSingleFunction('switch13', '1')
+        switchSingleFunction('switch14', '1')
+        switchSingleFunction('switch15', '1')
+        switchSingleFunction('switch16', '1')
+        switchSingleFunction('switch17', '1')
+        switchSingleFunction('switch18', '1')
+        switchSingleFunction('switch19', '1')
+        switchSingleFunction('switch20', '1')
+        switchSingleFunction('switch21', '1')
+        switchSingleFunction('switch22', '1')
+        switchSingleFunction('switch23', '1')
+        switchSingleFunction('switch24', '1')
+        switchSingleFunction('switch25', '1')
+        switchSingleFunction('switch26', '1')
+        switchSingleFunction('switch27', '1')
+        switchSingleFunction('switch28', '1')
+        switchSingleFunction('switch30', '1')
+        switchSingleFunction('switch31', '1')
+        switchSingleFunction('switch32', '1')
+        switchSingleFunction('switch33', '0')
+        switchSingleFunction('switch34', '0')
+        switchSingleFunction('switch35', '0')
+    elif mode == 'client':
+        switchSingleFunction('switch2', '0')
+        switchSingleFunction('switch3', '0')
+        switchSingleFunction('switch', '0')
+        switchSingleFunction('switch4', '0')
+        switchSingleFunction('switch5', '0')
+        switchSingleFunction('switch6', '0')
+        switchSingleFunction('switch7', '0')
+        switchSingleFunction('switch8', '0')
+        switchSingleFunction('switch9', '0')
+        switchSingleFunction('switch10', '0')
+        switchSingleFunction('switch11', '0')
+        switchSingleFunction('switch12', '0')
+        switchSingleFunction('switch13', '0')
+        switchSingleFunction('switch14', '0')
+        switchSingleFunction('switch15', '0')
+        switchSingleFunction('switch16', '0')
+        switchSingleFunction('switch17', '0')
+        switchSingleFunction('switch18', '0')
+        switchSingleFunction('switch19', '0')
+        switchSingleFunction('switch20', '0')
+        switchSingleFunction('switch21', '0')
+        switchSingleFunction('switch22', '0')
+        switchSingleFunction('switch23', '0')
+        switchSingleFunction('switch24', '1')
+        switchSingleFunction('switch25', '0')
+        switchSingleFunction('switch26', '1')
+        switchSingleFunction('switch27', '1')
+        switchSingleFunction('switch28', '1')
+        switchSingleFunction('switch30', '0')
+        switchSingleFunction('switch31', '0')
+        switchSingleFunction('switch32', '0')
+        switchSingleFunction('switch33', '0')
+        switchSingleFunction('switch34', '0')
+        switchSingleFunction('switch35', '0')
+    return 'success'
+
+
+# 修改DNS超时时间戳
+@app.route('/api/savetimeout', methods=['POST'])
+@requires_auth
+def savetimeout():
+    data = request.json['selected_button']
+    redis_add(REDIS_KEY_DNS_TIMEOUT, int(data))
+    dnstimeout[REDIS_KEY_DNS_TIMEOUT] = int(data)
+    return "数据已经保存"
+
+
+# DNS并发查询数
+@app.route('/api/gettimeout', methods=['GET'])
+@requires_auth
+def gettimeout():
+    num = init_dns_timeout()
+    return jsonify({'button': num})
+
+
+# 修改DNS并发查询数量
+@app.route('/api/savequeryThreadNum', methods=['POST'])
+@requires_auth
+def savequeryThreadNum():
+    data = request.json['selected_button']
+    redis_add(REDIS_KEY_DNS_QUERY_NUM, int(data))
+    dnsquerynum[REDIS_KEY_DNS_QUERY_NUM] = int(data)
+    return "数据已经保存"
+
+
+# 获取DNS并发查询数量
+@app.route('/api/getQueryThreadNum', methods=['GET'])
+@requires_auth
+def getQueryThreadNum():
+    num = init_dns_query_num()
+    return jsonify({'button': num})
+
+
+# 删除DNS简易黑名单
+@app.route('/api/deletewm3u13', methods=['POST'])
+@requires_auth
+def deletewm3u13():
+    return_value = dellist(request, REDIS_KEY_DNS_SIMPLE_BLACKLIST)
+    redis_public_message(f'{REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG}_3_1')
+    return return_value
+
+
+# 删除youtube直播源
+@app.route('/api/deletewm3u24', methods=['POST'])
+@requires_auth
+def deletewm3u24():
+    deleteurl = request.json.get('deleteurl')
+    del redisKeyYoutube[deleteurl]
+    return dellist(request, REDIS_KEY_YOUTUBE)
+
+
+# 删除bilibili直播源
+@app.route('/api/deletewm3u25', methods=['POST'])
+@requires_auth
+def deletewm3u25():
+    deleteurl = request.json.get('deleteurl')
+    del redisKeyBilili[deleteurl]
+    return dellist(request, REDIS_KEY_BILIBILI)
+
+
+# 删除huya直播源
+@app.route('/api/deletewm3u26', methods=['POST'])
+@requires_auth
+def deletewm3u26():
+    deleteurl = request.json.get('deleteurl')
+    del redisKeyHuya[deleteurl]
+    return dellist(request, REDIS_KEY_HUYA)
+
+
+# 删除YY直播源
+@app.route('/api/deletewm3u27', methods=['POST'])
+@requires_auth
+def deletewm3u27():
+    deleteurl = request.json.get('deleteurl')
+    del redisKeyYY[deleteurl]
+    return dellist(request, REDIS_KEY_YY)
+
+
+# 删除DOUYIN直播源
+@app.route('/api/deletewm3u29', methods=['POST'])
+@requires_auth
+def deletewm3u29():
+    deleteurl = request.json.get('deleteurl')
+    del redisKeyDOUYIN[deleteurl]
+    return dellist(request, REDIS_KEY_DOUYIN)
+
+
+# 删除alist直播源
+@app.route('/api/deletewm3u30', methods=['POST'])
+@requires_auth
+def deletewm3u30():
+    deleteurl = request.json.get('deleteurl')
+    del redisKeyAlist[deleteurl]
+    return dellist(request, REDIS_KEY_ALIST)
+
+
+# 删除TWITCH直播源
+@app.route('/api/deletewm3u28', methods=['POST'])
+@requires_auth
+def deletewm3u28():
+    deleteurl = request.json.get('deleteurl')
+    del redisKeyTWITCH[deleteurl]
+    return dellist(request, REDIS_KEY_TWITCH)
+
+
+# 删除NORMAL直播源
+@app.route('/api/deletewm3u31', methods=['POST'])
+@requires_auth
+def deletewm3u31():
+    deleteurl = request.json.get('deleteurl')
+    del redisKeyNormal[deleteurl]
+    return dellist(request, REDIS_KEY_NORMAL)
+
+
+# 添加DNS简易黑名单
+@app.route('/api/addnewm3u13', methods=['POST'])
+@requires_auth
+def addnewm3u13():
+    # 获取 HTML 页面发送的 POST 请求参数
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    addurl = stupidThink(addurl)
+    my_dict = {addurl: name}
+    redis_add_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST, my_dict)
+    redis_public_message(f'{REDIS_KEY_UPDATE_SIMPLE_BLACK_LIST_FLAG}_0_{addurl}')
+    return jsonify({'addresult': "add success"})
+
+
+# 拉取全部DNS简易黑名单
+@app.route('/api/getall13', methods=['GET'])
+@requires_auth
+def getall13():
+    return jsonify(redis_get_map(REDIS_KEY_DNS_SIMPLE_BLACKLIST))
+
+
+# 拉取全部youtube
+@app.route('/api/getall24', methods=['GET'])
+@requires_auth
+def getall24():
+    global redisKeyYoutube
+    return returnDictCache(REDIS_KEY_YOUTUBE, redisKeyYoutube)
+
+
+# 拉取全部bilibili
+@app.route('/api/getall25', methods=['GET'])
+@requires_auth
+def getall25():
+    global redisKeyBilili
+    return returnDictCache(REDIS_KEY_BILIBILI, redisKeyBilili)
+
+
+# 拉取全部huya
+@app.route('/api/getall26', methods=['GET'])
+@requires_auth
+def getall26():
+    global redisKeyHuya
+    return returnDictCache(REDIS_KEY_HUYA, redisKeyHuya)
+
+
+# 拉取全部YY
+@app.route('/api/getall27', methods=['GET'])
+@requires_auth
+def getall27():
+    global redisKeyYY
+    return returnDictCache(REDIS_KEY_YY, redisKeyYY)
+
+
+# 拉取全部DOUYIN
+@app.route('/api/getall29', methods=['GET'])
+@requires_auth
+def getall29():
+    global redisKeyDOUYIN
+    return returnDictCache(REDIS_KEY_DOUYIN, redisKeyDOUYIN)
+
+
+# 拉取全部alist
+@app.route('/api/getall30', methods=['GET'])
+@requires_auth
+def getall30():
+    global redisKeyAlist
+    return returnDictCache(REDIS_KEY_ALIST, redisKeyAlist)
+
+
+# 拉取全部TWITCH
+@app.route('/api/getall28', methods=['GET'])
+@requires_auth
+def getall28():
+    global redisKeyTWITCH
+    return returnDictCache(REDIS_KEY_TWITCH, redisKeyTWITCH)
+
+
+# 拉取全部normal
+@app.route('/api/getall31', methods=['GET'])
+@requires_auth
+def getall31():
+    global redisKeyNormal
+    return returnDictCache(REDIS_KEY_NORMAL, redisKeyNormal)
+
+
+# 删除DNS简易白名单
+@app.route('/api/deletewm3u12', methods=['POST'])
+@requires_auth
+def deletewm3u12():
+    return_value = dellist(request, REDIS_KEY_DNS_SIMPLE_WHITELIST)
+    redis_public_message(f'{REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG}_3_1')
+    return return_value
+
+
+# 添加DNS简易白名单
+@app.route('/api/addnewm3u12', methods=['POST'])
+@requires_auth
+def addnewm3u12():
+    # 获取 HTML 页面发送的 POST 请求参数
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    addurl = stupidThink(addurl)
+    my_dict = {addurl: name}
+    redis_add_map(REDIS_KEY_DNS_SIMPLE_WHITELIST, my_dict)
+    redis_public_message(f'{REDIS_KEY_UPDATE_SIMPLE_WHITE_LIST_FLAG}_0_{addurl}')
+    return jsonify({'addresult': "add success"})
+
+
+# 拉取全部DNS简易白名单
+@app.route('/api/getall12', methods=['GET'])
+@requires_auth
+def getall12():
+    return jsonify(redis_get_map(REDIS_KEY_DNS_SIMPLE_WHITELIST))
+
+
+# 获取主机IP
+@app.route('/api/getIP', methods=['GET'])
+@requires_auth
+def getIP():
+    num = init_IP()
+    return jsonify({'button': num})
+
+
+# 修改主机IP
+@app.route('/api/changeIP', methods=['POST'])
+@requires_auth
+def changeIP():
+    data = request.json['selected_button']
+    if data == "":
+        data = getMasterIp()
+    redis_add(REDIS_KEY_IP, data)
+    ip[REDIS_KEY_IP] = data
+    return "数据已经保存"
+
+
+@app.route('/api/download_config', methods=['POST'])
+@requires_auth
+def handle_post_request():
+    protocol = request.json.get('protocol')
+    return download_json_file_base(protocol)
+
+
+# 删除M3U白名单
+@app.route('/api/deletewm3u11', methods=['POST'])
+@requires_auth
+def deletewm3u11():
+    deleteurl = request.json.get('deleteurl')
+    group = m3u_whitlist.get(deleteurl)
+    del m3u_whitlist[deleteurl]
+    checkAndRemoveM3uRank(group)
+    return dellist(request, REDIS_KEY_M3U_WHITELIST)
+
+
+# 删除M3U白名单分组优先级
+@app.route('/api/deletewm3u16', methods=['POST'])
+@requires_auth
+def deletewm3u16():
+    deleteurl = request.json.get('deleteurl')
+    rank = m3u_whitlist_rank.get(deleteurl)
+    del m3u_whitlist_rank[deleteurl]
+    dealRemoveRankGroup(rank)
+    return dellist(request, REDIS_KEY_M3U_WHITELIST_RANK)
+
+
+# 切换功能开关
+@app.route('/api/switchstate', methods=['POST'])
+@requires_auth
+def switchFunction():
+    state = request.json['state']
+    id = request.json['id']
+    switchSingleFunction(id, state)
+    return 'success'
+
+
+# 删除M3U黑名单
+@app.route('/api/deletewm3u15', methods=['POST'])
+@requires_auth
+def deletewm3u15():
+    deleteurl = request.json.get('deleteurl')
+    del m3u_blacklist[deleteurl]
+    return dellist(request, REDIS_KEY_M3U_BLACKLIST)
+
+
+# 删除单个下载加密上传
+@app.route('/api/deletewm3u17', methods=['POST'])
+@requires_auth
+def deletewm3u17():
+    deleteurl = request.json.get('deleteurl')
+    del downAndSecUploadUrlPassAndName[deleteurl]
+    # 序列化成JSON字符串
+    json_string = json.dumps(downAndSecUploadUrlPassAndName)
+    # 将JSON字符串存储到Redis中
+    redis_add(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME, json_string)
+    return jsonify({'deleteresult': "delete success"})
+
+
+# 删除单个下载解密
+@app.route('/api/deletewm3u18', methods=['POST'])
+@requires_auth
+def deletewm3u18():
+    deleteurl = request.json.get('deleteurl')
+    del downAndDeSecUrlPassAndName[deleteurl]
+    # 序列化成JSON字符串
+    json_string = json.dumps(downAndDeSecUrlPassAndName)
+    # 将JSON字符串存储到Redis中
+    redis_add(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME, json_string)
+    return jsonify({'deleteresult': "delete success"})
+
+
+# 添加M3U白名单
+@app.route('/api/addnewm3u11', methods=['POST'])
+@requires_auth
+def addnewm3u11():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    checkAndUpdateM3uRank(name, -99)
+    addurl_tw = convert(addurl, 'zh-tw')
+    addurl_cn = convert(addurl, 'zh-cn')
+    m3u_whitlist[addurl_tw] = name
+    m3u_whitlist[addurl_cn] = name
+    my_dict = {addurl_tw: name, addurl_cn: name}
+    redis_add_map(REDIS_KEY_M3U_WHITELIST, my_dict)
+    return jsonify({'addresult': "add success"})
+
+
+# 添加youtube直播源
+@app.route('/api/addnewm3u24', methods=['POST'])
+@requires_auth
+def addnewm3u24():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    redisKeyYoutube[addurl] = name
+    return addlist(request, REDIS_KEY_YOUTUBE)
+
+
+# 添加bilibili直播源
+@app.route('/api/addnewm3u25', methods=['POST'])
+@requires_auth
+def addnewm3u25():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    global redisKeyBilili
+    redisKeyBilili[addurl] = name
+    return addlist(request, REDIS_KEY_BILIBILI)
+
+
+# 添加huya直播源
+@app.route('/api/addnewm3u26', methods=['POST'])
+@requires_auth
+def addnewm3u26():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    global redisKeyHuya
+    redisKeyHuya[addurl] = name
+    return addlist(request, REDIS_KEY_HUYA)
+
+
+# 添加YY直播源
+@app.route('/api/addnewm3u27', methods=['POST'])
+@requires_auth
+def addnewm3u27():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    global redisKeyYY
+    redisKeyYY[addurl] = name
+    return addlist(request, REDIS_KEY_YY)
+
+
+# 添加DOUYIN直播源
+@app.route('/api/addnewm3u29', methods=['POST'])
+@requires_auth
+def addnewm3u29():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    global redisKeyDOUYIN
+    redisKeyDOUYIN[addurl] = name
+    return addlist(request, REDIS_KEY_DOUYIN)
+
+
+# 添加alist直播源
+@app.route('/api/addnewm3u30', methods=['POST'])
+@requires_auth
+def addnewm3u30():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    global redisKeyAlist
+    redisKeyAlist[addurl] = name
+    return addlist(request, REDIS_KEY_ALIST)
+
+
+# 添加TWITCH直播源
+@app.route('/api/addnewm3u28', methods=['POST'])
+@requires_auth
+def addnewm3u28():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    global redisKeyTWITCH
+    redisKeyTWITCH[addurl] = name
+    return addlist(request, REDIS_KEY_TWITCH)
+
+
+# 添加normal直播源
+@app.route('/api/addnewm3u31', methods=['POST'])
+@requires_auth
+def addnewm3u31():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    global redisKeyNormal
+    redisKeyNormal[addurl] = name
+    return addlist(request, REDIS_KEY_NORMAL)
+
+
+# 添加M3U白名单分组优先级
+@app.route('/api/addnewm3u16', methods=['POST'])
+@requires_auth
+def addnewm3u16():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    checkAndUpdateM3uRank(addurl, name)
+    return jsonify({'addresult': "add success"})
+
+
+# 添加下载加密上传-特殊字典结构保存到redis
+@app.route('/api/addnewm3u17', methods=['POST'])
+@requires_auth
+def addnewm3u17():
+    addurl = request.json.get('url')
+    password = request.json.get('password')
+    name = request.json.get('secretName')
+    if len(downAndSecUploadUrlPassAndName.items()) == 0:
+        # 从Redis中读取JSON字符串
+        json_string_redis = redis_get(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME)
+        # 反序列化成Python对象
+        my_dict_redis = json.loads(json_string_redis)
+        downAndSecUploadUrlPassAndName.update(my_dict_redis)
+    downAndSecUploadUrlPassAndName[addurl] = {'password': password, 'secretName': name}
+    # 序列化成JSON字符串
+    json_string = json.dumps(downAndSecUploadUrlPassAndName)
+    # 将JSON字符串存储到Redis中
+    redis_add(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME, json_string)
+    return jsonify({'addresult': "add success"})
+
+
+# 添加下载解密-特殊字典结构保存到redis
+@app.route('/api/addnewm3u18', methods=['POST'])
+@requires_auth
+def addnewm3u18():
+    addurl = request.json.get('url')
+    password = request.json.get('password')
+    name = request.json.get('secretName')
+    if len(downAndDeSecUrlPassAndName.items()) == 0:
+        # 从Redis中读取JSON字符串
+        json_string_redis = redis_get(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME)
+        # 反序列化成Python对象
+        my_dict_redis = json.loads(json_string_redis)
+        downAndDeSecUrlPassAndName.update(my_dict_redis)
+    downAndDeSecUrlPassAndName[addurl] = {'password': password, 'secretName': name}
+    # 序列化成JSON字符串
+    json_string = json.dumps(downAndDeSecUrlPassAndName)
+    # 将JSON字符串存储到Redis中
+    redis_add(REDIS_KEY_DOWNLOAD_AND_DESECRET_URL_PASSWORD_NAME, json_string)
+    return jsonify({'addresult': "add success"})
+
+
+# 添加M3U黑名单
+@app.route('/api/addnewm3u15', methods=['POST'])
+@requires_auth
+def addnewm3u15():
+    addurl = request.json.get('addurl')
+    name = request.json.get('name')
+    m3u_blacklist[addurl] = name
+    return addlist(request, REDIS_KEY_M3U_BLACKLIST)
+
+
+# 拉取全部m3u白名单配置
+@app.route('/api/getall11', methods=['GET'])
+@requires_auth
+def getall11():
+    init_m3u_whitelist()
+    return jsonify(m3u_whitlist)
+
+
+# 拉取全部m3u白名单分组优先级配置
+@app.route('/api/getall16', methods=['GET'])
+@requires_auth
+def getall16():
+    init_m3u_whitelist()
+    return jsonify(m3u_whitlist_rank)
+
+
+# 拉取全部下载加密上传
+@app.route('/api/getall17', methods=['GET'])
+@requires_auth
+def getall17():
+    return jsonify(downAndSecUploadUrlPassAndName)
+
+
+# 拉取全部下载解密
+@app.route('/api/getall18', methods=['GET'])
+@requires_auth
+def getall18():
+    return jsonify(downAndDeSecUrlPassAndName)
+
+
+# 拉取全部m3u黑名单配置
+@app.route('/api/getall15', methods=['GET'])
+@requires_auth
+def getall15():
+    init_m3u_blacklist()
+    return jsonify(m3u_blacklist)
+
+
+# 通用获取同步账户数据-cachekey,flag(bbs-gitee,pps-github,lls-webdav)
+@app.route('/api/getSyncAccountData', methods=['POST'])
+@requires_auth
+def getSyncAccountData():
+    cacheKey = request.json['cacheKey']
+    type = request.json['inputvalue']
+    if type == 'bbs':
+        global redisKeyGitee
+        num = init_gitee(cacheKey, REDIS_KEY_GITEE, redisKeyGitee)
+        return jsonify({'password': num})
+    elif type == 'pps':
+        global redisKeyGithub
+        num = init_gitee(cacheKey, REDIS_KEY_GITHUB, redisKeyGithub)
+        return jsonify({'password': num})
+    elif type == 'lls':
+        global redisKeyWebDav
+        num = init_gitee(cacheKey, REDIS_KEY_WEBDAV, redisKeyWebDav)
+        return jsonify({'password': num})
+
+
+# 修改同步账户数据    gitee-bbs github-pps webdav-lls
+@app.route('/api/changeSyncData', methods=['POST'])
+@requires_auth
+def changeSyncData():
+    cacheKey = request.json['cacheKey']
+    type = request.json['type']
+    value = request.json['inputvalue']
+    if type == 'bbs':
+        global redisKeyGitee
+        update_gitee(cacheKey, value, REDIS_KEY_GITEE, redisKeyGitee)
+    elif type == 'pps':
+        global redisKeyGithub
+        update_gitee(cacheKey, value, REDIS_KEY_GITHUB, redisKeyGithub)
+    elif type == 'lls':
+        global redisKeyWebDav
+        update_gitee(cacheKey, value, REDIS_KEY_WEBDAV, redisKeyWebDav)
+    return "数据已经保存"
+
+
+# 通用随机订阅密码切换
+@app.route("/api/changeSubscribePassword", methods=['POST'])
+@requires_auth
+def changeSubscribePassword():
+    cacheKey = request.json['cacheKey']
+    num = update_m3u_subscribe_pass(cacheKey)
+    return jsonify({"password": num})
+
+
+# 通用随机订阅密码切换-下载加密上传功能
+@app.route("/api/changeSubscribePassword2", methods=['POST'])
+@requires_auth
+def changeSubscribePassword2():
+    url = request.json['cacheKey']
+    password = generateEncryptPassword()
+    global downAndSecUploadUrlPassAndName
+    myDict = downAndSecUploadUrlPassAndName.get(url)
+    if myDict:
+        myDict['password'] = password
+        # 序列化成JSON字符串
+        json_string = json.dumps(downAndSecUploadUrlPassAndName)
+        # 将JSON字符串存储到Redis中
+        redis_add(REDIS_KEY_DOWNLOAD_AND_SECRET_UPLOAD_URL_PASSWORD_NAME, json_string)
+    return jsonify({"password": password})
+
+
+# 查询订阅文件名字
+@app.route("/api/getFileName", methods=['POST'])
+@requires_auth
+def getFileName():
+    cacheKey = request.json['cacheKey']
+    num = getFileNameByTagName(cacheKey)
+    return jsonify({"password": num})
+
+
+# 通用订阅文件名字手动修改
+@app.route("/api/changeFileName", methods=['POST'])
+@requires_auth
+def changeFileName():
+    cacheKey = request.json['cacheKey']
+    newName = request.json['inputvalue']
+    num = changeFileName2(cacheKey, newName)
+    return jsonify({"password": num})
+
+
+# 通用订阅密码手动修改
+@app.route("/api/changeSubscribePasswordByHand", methods=['POST'])
+@requires_auth
+def changeSubscribePasswordByHand():
+    cacheKey = request.json['cacheKey']
+    password = request.json['inputvalue']
+    num = update_m3u_subscribe_pass_by_hand(cacheKey, password)
+    return jsonify({"password": num})
+
+
+# 获取外国DNS端口
+@app.route('/api/getExtraDnsPort', methods=['GET'])
+@requires_auth
+def getExtraDnsPort():
+    num = init_extra_dns_port()
+    return jsonify({'button': num})
+
+
+# 修改外国DNS端口
+@app.route('/api/saveExtraDnsPort', methods=['POST'])
+@requires_auth
+def saveExtraDnsPort():
+    data = request.json['selected_button']
+    redis_add(REDIS_KEY_EXTRA_DNS_PORT, int(data))
+    extradnsport[REDIS_KEY_EXTRA_DNS_PORT] = int(data)
+    redis_public_message(REDIS_KEY_UPDATE_EXTRA_DNS_PORT_FLAG)
+    return "数据已经保存"
+
+
+# 获取外国DNS服务器
+@app.route('/api/getExtraDnsServer', methods=['GET'])
+@requires_auth
+def getExtraDnsServer():
+    num = init_extra_dns_server()
+    return jsonify({'button': num})
+
+
+# 修改外国DNS服务器
+@app.route('/api/saveExtraDnsServer', methods=['POST'])
+@requires_auth
+def saveExtraDnsServer():
+    data = request.json['selected_button']
+    if data == "":
+        data = "127.0.0.1"
+    redis_add(REDIS_KEY_EXTRA_DNS_SERVER, data)
+    extradnsserver[REDIS_KEY_EXTRA_DNS_SERVER] = data
+    redis_public_message(REDIS_KEY_UPDATE_EXTRA_DNS_SERVER_FLAG)
+    return "数据已经保存"
+
+
+# 获取中国DNS端口
+@app.route('/api/getChinaDnsPort', methods=['GET'])
+@requires_auth
+def getChinaDnsPort():
+    num = init_china_dns_port()
+    return jsonify({'button': num})
+
+
+# 修改中国DNS端口
+@app.route('/api/savechinaDnsPort', methods=['POST'])
+@requires_auth
+def savechinaDnsPort():
+    data = request.json['selected_button']
+    redis_add(REDIS_KEY_CHINA_DNS_PORT, int(data))
+    chinadnsport[REDIS_KEY_CHINA_DNS_PORT] = int(data)
+    redis_public_message(REDIS_KEY_UPDATE_CHINA_DNS_PORT_FLAG)
+    return "数据已经保存"
+
+
+# 获取中国DNS服务器
+@app.route('/api/getChinaDnsServer', methods=['GET'])
+@requires_auth
+def getChinaDnsServer():
+    num = init_china_dns_server()
+    return jsonify({'button': num})
+
+
+# 修改中国DNS服务器
+@app.route('/api/savechinaDnsServer', methods=['POST'])
+@requires_auth
+def savechinaDnsServer():
+    data = request.json['selected_button']
+    if data == "":
+        data = "127.0.0.1"
+    redis_add(REDIS_KEY_CHINA_DNS_SERVER, data)
+    chinadnsserver[REDIS_KEY_CHINA_DNS_SERVER] = data
+    redis_public_message(REDIS_KEY_UPDATE_CHINA_DNS_SERVER_FLAG)
+    return "数据已经保存"
+
+
+# 获取黑白名单并发检测线程数
+@app.route('/api/getThreadNum', methods=['GET'])
+@requires_auth
+def getThreadNum():
+    num = init_threads_num()
+    return jsonify({'button': num})
+
+
+# 修改黑白名单并发检测线程数
+@app.route('/api/saveThreadS', methods=['POST'])
+@requires_auth
+def saveThreadS():
+    data = request.json['selected_button']
+    redis_add(REDIS_KEY_THREADS, min(int(data), 1000))
+    threadsNum[REDIS_KEY_THREADS] = min(int(data), 1000)
+    redis_public_message(f'{REDIS_KEY_UPDATE_THREAD_NUM_FLAG}_{data}')
+    return "数据已经保存"
+
+
+# 选择目标转换的远程配置
+@app.route('/api/chooseProxyModel', methods=['POST'])
+@requires_auth
+def chooseProxyModel():
+    button = request.json.get('selected_button')
+    dict = {}
+    dict[REDIS_KEY_PROXIES_MODEL_CHOSEN] = button
+    redis_add_map(REDIS_KEY_PROXIES_MODEL_CHOSEN, dict)
+    return "success"
+
+
+# 选择目标转换的远程服务器
+@app.route('/api/chooseProxyServer', methods=['POST'])
+@requires_auth
+def chooseProxyServer():
+    button = request.json.get('selected_button')
+    dict = {}
+    dict[REDIS_KEY_PROXIES_SERVER_CHOSEN] = button
+    redis_add_map(REDIS_KEY_PROXIES_SERVER_CHOSEN, dict)
+    return "success"
+
+
+# 服务器启动时加载选择的配置
+@app.route('/api/getSelectedModel', methods=['GET'])
+@requires_auth
+def getSelectedModel():
+    dict = redis_get_map(REDIS_KEY_PROXIES_MODEL_CHOSEN)
+    if dict and len(dict.keys()) > 0:
+        value = dict[REDIS_KEY_PROXIES_MODEL_CHOSEN]
+        if value:
+            return jsonify({'button': value})
+        else:
+            tmp_dict = {}
+            tmp_dict[REDIS_KEY_PROXIES_MODEL_CHOSEN] = "ACL4SSR_Online 默认版 分组比较全(本地离线模板)"
+            # 设定默认选择的模板
+            redis_add_map(REDIS_KEY_PROXIES_MODEL_CHOSEN, tmp_dict)
+            return jsonify({'button': tmp_dict[REDIS_KEY_PROXIES_MODEL_CHOSEN]})
+    else:
+        tmp_dict = {}
+        tmp_dict[REDIS_KEY_PROXIES_MODEL_CHOSEN] = "ACL4SSR_Online 默认版 分组比较全(本地离线模板)"
+        # 设定默认选择的模板
+        redis_add_map(REDIS_KEY_PROXIES_MODEL_CHOSEN, tmp_dict)
+        return jsonify({'button': tmp_dict[REDIS_KEY_PROXIES_MODEL_CHOSEN]})
+
+
+# 服务器启动时加载选择的服务器
+@app.route('/api/getSelectedServer', methods=['GET'])
+@requires_auth
+def getSelectedServer():
+    dict = redis_get_map(REDIS_KEY_PROXIES_SERVER_CHOSEN)
+    if dict and len(dict.keys()) > 0:
+        value = dict[REDIS_KEY_PROXIES_SERVER_CHOSEN]
+        if value:
+            return jsonify({'button': value})
+        else:
+            tmp_dict = {}
+            tmp_dict[REDIS_KEY_PROXIES_SERVER_CHOSEN] = "bridge模式:本地服务器"
+            redis_add_map(REDIS_KEY_PROXIES_SERVER_CHOSEN, tmp_dict)
+            return jsonify({'button': tmp_dict[REDIS_KEY_PROXIES_SERVER_CHOSEN]})
+    else:
+        tmp_dict = {}
+        tmp_dict[REDIS_KEY_PROXIES_SERVER_CHOSEN] = "bridge模式:本地服务器"
+        redis_add_map(REDIS_KEY_PROXIES_SERVER_CHOSEN, tmp_dict)
+        return jsonify({'button': tmp_dict[REDIS_KEY_PROXIES_SERVER_CHOSEN]})
+
+
+# 拉取列表-代理模板
+@app.route('/api/reloadProxyModels', methods=['GET'])
+@requires_auth
+def reloadProxyModels():
+    return jsonify(redis_get_map(REDIS_KEY_PROXIES_SERVER))
+
+
+# 删除节点远程后端服务器订阅
+@app.route('/api/deletewm3u10', methods=['POST'])
+@requires_auth
+def deletewm3u10():
+    returnJson = dellist(request, REDIS_KEY_PROXIES_SERVER)
+    setRandomValueChosen(REDIS_KEY_PROXIES_SERVER, REDIS_KEY_PROXIES_SERVER_CHOSEN)
+    return returnJson
+
+
+# 添加节点后端订阅
+@app.route('/api/addnewm3u10', methods=['POST'])
+@requires_auth
+def addnewm3u10():
+    return addlist(request, REDIS_KEY_PROXIES_SERVER)
+
+
+# 拉取全部后端服务器配置
+@app.route('/api/getall10', methods=['GET'])
+@requires_auth
+def getall10():
+    return jsonify(redis_get_map(REDIS_KEY_PROXIES_SERVER))
+
+
+# 删除节点远程配置订阅
+@app.route('/api/deletewm3u9', methods=['POST'])
+@requires_auth
+def deletewm3u9():
+    returnJson = dellist(request, REDIS_KEY_PROXIES_MODEL)
+    setRandomValueChosen(REDIS_KEY_PROXIES_MODEL, REDIS_KEY_PROXIES_MODEL_CHOSEN)
+    return returnJson
+
+
+# 添加节点远程配置订阅
+@app.route('/api/addnewm3u9', methods=['POST'])
+@requires_auth
+def addnewm3u9():
+    return addlist(request, REDIS_KEY_PROXIES_MODEL)
+
+
+# 拉取全部节点订阅远程配置
+@app.route('/api/getall9', methods=['GET'])
+@requires_auth
+def getall9():
+    return jsonify(redis_get_map(REDIS_KEY_PROXIES_MODEL))
+
+
+# 服务器启动时加载选择的节点类型id
+@app.route('/api/getSelectedButtonId', methods=['GET'])
+@requires_auth
+def getSelectedButtonId():
+    button = getProxyButton()
+    return jsonify({'button': button})
+
+
+# 选择目标转换的节点类型id
+@app.route('/api/chooseProxy', methods=['POST'])
+@requires_auth
+def chooseProxy():
+    button = request.json.get('selected_button')
+    dict = {}
+    dict[REDIS_KEY_PROXIES_TYPE] = button
+    redis_add_map(REDIS_KEY_PROXIES_TYPE, dict)
+    return "success"
+
+
+# 删除节点订阅
+@app.route('/api/deletewm3u8', methods=['POST'])
+@requires_auth
+def deletewm3u8():
+    return dellist(request, REDIS_KEY_PROXIES_LINK)
+
+
+# 添加节点订阅
+@app.route('/api/addnewm3u8', methods=['POST'])
+@requires_auth
+def addnewm3u8():
+    return addlist(request, REDIS_KEY_PROXIES_LINK)
+
+
+# 拉取全部节点订阅
+@app.route('/api/getall8', methods=['GET'])
+@requires_auth
+def getall8():
+    return jsonify(redis_get_map(REDIS_KEY_PROXIES_LINK))
+
+
+# 全部节点订阅链接超融合
+@app.route('/api/chaoronghe6', methods=['GET'])
+@requires_auth
+def chaoronghe_proxy():
+    return chaoronghe6()
+
+
+# 下载解密
+@app.route('/api/chaoronghe10', methods=['GET'])
+@requires_auth
+def chaoronghe_downAndDesecret():
+    return chaoronghe10()
+
+
+# 下载加密上传执行
+@app.route('/api/chaoronghe9', methods=['GET'])
+@requires_auth
+def chaoronghe_downAndUpload():
+    return chaoronghe9()
+
+
+# 简易DNS白名单超融合:白名单dnsmasq配置+白名单代理规则
+@app.route('/api/chaoronghe8', methods=['GET'])
+@requires_auth
+def chaoronghe_simpleWhitelist():
+    return chaoronghe8()
+
+
+# 简易DNS黑名单超融合：op黑名单代理域名+代理规则
+@app.route('/api/chaoronghe7', methods=['GET'])
+@requires_auth
+def chaoronghe_simpleBlacklist():
+    return chaoronghe7()
+
+
+# 生成全部alist直播源
+@app.route('/api/chaoronghe30', methods=['GET'])
+@requires_auth
+def chaoronghe_alist():
+    return chaoronghe30()
+
+
+# 生成全部douyin直播源
+@app.route('/api/chaoronghe29', methods=['GET'])
+@requires_auth
+def chaoronghe_douyin():
+    return chaoronghe29()
+
+
+# 生成全部YY直播源
+@app.route('/api/chaoronghe27', methods=['GET'])
+@requires_auth
+def chaoronghe_yy():
+    return chaoronghe27()
+
+
+# 生成全部huyta直播源
+@app.route('/api/chaoronghe26', methods=['GET'])
+@requires_auth
+def chaoronghe_huya():
+    return chaoronghe26()
+
+
+# 生成全部bilibili直播源
+@app.route('/api/chaoronghe25', methods=['GET'])
+@requires_auth
+def chaoronghe_bilibili():
+    return chaoronghe25()
+
+
+# 推流加密ts文件
+@app.route('/alist/<path:path>.ts')
+def video_m3u8_alist_ts(path):
+    uuid_ts = path
+    start_time = time.time()  # 获取当前时间戳
+    reliveAlistTsTime = int(getFileNameByTagName('reliveAlistTsTime'))
+    while (time.time() - start_time) < reliveAlistTsTime:
+        bytes_data_ts = get_true_alist_ts_url(uuid_ts)
+        if bytes_data_ts:
+            return Response(bytes_data_ts, mimetype='video/MP2T')
+    return
+
+
+# 推流加密m3u8列表
+@app.route('/alist/<path:path>.m3u8')
+def video_m3u8_alist(path):
+    if path not in redisKeyAlistM3u.keys():
+        return "Video not found", 404
+    m3u8_path = os.path.join(SLICES_ALIST_M3U8, f"{path}.m3u8")
+    # 读取M3U8播放列表文件并返回给客户端
+    with open(m3u8_path, "rb") as f:
+        m3u8_data = f.read()
+    if m3u8_data:
+        return Response(m3u8_data, headers=headers_default)
+    else:
+        return "Video not found", 404
+
+
+# 生成全部TWITCH直播源
+@app.route('/api/chaoronghe28', methods=['GET'])
+@requires_auth
+def chaoronghe_TWITCH():
+    return chaoronghe28()
+
+
+# 生成全部youtube直播源
+@app.route('/api/chaoronghe24', methods=['GET'])
+@requires_auth
+def chaoronghe_youtube():
+    return chaoronghe24()
+
+
+# 生成全部normal直播源
+@app.route('/api/chaoronghe31', methods=['GET'])
+@requires_auth
+def chaoronghe_normal():
+    return chaoronghe31()
+
+
+@app.route('/api/download_json_file7', methods=['GET'])
+@requires_auth
+def download_json_file7():
+    file_paths = []
+    # 生成JSON文件数据
+    json_data = generate_multi_json_string(allListArr)
+    if os.path.exists(f"{secret_path}allData.json"):
+        os.remove(f"{secret_path}allData.json")
+    # 保存JSON数据到临时文件
+    with open(f"{secret_path}allData.json", 'w') as f:
+        f.write(json_data)
+    file_paths.append(f"{secret_path}allData.json")
+    getHugeDataList(file_paths)
+    # 发送所有JSON文件到前端
+    result = send_multiple_files(file_paths)
+    # 删除所有数据项
+    delete_all_items_in_db(file_paths)
+    return result
 
 
 # 删除密码
@@ -7996,14 +8443,6 @@ def getall6():
 @requires_auth
 def chaoronghe_ipv6():
     return chaoronghe5()
-
-
-def chaoronghe5():
-    try:
-        return chaorongheBase(REDIS_KEY_WHITELIST_IPV6_LINK, 'process_data_abstract6',
-                              REDIS_KEY_WHITELIST_IPV6_DATA, f"{secret_path}{getFileNameByTagName('ipv6')}.txt")
-    except:
-        return "empty"
 
 
 # 拉取全部ipv6订阅
@@ -8048,14 +8487,6 @@ def chaoronghe_ipv4():
     return chaoronghe4()
 
 
-def chaoronghe4():
-    try:
-        return chaorongheBase(REDIS_KEY_WHITELIST_IPV4_LINK, 'process_data_abstract5',
-                              REDIS_KEY_WHITELIST_IPV4_DATA, f"{secret_path}{getFileNameByTagName('ipv4')}.txt")
-    except:
-        return "empty"
-
-
 # 拉取全部ipv4订阅
 @app.route('/api/getall4', methods=['GET'])
 @requires_auth
@@ -8068,17 +8499,6 @@ def getall4():
 @requires_auth
 def chaoronghe_blacklist():
     return chaoronghe3()
-
-
-def chaoronghe3():
-    try:
-        return chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract7',
-                              REDIS_KEY_BLACKLIST_OPENCLASH_FALLBACK_FILTER_DOMAIN_DATA,
-                              f"{secret_path}{getFileNameByTagName('openclashFallbackFilterDomain')}.conf")
-        # return chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract2',
-        #                       REDIS_KEY_BLACKLIST_DATA, "/C.txt")
-    except:
-        return "empty"
 
 
 # 删除黑名单订阅
@@ -8107,19 +8527,6 @@ def getall3():
 @requires_auth
 def chaoronghe_whitelist():
     return chaoronghe2()
-
-
-def chaoronghe2():
-    try:
-        # chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract4',
-        #                REDIS_KEY_DOMAIN_DATA, "/WhiteDomain.txt")
-        return chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract3',
-                              REDIS_KEY_WHITELIST_DATA_DNSMASQ,
-                              f"{secret_path}{getFileNameByTagName('whiteListDnsmasq')}.conf")
-        # return chaorongheBase(REDIS_KEY_WHITELIST_LINK, 'process_data_abstract2',
-        #                       REDIS_KEY_WHITELIST_DATA, "/B.txt")
-    except:
-        return "empty"
 
 
 # 拉取全部白名单订阅
@@ -8485,251 +8892,8 @@ def chaoronghe_m3u():
     return chaoronghe()
 
 
-def chaoronghe():
-    try:
-        return chaorongheBase(REDIS_KEY_M3U_LINK, 'process_data_abstract', REDIS_KEY_M3U_DATA,
-                              f"{secret_path}{getFileNameByTagName('allM3u')}.m3u")
-    except:
-        return "empty"
-
-
-# 手动上传m3u文件格式化统一转换
-@app.route('/api/process-file', methods=['POST'])
-@requires_auth
-def process_file():
-    file = request.files['file']
-    # file_content = file.read().decode('utf-8')
-    file_content = file.read()
-    # file_content = read_file_with_encoding(file)
-    my_dict = formatdata_multithread(file_content.splitlines(), 10)
-    # my_dict = formattxt_multithread(file_content.splitlines(), 100)
-    # my_dict = formatdata_multithread(file.readlines(), 100)
-    distribute_data(my_dict, f"{secret_path}tmp.m3u", 10)
-    return send_file(f"{secret_path}tmp.m3u", as_attachment=True)
-
-
-# 手动上传m3u文件提取名字统一分组
-@app.route('/api/process-file2', methods=['POST'])
-@requires_auth
-def process_file2():
-    file = request.files['file']
-    file_content = file.read()
-    group = request.form.get('data')
-    datalist = []
-    for line in file_content.splitlines():
-        datalist.append(decode_bytes(line).strip())
-    file_content = "\n".join(datalist)
-    regex_pattern = r'tvg-name="(.*?)"'
-    all_matches = re.findall(regex_pattern, file_content)
-    group_dict = {}
-    for i in all_matches:
-        group_dict[convert(i, 'zh-tw')] = group
-        group_dict[convert(i, 'zh-cn')] = group
-    # 将字典转换为JSON字符串并返回
-    json_str = json.dumps(group_dict)
-    filename = f'{secret_path}group.json'
-    if os.path.exists(filename):
-        os.remove(filename)
-    # 保存JSON数据到临时文件
-    with open(filename, 'w') as f:
-        f.write(json_str)
-    return send_file(filename, as_attachment=True)
-
-
-# 手动上传m3u文件提取名字统一分组
-@app.route('/api/process-file3', methods=['POST'])
-@requires_auth
-def process_file3():
-    file = request.files['file']
-    file_content = file.read()
-    group = request.form.get('data')
-    group_dict = {}
-    # 数据源，字典（词库+新分组名字），新分组名字
-    find_m3u_name_txt(file_content.splitlines(), group_dict, group)
-    # 将字典转换为JSON字符串并返回
-    json_str = json.dumps(group_dict)
-    filename = f'{secret_path}group.json'
-    if os.path.exists(filename):
-        os.remove(filename)
-    # 保存JSON数据到临时文件
-    with open(filename, 'w') as f:
-        f.write(json_str)
-    return send_file(filename, as_attachment=True)
-
-
-# 手动上传m3u文件转换成txt文件
-@app.route('/api/process-file4', methods=['POST'])
-@requires_auth
-def process_file4():
-    file = request.files['file']
-    file_content = file.read()
-    # 数据源，字典（词库+新分组名字），新分组名字
-    resultContent = m3uToTxt(file_content.splitlines())
-    filename = f'{secret_path}source.txt'
-    if os.path.exists(filename):
-        os.remove(filename)
-    # 保存JSON数据到临时文件
-    with open(filename, 'w', encoding='utf-8') as f:
-        f.write(resultContent)
-    return send_file(filename, as_attachment=True)
-
-
-###################################################模仿redis服务器############################################
-# 存放数据库文件的路径
-DB_PATH = "/app/db"
-
-message_dict = {}
-
-
-@app.route('/api/data', methods=['GET'])
-def get_data():
-    global message_dict
-    returndict = jsonify(message_dict)
-    message_dict.clear()
-    return returndict
-
-
-@app.route('/api/ping', methods=['GET'])
-def ping():
-    return jsonify({'result': ''})
-
-
-@app.route('/api/data', methods=['POST'])
-def post_data():
-    global message_dict
-    message = request.form.get('message')
-    message_dict[message] = ''
-    return jsonify({'result': ''})
-
-
-@app.route('/api/data2', methods=['POST'])
-def post_data_key_data():
-    cachekey = request.form.get('cacheKey')
-    action = request.form.get('action')
-    file_path = os.path.join(DB_PATH, f'{cachekey}.txt')
-    if action == 'get_single':
-        try:
-            with open(file_path, "rb") as f:
-                data_bytes = f.read()
-            return jsonify({'result': data_bytes.decode('utf-8')})
-        except Exception as e:
-            return jsonify({'result': ''})
-    # 删除一个数据表
-    elif action == 'delete':
-        try:
-            os.remove(file_path)
-            return jsonify({'result': 1})
-        except Exception as e:
-            return jsonify({'result': 0})
-    # map增加表中一些条数据
-    elif action == 'add_map':
-        try:
-            # 字符串格式的json数据
-            add_dict = json.loads(request.form.get('dict_data'))
-            if len(add_dict) == 0:
-                return jsonify({'result': 0})
-            old_dict = {}
-            try:
-                with open(file_path, "rb") as f:
-                    data_bytes = f.read()
-                old_dict = json.loads(data_bytes.decode('utf-8'))
-            except Exception as e:
-                # 如果文件不存在，创建一个新文件
-                open(file_path, "wb").close()
-            old_dict.update(add_dict)
-            # 清除文件中的所有数据
-            with open(file_path, "wb") as f:
-                pass
-            # 复写数据
-            with open(file_path, "wb") as f:
-                f.write(json.dumps(old_dict).encode('utf-8'))
-            return jsonify({'result': 1})
-        except Exception as e:
-            return jsonify({'result': 0})
-    # 增加/修改表中一条数据
-    elif action == 'add_single':
-        try:
-            # 字符串格式的json数据
-            value = request.form.get('dict_data')
-            try:
-                # 如果文件存在，清除文件中的所有数据
-                with open(file_path, "wb") as f:
-                    pass
-            except:
-                # 如果文件不存在，创建一个新文件
-                open(file_path, "wb").close()
-            # 复写数据
-            with open(file_path, "wb") as f:
-                f.write(value.encode('utf-8'))
-            return jsonify({'result': 1})
-        except Exception as e:
-            return jsonify({'result': 0})
-    # 删除map里的单个key/多个key
-    elif action == 'delete_keys':
-        try:
-            # 字符串格式的json数据
-            dict_data = json.loads(request.form.get('dict_data'))
-            with open(file_path, "rb") as f:
-                data_bytes = f.read()
-            dict = json.loads(data_bytes.decode('utf-8'))
-            new_dict = {}
-            for key, value in dict.items():
-                if key in dict_data:
-                    continue
-                new_dict[key] = value
-            # 清除文件中的所有数据
-            with open(file_path, "wb") as f:
-                pass
-            # 复写数据
-            with open(file_path, "wb") as f:
-                f.write(json.dumps(new_dict).encode('utf-8'))
-            return jsonify({'result': 1})
-        except Exception as e:
-            return jsonify({'result': 0})
-    # 查询map
-    elif action == 'get_map':
-        try:
-            with open(file_path, "rb") as f:
-                data_bytes = f.read()
-            return jsonify(json.loads(data_bytes.decode('utf-8')))
-        except Exception as e:
-            return jsonify({})
-
-
-###################################################模仿redis服务器#############################################
-
-# 根据年月日、当前时间、输入的字符串生成的绝对唯一uuid
-def generate_only_uuid(my_string):
-    now = datetime.now()
-    timestamp = now.strftime("%Y%m%d%H%M%S%f")
-    unique_str = f"{timestamp}-{my_string}"
-    serial_number = uuid.uuid5(uuid.NAMESPACE_URL, unique_str)
-    return str(serial_number)
-
-
-def main():
-    init_db()
-    timer_thread1 = threading.Thread(target=clock_thread, daemon=True)
-    timer_thread1.start()
+if __name__ == '__main__':
     try:
         app.run(debug=True, host='0.0.0.0', port=22771)
     finally:
         print("close")
-
-
-if __name__ == '__main__':
-    # start = False
-    # while True:
-    #     try:
-    #         # 检查Redis连接状态
-    #         url = 'http://127.0.0.1:22772/api/ping'
-    #         response = requests.get(url)
-    #         if response.status_code == 200:
-    #             print('!!!!!!!!!!!!!!!!!!!!!!!Redis is ready dns.py\n')
-    #             start = True
-    #             break
-    #     except Exception as e:
-    #         # 连接失败，等待一段时间后重试
-    #         time.sleep(1)
-    # if start:
-    main()

@@ -21,7 +21,6 @@ import zipfile
 from concurrent.futures import ThreadPoolExecutor
 
 import m3u8
-from zhconv import convert
 import aiohttp
 import aiofiles
 import requests
@@ -30,10 +29,8 @@ from urllib.parse import urlparse, urlencode
 from flask import Flask, jsonify, request, send_file, render_template, send_from_directory, \
     after_this_request, redirect, Response
 
-import chardet
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
-from multidict import CIMultiDict
 
 # 存放数据库文件的路径
 DB_PATH = "/app/db"
@@ -351,7 +348,8 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
                   'usernameSys': 'admin', 'passwordSys': 'password', 'normalM3uClock': '7200',
                   'normalSubscriberClock': '10800',
-                  'proxySubscriberClock': '3600', 'spM3uClock': '3700', 'autoDnsSwitchClock': '600', 'syncClock': '10',
+                  'failTs': 'https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4',
+                  'proxySubscriberClock': '3600', 'autoDnsSwitchClock': '600', 'syncClock': '10',
                   'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国', 'foreignTopDomain':
                       'xyz,club,online,site,top,win', 'dnsMode': '0', 'dnsLimitRecordSecondDomain': '15',
                   'dnsLimitRecordSecondLenDomain': '15'}
@@ -809,8 +807,7 @@ def upload_json_base(rediskey, file_content):
             if rediskey == REDIS_KEY_M3U_WHITELIST:
                 dict_final = {}
                 for key, value in json_dict.items():
-                    dict_final[convert(key, 'zh-tw').lower()] = value
-                    dict_final[convert(key, 'zh-cn').lower()] = value
+                    dict_final[key.lower()] = value
                 redis_add_map(rediskey, dict_final)
                 importToReloadCache(rediskey, dict_final)
             else:
@@ -829,10 +826,11 @@ def upload_json_base(rediskey, file_content):
 
 
 # 上次更新时间戳
-time_clock_update_dict = {'proxySubscriberClock': '0', 'spM3uClock': '0', 'normalM3uClock': '0', 'youtube': '0',
+time_clock_update_dict = {'proxySubscriberClock': '0', 'normalM3uClock': '0', 'youtube': '0',
                           'bilibili': '0', 'huya': '0', 'yy': '0', 'twitch': '0', 'douyin': '0',
                           'autoDnsSwitchClock': '0', 'normalSubscriberClock': '0', 'syncClock': '0', 'recycle': '0',
-                          'checkAlive': '0'}
+                          'checkAlive': '0', 'migu': '0', 'miguId': '0', 'cq': '0', 'cqId': '0', 'youtubeId': '0',
+                          'bilibiliId': '0', 'huyaId': '0', 'yyId': '0', 'twitchId': '0', 'douyinId': '0'}
 
 
 def is_same_action_uuid(old_uuid, cachekey):
@@ -846,8 +844,12 @@ def is_same_action_uuid(old_uuid, cachekey):
 # true-需要更新 false-不需要更新
 def is_update_clock_live(cachekey):
     lastUpdateTime = float(time_clock_update_dict[cachekey])
-    if (time.time() - lastUpdateTime) >= 10:
-        return True
+    if cachekey == 'migu' or cachekey == 'cq':
+        if (time.time() - lastUpdateTime) >= 600:
+            return True
+    else:
+        if (time.time() - lastUpdateTime) >= 3600:
+            return True
     return False
 
 
@@ -885,16 +887,6 @@ def clock_thread():
             chaoronghe7()
             chaoronghe8()
             update_clock('autoDnsSwitchClock')
-        # youtube/bilibili/huya/yy/twitch/douyin直播源刷新
-        if isOpenFunction('switch35') and is_update_clock('spM3uClock'):
-            chaoronghe24()
-            chaoronghe25()
-            chaoronghe26()
-            chaoronghe27()
-            chaoronghe28()
-            chaoronghe29()
-            chaoronghe31()
-            update_clock('spM3uClock')
         # 通常直播源下载定时器
         if isOpenFunction('switch25') and is_update_clock('normalM3uClock'):
             chaoronghe()
@@ -974,9 +966,6 @@ def toggle_m3u(functionId, value):
         function_dict[functionId] = str(value)
         redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
     elif functionId == 'switch34':
-        function_dict[functionId] = str(value)
-        redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
-    elif functionId == 'switch35':
         function_dict[functionId] = str(value)
         redis_add_map(REDIS_KEY_FUNCTION_DICT, function_dict)
 
@@ -1983,9 +1972,6 @@ def init_function_dict():
         # 下载解密-定时器
         if 'switch34' not in keys:
             dict['switch34'] = '0'
-        # YOUTUBE-定时器
-        if 'switch35' not in keys:
-            dict['switch35'] = '0'
         redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
         function_dict = dict.copy()
     else:
@@ -1997,7 +1983,7 @@ def init_function_dict():
                 'switch21': '0',
                 'switch22': '1', 'switch23': '1', 'switch24': '1', 'switch25': '0', 'switch26': '0', 'switch27': '0'
             , 'switch28': '0', 'switch30': '0', 'switch31': '0', 'switch32': '0', 'switch33': '0',
-                'switch34': '0', 'switch35': '0'}
+                'switch34': '0'}
         redis_add_map(REDIS_KEY_FUNCTION_DICT, dict)
         function_dict = dict.copy()
 
@@ -2488,9 +2474,9 @@ def decode_bytes(text):
             continue
 
     # if none of the above worked, use chardet to detect the encoding
-    result = chardet.detect(text)
-    decoded_text = text.decode(result['encoding']).strip()
-    return decoded_text
+    # result = chardet.detect(text)
+    # decoded_text = text.decode(result['encoding']).strip()
+    # return decoded_text
 
 
 def pureUrl(s):
@@ -2567,15 +2553,13 @@ def find_m3u_name_txt(lines, name_dict, def_group):
             if re.match(r"^[^#].*,(http|rtsp|rtmp|P2p|mitv)", line):
                 name, url = getChannelAndUrl(",", line)
                 if name:
-                    name_dict[convert(name, 'zh-tw')] = def_group
-                    name_dict[convert(name, 'zh-cn')] = def_group
+                    name_dict[name] = def_group
                 else:
                     continue
             elif re.match(r"^[^#].*，(http|rtsp|rtmp|P2p|mitv)", line):
                 name, url = getChannelAndUrl("，", line)
                 if name:
-                    name_dict[convert(name, 'zh-tw')] = def_group
-                    name_dict[convert(name, 'zh-cn')] = def_group
+                    name_dict[name] = def_group
                 else:
                     continue
             else:
@@ -4337,7 +4321,8 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
                           'usernameSys': 'admin', 'passwordSys': 'password', 'normalM3uClock': '7200',
                           'normalSubscriberClock': '10800',
-                          'proxySubscriberClock': '3600', 'spM3uClock': '3700', 'autoDnsSwitchClock': '600',
+                          'failTs': 'https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4',
+                          'proxySubscriberClock': '3600', 'autoDnsSwitchClock': '600',
                           'syncClock': '10', 'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国',
                           'foreignTopDomain':
                               'xyz,club,online,site,top,win', 'dnsMode': '0', 'dnsLimitRecordSecondDomain': '15',
@@ -4388,8 +4373,7 @@ def getFileNameByTagName(tagname):
 
 
 # 需要额外操作的
-clockArr = ['switch25', 'switch26', 'switch27', 'switch28', 'switch13', 'switch25', 'switch33', 'switch34',
-            'switch35']
+clockArr = ['switch25', 'switch26', 'switch27', 'switch28', 'switch13', 'switch25', 'switch33', 'switch34']
 
 
 def switchSingleFunction(id, state):
@@ -4625,11 +4609,11 @@ async def download_file5_single(ids, mintimeout, maxTimeout):
 
 
 async def download_files5():
-    global redisKeyBilili
-    ids = redisKeyBilili.keys()
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
-    m3u_dict = await download_file5_single(ids, mintimeout, maxTimeout)
+    global time_clock_update_dict
+    nowId = time_clock_update_dict.get('bilibiliId')
+    m3u_dict = await download_file5_single([nowId], mintimeout, maxTimeout)
     return m3u_dict
 
 
@@ -4650,11 +4634,11 @@ async def download_files6_single(ids, mintimeout, maxTimeout):
 
 
 async def download_files6():
-    global redisKeyHuya
-    ids = redisKeyHuya.keys()
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
-    m3u_dict = await download_files6_single(ids, mintimeout, maxTimeout)
+    global time_clock_update_dict
+    nowId = time_clock_update_dict.get('huyaId')
+    m3u_dict = await download_files6_single([nowId], mintimeout, maxTimeout)
     return m3u_dict
 
 
@@ -4732,20 +4716,14 @@ async def download_files_normal_single():
             ipanda_ids[id_arr[1]] = id_arr[2]
     async with aiohttp.ClientSession() as session:
         try:
-            tasks = []
             for id in chongqing_ids:
-                task = asyncio.ensure_future(grab_normal_chongqin(session, id, m3u_dict, mintimeout, maxTimeout, 'cq'))
-                tasks.append(task)
-            await asyncio.gather(*tasks)
+                m3u_dict[f'cq,{id}'] = ''
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             print(f"normal Failed to fetch files. Error: {e}")
         try:
-            tasks = []
             for id in migu_ids.keys():
-                task = asyncio.ensure_future(
-                    grab_normal_migu(session, id, m3u_dict, mintimeout, maxTimeout, 'migu', migu_ids.get(id)))
-                tasks.append(task)
-            await asyncio.gather(*tasks)
+                arr = migu_ids.get(id)
+                m3u_dict[f'migu,{id},{arr[0]},{arr[1]}'] = ''
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             print(f"migu Failed to fetch files. Error: {e}")
         try:
@@ -4765,6 +4743,10 @@ async def download_files_normal_single():
             await  grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, 'longzhu')
         except Exception as e:
             print(f"longzhu Failed to fetch files. Error: {e}")
+        try:
+            await  grab_normal_857(session, m3u_dict, mintimeout, maxTimeout, '857')
+        except Exception as e:
+            print(f"857 Failed to fetch files. Error: {e}")
     return m3u_dict
 
 
@@ -4792,29 +4774,29 @@ async def deal_qiumihui(session, m3u_dict, mintimeout, maxTimeout):
 
 
 async def download_files7():
-    global redisKeyYY
-    ids = redisKeyYY.keys()
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
-    m3u_dict = await download_files7_single(ids, mintimeout, maxTimeout)
+    global time_clock_update_dict
+    nowId = time_clock_update_dict.get('yyId')
+    m3u_dict = await download_files7_single([nowId], mintimeout, maxTimeout)
     return m3u_dict
 
 
 async def download_files_douyin():
-    global redisKeyDOUYIN
-    ids = redisKeyDOUYIN.keys()
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
-    m3u_dict = await download_files_douyin_single(ids, mintimeout, maxTimeout)
+    global time_clock_update_dict
+    nowId = time_clock_update_dict.get('douyinId')
+    m3u_dict = await download_files_douyin_single([nowId], mintimeout, maxTimeout)
     return m3u_dict
 
 
 async def download_files8():
-    global redisKeyTWITCH
-    ids = redisKeyTWITCH.keys()
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
-    m3u_dict = await download_files8_single(ids, mintimeout, maxTimeout)
+    global time_clock_update_dict
+    nowId = time_clock_update_dict.get('twitchId')
+    m3u_dict = await download_files8_single([nowId], mintimeout, maxTimeout)
     return m3u_dict
 
 
@@ -4825,8 +4807,10 @@ bili_header = {
                   'like Gecko) CriOS/87.0.4280.163 Mobile/15E148 Safari/604.1',
 }
 
-# 转换为 CIMultiDict 对象
-cim_headers = CIMultiDict(bili_header)
+cim_headers = {
+    'User-Agent': 'Mozilla/5.0 (iPod; CPU iPhone OS 14_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, '
+                  'like Gecko) CriOS/87.0.4280.163 Mobile/15E148 Safari/604.1',
+}
 
 biliurl = 'https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo'
 
@@ -4939,13 +4923,11 @@ def huya_live(e):
     return url
 
 
-huya_header = {
+cim_headers_huya = {
     'Content-Type': 'application/x-www-form-urlencoded',
     'User-Agent': 'Mozilla/5.0 (Linux; Android 5.0; SM-G900P Build/LRX21T) AppleWebKit/537.36 (KHTML, like Gecko) '
                   'Chrome/75.0.3770.100 Mobile Safari/537.36 '
 }
-# 转换为 CIMultiDict 对象
-cim_headers_huya = CIMultiDict(huya_header)
 
 headers_web_YY = {
     'referer': f'https://www.yy.com/',
@@ -5235,8 +5217,8 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, min
     update_dict = {}
     if dict_url:
         url = None
-        if 'stream' in dict_url.keys():
-            data_dict = dict_url['stream']
+        if 'ud' in dict_url.keys():
+            data_dict = dict_url['ud']
             try:
                 url = data_dict['m3u8']
                 # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
@@ -5255,8 +5237,8 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, min
                 except:
                     pass
         if url is None or url == '':
-            if 'playStreamInfo' in dict_url.keys():
-                data_dict = dict_url['playStreamInfo']
+            if 'hd' in dict_url.keys():
+                data_dict = dict_url['hd']
                 try:
                     url = data_dict['m3u8']
                     # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
@@ -5275,8 +5257,8 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, min
                     except:
                         pass
         if url is None or url == '':
-            if 'hd' in dict_url.keys():
-                data_dict = dict_url['hd']
+            if 'playStreamInfo' in dict_url.keys():
+                data_dict = dict_url['playStreamInfo']
                 try:
                     url = data_dict['m3u8']
                     # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
@@ -5335,8 +5317,8 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, min
                     except:
                         pass
         if url is None or url == '':
-            if 'ud' in dict_url.keys():
-                data_dict = dict_url['ud']
+            if 'stream' in dict_url.keys():
+                data_dict = dict_url['stream']
                 try:
                     url = data_dict['m3u8']
                     # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
@@ -5359,6 +5341,172 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, min
             update_dict[f'{source_type},{rid}'] = f'{name},{pic}'
     if len(update_dict) > 0:
         redisKeyNormal.update(update_dict)
+
+
+# 857直播
+def get_hd_url_857(id):
+    room = id.split(',')[1]
+    url = f'https://json.yyres.co/room/{room}/detail.json?v=1'
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.content.decode()
+        # 截取JSON字符串，去掉外部的无意义字符串和括号
+        json_data = data[data.find("(") + 1:data.rfind(")")]
+        # 解析JSON数据并转换为Python对象
+        python_data = json.loads(json_data)
+        # 访问JSON对象的属性
+        try:
+            liveUrl = python_data["data"]['stream']['hdM3u8']
+        except:
+            try:
+                liveUrl = python_data["data"]['stream']['hdFlv']
+            except:
+                try:
+                    liveUrl = python_data["data"]['stream']['m3u8']
+                except:
+                    liveUrl = python_data["data"]['stream']['fly']
+        return liveUrl
+
+
+# migu直播
+def get_hd_url_migu(id):
+    global time_clock_update_dict
+    time_clock_update_dict['miguId'] = id
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    # 有效直播源,名字/id
+    m3u_dict = loop.run_until_complete(download_files_normal_single_migu())
+    return m3u_dict[id]
+
+
+# youtube直播
+def get_hd_url_youtube(id):
+    global time_clock_update_dict
+    time_clock_update_dict['youtubeId'] = id
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    # 有效直播源,名字/id
+    m3u_dict = loop.run_until_complete(download_files4())
+    return m3u_dict[id]
+
+
+# bilibili直播
+def get_hd_url_bilibili(id):
+    global time_clock_update_dict
+    time_clock_update_dict['bilibiliId'] = id
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    # 有效直播源,名字/id
+    m3u_dict = loop.run_until_complete(download_files5())
+    return m3u_dict[id]
+
+
+# huya直播
+def get_hd_url_huya(id):
+    global time_clock_update_dict
+    time_clock_update_dict['huyaId'] = id
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    # 有效直播源,名字/id
+    m3u_dict = loop.run_until_complete(download_files6())
+    return m3u_dict[id]
+
+
+# yy直播
+def get_hd_url_yy(id):
+    global time_clock_update_dict
+    time_clock_update_dict['yyId'] = id
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    # 有效直播源,名字/id
+    m3u_dict = loop.run_until_complete(download_files7())
+    return m3u_dict[id]
+
+
+# douyin直播
+def get_hd_url_douyin(id):
+    global time_clock_update_dict
+    time_clock_update_dict['douyinId'] = id
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    # 有效直播源,名字/id
+    m3u_dict = loop.run_until_complete(download_files_douyin())
+    return m3u_dict[id]
+
+
+# twitch直播
+def get_hd_url_twitch(id):
+    global time_clock_update_dict
+    time_clock_update_dict['twitchId'] = id
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    # 有效直播源,名字/id
+    m3u_dict = loop.run_until_complete(download_files8())
+    return m3u_dict[id]
+
+
+# cq直播
+def get_hd_url_cq(id):
+    global time_clock_update_dict
+    time_clock_update_dict['cqId'] = id
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    # 有效直播源,名字/id
+    m3u_dict = loop.run_until_complete(download_files_normal_single_cq())
+    return m3u_dict[id]
+
+
+async def grab_normal_857(session, m3u_dict, mintimeout, maxTimeout, source_type):
+    global redisKeyNormal
+    timestr = str(int(time.time()) * 1000)
+    m3u8_url = f'https://json.yyres.co/all_live_rooms.json?v={timestr}'
+    update_dict = {}
+    try:
+        async with session.get(m3u8_url, timeout=mintimeout) as response:
+            data = await response.read()
+            try:
+                data = data.decode('utf-8')
+                # 截取JSON字符串，去掉外部的无意义字符串和括号
+                json_data = data[data.find("(") + 1:data.rfind(")")]
+                # 解析JSON数据并转换为Python对象
+                python_data = json.loads(json_data)
+                # 访问JSON对象的属性
+                pages = python_data["data"]
+                for page, pageListDict in pages.items():
+                    for pageDict in pageListDict:
+                        title = pageDict['title']
+                        logo = pageDict['cover']
+                        rid = pageDict['roomNum']
+                        m3u_dict[f'{source_type},{rid}'] = ''
+                        update_dict[f'{source_type},{rid}'] = f'{title},{logo}'
+                if len(update_dict) > 0:
+                    redisKeyNormal.update(update_dict)
+            except Exception as e:
+                pass
+    except asyncio.TimeoutError:
+        async with session.get(m3u8_url, timeout=maxTimeout) as response:
+            data = await response.read()
+            try:
+                data = data.decode('utf-8')
+                # 截取JSON字符串，去掉外部的无意义字符串和括号
+                json_data = data[data.find("(") + 1:data.rfind(")")]
+                # 解析JSON数据并转换为Python对象
+                python_data = json.loads(json_data)
+                # 访问JSON对象的属性
+                pages = python_data["data"]
+                for page, pageListDict in pages.items():
+                    for pageDict in pageListDict:
+                        title = pageDict['title']
+                        logo = pageDict['cover']
+                        rid = pageDict['roomNum']
+                        m3u_dict[f'{source_type},{rid}'] = ''
+                        update_dict[f'{source_type},{rid}'] = f'{title},{logo}'
+                if len(update_dict) > 0:
+                    redisKeyNormal.update(update_dict)
+            except Exception as e:
+                pass
+    except Exception as e:
+        print(f"857live An error occurred while processing {rid}. Error: {e}")
 
 
 async def grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, source_type):
@@ -5444,10 +5592,6 @@ async def grab_normal_chongqin(session, rid, m3u_dict, mintimeout, maxTimeout, s
     except Exception as e:
         print(f"chongqing An error occurred while processing {rid}. Error: {e}")
 
-
-cim_headers_YY = CIMultiDict(headers_YY)
-
-
 async def grab4(session, id, m3u_dict, mintimeout, maxTimeout):
     try:
         headers_YY['referer'] = f'https://wap.yy.com/mobileweb/{id}'
@@ -5470,7 +5614,7 @@ async def grab4(session, id, m3u_dict, mintimeout, maxTimeout):
                 xv = data['video']
                 xv = re.sub(r'_0_\d+_0', '_0_0_0', xv)
                 url = f'https://interface.yy.com/hls/get/stream/15013/{xv}/15013/{xa}?source=h5player&type=m3u8'
-                res_json = await  fetch_real_url(session, url, cim_headers_YY, mintimeout, maxTimeout)
+                res_json = await  fetch_real_url(session, url, headers_YY, mintimeout, maxTimeout)
                 if not res_json:
                     return
                 res_json = json.loads(res_json)
@@ -5736,8 +5880,9 @@ async def download_files4():
     global redisKeyYoutube
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
-    ids = redisKeyYoutube.keys()
-    m3u_dict = await download_youtube_single(ids, mintimeout, maxTimeout)
+    global time_clock_update_dict
+    nowId = time_clock_update_dict.get('youtubeId')
+    m3u_dict = await download_youtube_single([nowId], mintimeout, maxTimeout)
     return m3u_dict
 
 
@@ -5806,19 +5951,20 @@ async def grab(session, id, m3u_dict, mintimeout, maxTimeout):
 
 def chaoronghe25():
     try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        m3u_dict = loop.run_until_complete(download_files5())
+        global redisKeyBilili
+        ids = redisKeyBilili.keys()
+        m3u_dict = {}
+        for id in ids:
+            m3u_dict[id] = ''
         length = len(m3u_dict)
         if length == 0:
             return "empty"
         ip = init_IP()
         global redisKeyBililiM3u
-        global redisKeyBilili
         redisKeyBililiM3uFake = {}
         redisKeyBililiM3u.clear()
         redis_del_map(REDIS_KEY_BILIBILI_M3U)
-        # fakeurl=f'http://127.0.0.1:22771/bilibili/'
+        #fakeurl = f'http://127.0.0.1:22771/bilibili/'
         fakeurl = f"http://{ip}:{port_live}/bilibili/"
         for id, url in m3u_dict.items():
             try:
@@ -5828,15 +5974,10 @@ def chaoronghe25():
                 redisKeyBililiM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except:
                 pass
-        redisKeyBilili['bilibili'] = '更新bilibili直播'
-        redis_add_map(REDIS_KEY_BILIBILI, {'bilibili': '更新bilibili直播'})
-        link1 = f'#EXTINF:-1 group-title="哔哩哔哩" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新bilibili直播",更新bilibili直播\n'
-        redisKeyBililiM3uFake[f'{fakeurl}bilibili.m3u8'] = link1
         # 同步方法写出全部配置
         distribute_data(redisKeyBililiM3uFake, f"{secret_path}bilibili.m3u", 10)
         redis_add_map(REDIS_KEY_BILIBILI_M3U, redisKeyBililiM3u)
         fuck_m3u_to_txt(f"{secret_path}bilibili.m3u", f"{secret_path}bilibili.txt")
-        update_clock('bilibili')
         return "result"
     except Exception as e:
         return "empty"
@@ -5844,20 +5985,20 @@ def chaoronghe25():
 
 def chaoronghe26():
     try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        # 有效直播源,名字/id
-        m3u_dict = loop.run_until_complete(download_files6())
+        global redisKeyHuya
+        ids = redisKeyHuya.keys()
+        m3u_dict = {}
+        for id in ids:
+            m3u_dict[id] = ''
         length = len(m3u_dict)
         if length == 0:
             return "empty"
         ip = init_IP()
         global redisKeyHuyaM3u
-        global redisKeyHuya
         redisKeyHuyaM3uFake = {}
         redisKeyHuyaM3u.clear()
         redis_del_map(REDIS_KEY_HUYA_M3U)
-        # fakeurl:192.168.5.1:22771/huya?id=xxxxx
+        #fakeurl = 'http://127.0.0.1:22771/huya/'
         fakeurl = f"http://{ip}:{port_live}/huya/"
         for id, url in m3u_dict.items():
             try:
@@ -5867,15 +6008,10 @@ def chaoronghe26():
                 redisKeyHuyaM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except:
                 pass
-        redisKeyHuya['huya'] = '更新虎牙直播'
-        redis_add_map(REDIS_KEY_HUYA, {'huya': '更新虎牙直播'})
-        link1 = f'#EXTINF:-1 group-title="虎牙" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新虎牙直播",更新虎牙直播\n'
-        redisKeyHuyaM3uFake[f'{fakeurl}huya.m3u8'] = link1
         # 同步方法写出全部配置
         distribute_data(redisKeyHuyaM3uFake, f"{secret_path}huya.m3u", 10)
         redis_add_map(REDIS_KEY_HUYA_M3U, redisKeyHuyaM3u)
         fuck_m3u_to_txt(f"{secret_path}huya.m3u", f"{secret_path}huya.txt")
-        update_clock('huya')
         return "result"
     except Exception as e:
         return "empty"
@@ -5883,20 +6019,20 @@ def chaoronghe26():
 
 def chaoronghe27():
     try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        # 有效直播源,名字/id
-        m3u_dict = loop.run_until_complete(download_files7())
+        global redisKeyYY
+        ids = redisKeyYY.keys()
+        m3u_dict = {}
+        for id in ids:
+            m3u_dict[id] = ''
         length = len(m3u_dict)
         if length == 0:
             return "empty"
         ip = init_IP()
         global redisKeyYYM3u
-        global redisKeyYY
         redisKeyYYM3uFake = {}
         redisKeyYYM3u.clear()
         redis_del_map(REDIS_KEY_YY_M3U)
-        # fakeurl:192.168.5.1:22771/YY?id=xxxxx
+        #fakeurl='http://127.0.0.1:22771/YY/'
         fakeurl = f"http://{ip}:{port_live}/YY/"
         for id, url in m3u_dict.items():
             try:
@@ -5906,15 +6042,10 @@ def chaoronghe27():
                 redisKeyYYM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except:
                 pass
-        redisKeyYY['YY'] = '更新YY直播'
-        redis_add_map(REDIS_KEY_YY, {'YY': '更新YY直播'})
-        link1 = f'#EXTINF:-1 group-title="YY" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新YY直播",更新YY直播\n'
-        redisKeyYYM3uFake[f'{fakeurl}YY.m3u8'] = link1
         # 同步方法写出全部配置
         distribute_data(redisKeyYYM3uFake, f"{secret_path}YY.m3u", 10)
         redis_add_map(REDIS_KEY_YY_M3U, redisKeyYYM3u)
         fuck_m3u_to_txt(f"{secret_path}YY.m3u", f"{secret_path}YY.txt")
-        update_clock('yy')
         return "result"
     except Exception as e:
         return "empty"
@@ -5922,21 +6053,21 @@ def chaoronghe27():
 
 def chaoronghe29():
     try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        # 有效直播源,名字/id
-        m3u_dict = loop.run_until_complete(download_files_douyin())
+        global redisKeyDOUYIN
+        ids = redisKeyDOUYIN.keys()
+        m3u_dict = {}
+        for id in ids:
+            m3u_dict[id] = ''
         length = len(m3u_dict)
         if length == 0:
             return "empty"
         ip = init_IP()
         global redisKeyDOUYINM3u
-        global redisKeyDOUYIN
         redisKeyDOUYINM3uFake = {}
         redisKeyDOUYINM3u.clear()
         redis_del_map(REDIS_KEY_DOUYIN_M3U)
         fakeurl = f"http://{ip}:{port_live}/DOUYIN/"
-        # fakeurl = f"http://127.0.0.1:5000/DOUYIN/"
+        # fakeurl = f"http://127.0.0.1:22771/DOUYIN/"
         for id, url in m3u_dict.items():
             try:
                 redisKeyDOUYINM3u[id] = url
@@ -5945,15 +6076,10 @@ def chaoronghe29():
                 redisKeyDOUYINM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except:
                 pass
-        redisKeyDOUYIN['Douyin'] = '更新抖音直播'
-        redis_add_map(REDIS_KEY_DOUYIN, {'Douyin': '更新抖音直播'})
-        link1 = f'#EXTINF:-1 group-title="抖音" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新抖音直播",更新抖音直播\n'
-        redisKeyDOUYINM3uFake[f'{fakeurl}Douyin.m3u8'] = link1
         # 同步方法写出全部配置
         distribute_data(redisKeyDOUYINM3uFake, f"{secret_path}Douyin.m3u", 10)
         redis_add_map(REDIS_KEY_DOUYIN_M3U, redisKeyDOUYINM3u)
         fuck_m3u_to_txt(f"{secret_path}Douyin.m3u", f"{secret_path}Douyin.txt")
-        update_clock('douyin')
         return "result"
     except Exception as e:
         return "empty"
@@ -6386,16 +6512,16 @@ headers_default = {'Content-Type': 'application/vnd.apple.mpegurl',
 
 def chaoronghe28():
     try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        # 有效直播源,名字/id
-        m3u_dict = loop.run_until_complete(download_files8())
+        global redisKeyTWITCH
+        ids = redisKeyTWITCH.keys()
+        m3u_dict = {}
+        for id in ids:
+            m3u_dict[id] = ''
         length = len(m3u_dict)
         if length == 0:
             return "empty"
         ip = init_IP()
         global redisKeyTWITCHM3u
-        global redisKeyTWITCH
         redisKeyTWITCHM3uFake = {}
         redisKeyTWITCHM3u.clear()
         redis_del_map(REDIS_KEY_TWITCH_M3U)
@@ -6409,15 +6535,10 @@ def chaoronghe28():
                 redisKeyTWITCHM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except:
                 pass
-        redisKeyTWITCH['Twitch'] = '更新Twitch直播'
-        redis_add_map(REDIS_KEY_TWITCH, {'Twitch': '更新Twitch直播'})
-        link1 = f'#EXTINF:-1 group-title="Twitch" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新Twitch直播",更新Twitch直播\n'
-        redisKeyTWITCHM3uFake[f'{fakeurl}Twitch.m3u8'] = link1
         # 同步方法写出全部配置
         distribute_data(redisKeyTWITCHM3uFake, f"{secret_path}TWITCH.m3u", 10)
         redis_add_map(REDIS_KEY_TWITCH_M3U, redisKeyTWITCHM3u)
         fuck_m3u_to_txt(f"{secret_path}TWITCH.m3u", f"{secret_path}TWITCH.txt")
-        update_clock('twitch')
         return "result"
     except Exception as e:
         return "empty"
@@ -6439,12 +6560,9 @@ def update_by_type_normal(type):
     elif type == 'longzhu,':
         # 有效直播源,名字/id
         m3u_dict = loop.run_until_complete(download_files_normal_single_longzhu())
-    elif type == 'migu,':
+    elif type == '857,':
         # 有效直播源,名字/id
-        m3u_dict = loop.run_until_complete(download_files_normal_single_migu())
-    elif type == 'cq,':
-        # 有效直播源,名字/id
-        m3u_dict = loop.run_until_complete(download_files_normal_single_cq())
+        m3u_dict = loop.run_until_complete(download_files_normal_single_857())
     return m3u_dict
 
 
@@ -6473,28 +6591,28 @@ async def download_files_normal_single_longzhu():
     return m3u_dict
 
 
-async def download_files_normal_single_migu():
-    global redisKeyNormal
-    ids = redisKeyNormal.keys()
+async def download_files_normal_single_857():
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
     m3u_dict = {}
-    migu_ids = {}
-    for key in ids:
-        id_arr = key.split(',')
-        if id_arr[0] == 'migu':
-            try:
-                migu_ids[id_arr[1]] = [id_arr[2], id_arr[3]]
-            except:
-                pass
     async with aiohttp.ClientSession() as session:
         try:
-            tasks = []
-            for id in migu_ids.keys():
-                task = asyncio.ensure_future(
-                    grab_normal_migu(session, id, m3u_dict, mintimeout, maxTimeout, 'migu', migu_ids.get(id)))
-                tasks.append(task)
-            await asyncio.gather(*tasks)
+            await  grab_normal_857(session, m3u_dict, mintimeout, maxTimeout, '857')
+        except Exception as e:
+            print(f"857 Failed to fetch files. Error: {e}")
+    return m3u_dict
+
+
+async def download_files_normal_single_migu():
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
+    m3u_dict = {}
+    global time_clock_update_dict
+    nowId = time_clock_update_dict.get('miguId')
+    source_type, rid, channel_id, media_id = nowId.split(',')
+    async with aiohttp.ClientSession() as session:
+        try:
+            await   grab_normal_migu(session, rid, m3u_dict, mintimeout, maxTimeout, 'migu', [channel_id, media_id])
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             print(f"migu Failed to fetch files. Error: {e}")
     return m3u_dict
@@ -6502,25 +6620,15 @@ async def download_files_normal_single_migu():
 
 async def download_files_normal_single_cq():
     global redisKeyNormal
-    ids = redisKeyNormal.keys()
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
     m3u_dict = {}
-    chongqing_ids = []
-    for key in ids:
-        id_arr = key.split(',')
-        if id_arr[0] == 'cq':
-            try:
-                chongqing_ids.append(id_arr[1])
-            except:
-                pass
+    global time_clock_update_dict
+    nowId = time_clock_update_dict.get('cqId')
+    source_type, rid = nowId.split(',')
     async with aiohttp.ClientSession() as session:
         try:
-            tasks = []
-            for id in chongqing_ids:
-                task = asyncio.ensure_future(grab_normal_chongqin(session, id, m3u_dict, mintimeout, maxTimeout, 'cq'))
-                tasks.append(task)
-            await asyncio.gather(*tasks)
+            await grab_normal_chongqin(session, rid, m3u_dict, mintimeout, maxTimeout, 'cq')
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             print(f"normal Failed to fetch files. Error: {e}")
     return m3u_dict
@@ -6562,19 +6670,19 @@ def chaoronghe31_single(type):
                     logo = None
                 if id.startswith('cq,'):
                     if logo is None:
-                        link = f'#EXTINF:-1 group-title="重庆源"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="国内源"  tvg-name="{name}",{name}\n'
                     else:
-                        link = f'#EXTINF:-1 group-title="重庆源" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="国内源" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 elif id.startswith('migu,'):
                     if logo is None:
-                        link = f'#EXTINF:-1 group-title="咪咕源"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="国内源2"  tvg-name="{name}",{name}\n'
                     else:
-                        link = f'#EXTINF:-1 group-title="咪咕源" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="国内源2" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 elif id.startswith('qiumihui,'):
                     if logo is None:
-                        link = f'#EXTINF:-1 group-title="球迷汇体育"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="体育直播1"  tvg-name="{name}",{name}\n'
                     else:
-                        link = f'#EXTINF:-1 group-title="球迷汇体育" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="体育直播1" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 elif id.startswith('ipanda,'):
                     if logo is None:
                         link = f'#EXTINF:-1 group-title="iPanda熊猫频道"  tvg-name="{name}",{name}\n'
@@ -6582,9 +6690,14 @@ def chaoronghe31_single(type):
                         link = f'#EXTINF:-1 group-title="iPanda熊猫频道" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 elif id.startswith('longzhu,'):
                     if logo is None:
-                        link = f'#EXTINF:-1 group-title="龙珠直播"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="体育直播2"  tvg-name="{name}",{name}\n'
                     else:
-                        link = f'#EXTINF:-1 group-title="龙珠直播" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="体育直播2" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                elif id.startswith('857,'):
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="体育直播3"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="体育直播3" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 else:
                     if logo is None:
                         link = f'#EXTINF:-1 group-title="国内"  tvg-name="{name}",{name}\n'
@@ -6604,32 +6717,36 @@ def chaoronghe31_single(type):
                 link = None
                 if id.startswith('qiumihui,'):
                     if logo is None:
-                        link = f'#EXTINF:-1 group-title="球迷汇体育"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="体育直播1"  tvg-name="{name}",{name}\n'
                     else:
-                        link = f'#EXTINF:-1 group-title="球迷汇体育" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="体育直播1" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 elif id.startswith('longzhu,'):
                     if logo is None:
-                        link = f'#EXTINF:-1 group-title="龙珠直播"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="体育直播2"  tvg-name="{name}",{name}\n'
                     else:
-                        link = f'#EXTINF:-1 group-title="龙珠直播" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="体育直播2" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                elif id.startswith('857,'):
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="体育直播3"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="体育直播3" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 elif id.startswith('migu,'):
                     if logo is None:
-                        link = f'#EXTINF:-1 group-title="咪咕源"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="国内源2"  tvg-name="{name}",{name}\n'
                     else:
-                        link = f'#EXTINF:-1 group-title="咪咕源" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="国内源2" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 elif id.startswith('cq,'):
                     if logo is None:
-                        link = f'#EXTINF:-1 group-title="重庆源"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="国内源"  tvg-name="{name}",{name}\n'
                     else:
-                        link = f'#EXTINF:-1 group-title="重庆源" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="国内源" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 if link:
                     redisKeyM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except Exception as e:
                 pass
-        add_update_live('qiumihui,', '球迷汇体育', '更新球迷汇', redisKeyM3uFake, fakeurl)
-        add_update_live('longzhu,', '龙珠直播', '更新龙珠直播', redisKeyM3uFake, fakeurl)
-        add_update_live('migu,', '咪咕源', '更新咪咕源', redisKeyM3uFake, fakeurl)
-        add_update_live('cq,', '重庆源', '更新重庆源', redisKeyM3uFake, fakeurl)
+        add_update_live('qiumihui,', '体育直播1', '更新体育直播1', redisKeyM3uFake, fakeurl)
+        add_update_live('longzhu,', '体育直播2', '更新体育直播2', redisKeyM3uFake, fakeurl)
+        add_update_live('857,', '体育直播3', '更新体育直播3', redisKeyM3uFake, fakeurl)
         # 同步方法写出全部配置
         distribute_data(redisKeyM3uFake, f"{secret_path}normal.m3u", 10)
         fuck_m3u_to_txt(f"{secret_path}normal.m3u", f"{secret_path}normal.txt")
@@ -6667,19 +6784,19 @@ def chaoronghe31():
                     logo = None
                 if id.startswith('cq,'):
                     if logo is None:
-                        link = f'#EXTINF:-1 group-title="重庆源"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="国内源"  tvg-name="{name}",{name}\n'
                     else:
-                        link = f'#EXTINF:-1 group-title="重庆源" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="国内源" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 elif id.startswith('migu,'):
                     if logo is None:
-                        link = f'#EXTINF:-1 group-title="咪咕源"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="国内源2"  tvg-name="{name}",{name}\n'
                     else:
-                        link = f'#EXTINF:-1 group-title="咪咕源" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="国内源2" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 elif id.startswith('qiumihui,'):
                     if logo is None:
-                        link = f'#EXTINF:-1 group-title="球迷汇体育"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="体育直播1"  tvg-name="{name}",{name}\n'
                     else:
-                        link = f'#EXTINF:-1 group-title="球迷汇体育" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="体育直播1" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 elif id.startswith('ipanda,'):
                     if logo is None:
                         link = f'#EXTINF:-1 group-title="iPanda熊猫频道"  tvg-name="{name}",{name}\n'
@@ -6687,9 +6804,14 @@ def chaoronghe31():
                         link = f'#EXTINF:-1 group-title="iPanda熊猫频道" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 elif id.startswith('longzhu,'):
                     if logo is None:
-                        link = f'#EXTINF:-1 group-title="龙珠直播"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="体育直播2"  tvg-name="{name}",{name}\n'
                     else:
-                        link = f'#EXTINF:-1 group-title="龙珠直播" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                        link = f'#EXTINF:-1 group-title="体育直播2" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                elif id.startswith('857,'):
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="体育直播3"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="体育直播3" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 else:
                     if logo is None:
                         link = f'#EXTINF:-1 group-title="国内"  tvg-name="{name}",{name}\n'
@@ -6698,10 +6820,9 @@ def chaoronghe31():
                 redisKeyM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except Exception as e:
                 pass
-        add_update_live('qiumihui,', '球迷汇体育', '更新球迷汇', redisKeyM3uFake, fakeurl)
-        add_update_live('longzhu,', '龙珠直播', '更新龙珠直播', redisKeyM3uFake, fakeurl)
-        add_update_live('migu,', '咪咕源', '更新咪咕源', redisKeyM3uFake, fakeurl)
-        add_update_live('cq,', '重庆源', '更新重庆源', redisKeyM3uFake, fakeurl)
+        add_update_live('qiumihui,', '体育直播1', '更新体育直播1', redisKeyM3uFake, fakeurl)
+        add_update_live('longzhu,', '体育直播2', '更新体育直播2', redisKeyM3uFake, fakeurl)
+        add_update_live('857,', '体育直播3', '更新体育直播3', redisKeyM3uFake, fakeurl)
         # 同步方法写出全部配置
         distribute_data(redisKeyM3uFake, f"{secret_path}normal.m3u", 10)
         redis_add_map(REDIS_KEY_NORMAL_M3U, redisKeyNormalM3U)
@@ -6721,15 +6842,16 @@ def add_update_live(type, group_name, tvg_name, redisKeyM3uFake, fakeurl):
 
 def chaoronghe24():
     try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        m3u_dict = loop.run_until_complete(download_files4())
+        global redisKeyYoutube
+        ids = redisKeyYoutube.keys()
+        m3u_dict = {}
+        for id in ids:
+            m3u_dict[id] = ''
         length = len(m3u_dict)
         if length == 0:
             return "empty"
         ip = init_IP()
         global redisKeyYoutubeM3u
-        global redisKeyYoutube
         redisKeyYoutubeM3u.clear()
         redis_del_map(REDIS_KEY_YOUTUBE_M3U)
         redisKeyYoutubeM3uFake = {}
@@ -6744,15 +6866,10 @@ def chaoronghe24():
                 redisKeyYoutubeM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except:
                 pass
-        redisKeyYoutube['youtube'] = '更新youtube直播'
-        redis_add_map(REDIS_KEY_YOUTUBE, {'youtube': '更新youtube直播'})
-        link1 = f'#EXTINF:-1 group-title="Youtube" tvg-logo="https://raw.githubusercontent.com/paperbluster/ppap/main/update.png"  tvg-name="更新youtube直播",更新youtube直播\n'
-        redisKeyYoutubeM3uFake[f'{fakeurl}youtube.m3u8'] = link1
         # 同步方法写出全部配置
         distribute_data(redisKeyYoutubeM3uFake, f"{secret_path}youtube.m3u", 10)
         redis_add_map(REDIS_KEY_YOUTUBE_M3U, redisKeyYoutubeM3u)
         fuck_m3u_to_txt(f"{secret_path}youtube.m3u", f"{secret_path}youtube.txt")
-        update_clock('youtube')
         return "result"
     except Exception as e:
         return "empty"
@@ -6902,17 +7019,27 @@ def serve_files2(filename):
 @app.route('/youtube/<path:filename>')
 def serve_youtube(filename):
     id = filename.split('.')[0]
-    if id == 'youtube':
-        if is_update_clock_live('youtube'):
-            chaoronghe24()
-            chaoronghe()
-            update_clock('normalM3uClock')
-        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
     url = tv_dict_youtube.get(id)
     if not url:
         url = redisKeyYoutubeM3u.get(id)
+        if url is None or url == '':
+            try:
+                url = get_hd_url_youtube(id)
+            except:
+                return redirect(getFileNameByTagName('failTs'))
+            redisKeyYoutubeM3u[id] = url
+            reset_clock('youtube')
         tv_dict_youtube.clear()
         tv_dict_youtube[id] = url
+    else:
+        if is_update_clock_live('youtube') and time_clock_update_dict['youtubeId'] == id:
+            try:
+                url = get_hd_url_youtube(id)
+            except:
+                return redirect(getFileNameByTagName('failTs'))
+            redisKeyYoutubeM3u[id] = url
+            tv_dict_youtube[id] = url
+            update_clock('youtube')
 
     @after_this_request
     def add_header(response):
@@ -6928,17 +7055,27 @@ def serve_youtube(filename):
 @app.route('/bilibili/<path:filename>')
 def serve_files4(filename):
     id = filename.split('.')[0]
-    if id == 'bilibili':
-        if is_update_clock_live('bilibili'):
-            chaoronghe25()
-            chaoronghe()
-            update_clock('normalM3uClock')
-        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
     url = tv_dict_bilibili.get(id)
     if not url:
         url = redisKeyBililiM3u.get(id)
+        if url is None or url == '':
+            try:
+                url = get_hd_url_bilibili(id)
+            except:
+                return redirect(getFileNameByTagName('failTs'))
+            tv_dict_bilibili[id] = url
+            reset_clock('bilibili')
         tv_dict_bilibili.clear()
         tv_dict_bilibili[id] = url
+    else:
+        if is_update_clock_live('bilibili') and time_clock_update_dict['bilibiliId'] == id:
+            try:
+                url = get_hd_url_bilibili(id)
+            except:
+                return redirect(getFileNameByTagName('failTs'))
+            redisKeyBililiM3u[id] = url
+            tv_dict_bilibili[id] = url
+            update_clock('bilibili')
 
     @after_this_request
     def add_header(response):
@@ -6954,17 +7091,27 @@ def serve_files4(filename):
 @app.route('/huya/<path:filename>')
 def serve_files5(filename):
     id = filename.split('.')[0]
-    if id == 'huya':
-        if is_update_clock_live('huya'):
-            chaoronghe26()
-            chaoronghe()
-            update_clock('normalM3uClock')
-        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
     url = tv_dict_huya.get(id)
     if not url:
         url = redisKeyHuyaM3u.get(id)
+        if url is None or url == '':
+            try:
+                url = get_hd_url_huya(id)
+            except:
+                return redirect(getFileNameByTagName('failTs'))
+            tv_dict_huya[id] = url
+            reset_clock('huya')
         tv_dict_huya.clear()
         tv_dict_huya[id] = url
+    else:
+        if is_update_clock_live('huya') and time_clock_update_dict['huyaId'] == id:
+            try:
+                url = get_hd_url_huya(id)
+            except:
+                return redirect(getFileNameByTagName('failTs'))
+            redisKeyHuyaM3u[id] = url
+            tv_dict_huya[id] = url
+            update_clock('huya')
 
     @after_this_request
     def add_header(response):
@@ -6980,17 +7127,27 @@ def serve_files5(filename):
 @app.route('/YY/<path:filename>')
 def serve_files6(filename):
     id = filename.split('.')[0]
-    if id == 'YY':
-        if is_update_clock_live('yy'):
-            chaoronghe27()
-            chaoronghe()
-            update_clock('normalM3uClock')
-        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
     url = tv_dict_yy.get(id)
     if not url:
         url = redisKeyYYM3u.get(id)
+        if url is None or url == '':
+            try:
+                url = get_hd_url_yy(id)
+            except:
+                return redirect(getFileNameByTagName('failTs'))
+            tv_dict_yy[id] = url
+            reset_clock('yy')
         tv_dict_yy.clear()
         tv_dict_yy[id] = url
+    else:
+        if is_update_clock_live('yy') and time_clock_update_dict['yyId'] == id:
+            try:
+                url = get_hd_url_yy(id)
+            except:
+                return redirect(getFileNameByTagName('failTs'))
+            redisKeyYYM3u[id] = url
+            tv_dict_yy[id] = url
+            update_clock('yy')
 
     @after_this_request
     def add_header(response):
@@ -7006,17 +7163,27 @@ def serve_files6(filename):
 @app.route('/DOUYIN/<path:filename>')
 def serve_files_DOUYIN(filename):
     id = filename.split('.')[0]
-    if id == 'Douyin':
-        if is_update_clock_live('douyin'):
-            chaoronghe29()
-            chaoronghe()
-            update_clock('normalM3uClock')
-        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
     url = tv_dict_douyin.get(id)
     if not url:
         url = redisKeyDOUYINM3u.get(id)
+        if url is None or url == '':
+            try:
+                url = get_hd_url_douyin(id)
+            except:
+                return redirect(getFileNameByTagName('failTs'))
+            tv_dict_douyin[id] = url
+            reset_clock('douyin')
         tv_dict_douyin.clear()
         tv_dict_douyin[id] = url
+    else:
+        if is_update_clock_live('douyin') and time_clock_update_dict['douyinId'] == id:
+            try:
+                url = get_hd_url_douyin(id)
+            except:
+                return redirect(getFileNameByTagName('failTs'))
+            redisKeyDOUYINM3u[id] = url
+            tv_dict_douyin[id] = url
+            update_clock('douyin')
 
     @after_this_request
     def add_header(response):
@@ -7032,17 +7199,27 @@ def serve_files_DOUYIN(filename):
 @app.route('/TWITCH/<path:filename>')
 def serve_files7(filename):
     id = filename.split('.')[0]
-    if id == 'Twitch':
-        if is_update_clock_live('twitch'):
-            chaoronghe28()
-            chaoronghe()
-            update_clock('normalM3uClock')
-        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
     url = tv_dict_twitch.get(id)
     if not url:
         url = redisKeyTWITCHM3u.get(id)
+        if url is None or url == '':
+            try:
+                url = get_hd_url_twitch(id)
+            except:
+                return redirect(getFileNameByTagName('failTs'))
+            tv_dict_twitch[id] = url
+            reset_clock('twitch')
         tv_dict_twitch.clear()
         tv_dict_twitch[id] = url
+    else:
+        if is_update_clock_live('twitch') and time_clock_update_dict['twitchId'] == id:
+            try:
+                url = get_hd_url_twitch(id)
+            except:
+                return redirect(getFileNameByTagName('failTs'))
+            redisKeyTWITCHM3u[id] = url
+            tv_dict_twitch[id] = url
+            update_clock('twitch')
 
     @after_this_request
     def add_header(response):
@@ -7054,27 +7231,55 @@ def serve_files7(filename):
     return redirect(url)
 
 
+def reset_clock(key):
+    global time_clock_update_dict
+    time_clock_update_dict[key] = '0'
+
+
 # 路由normal
 @app.route('/normal/<path:filename>')
 def serve_files_normal(filename):
+    global redisKeyNormalM3U
     id = filename.split('.')[0]
     if id == 'qiumihui,':
         chaoronghe31_single('qiumihui,')
-        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
+        return redirect(getFileNameByTagName('failTs'))
     elif id == 'longzhu,':
         chaoronghe31_single('longzhu,')
-        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
-    if id == 'migu,':
-        chaoronghe31_single('migu,')
-        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
-    elif id == 'cq,':
-        chaoronghe31_single('cq,')
-        return redirect('https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4')
+        return redirect(getFileNameByTagName('failTs'))
+    elif id == '857,':
+        chaoronghe31_single('857,')
+        return redirect(getFileNameByTagName('failTs'))
     url = tv_dict_normal.get(id)
     if not url:
         url = redisKeyNormalM3U.get(id)
+        if url is None or url == '':
+            if id.startswith('857,'):
+                url = get_hd_url_857(id)
+                redisKeyNormalM3U[id] = url
+        if id.startswith('migu,'):
+            url = get_hd_url_migu(id)
+            redisKeyNormalM3U[id] = url
+            reset_clock('migu')
+        if id.startswith('cq,'):
+            url = get_hd_url_cq(id)
+            redisKeyNormalM3U[id] = url
+            reset_clock('cq')
         tv_dict_normal.clear()
         tv_dict_normal[id] = url
+    else:
+        if id.startswith('migu,'):
+            if is_update_clock_live('migu') and time_clock_update_dict['miguId'] == id:
+                url = get_hd_url_migu(id)
+                redisKeyNormalM3U[id] = url
+                tv_dict_normal[id] = url
+                update_clock('migu')
+        if id.startswith('cq,'):
+            if is_update_clock_live('cq') and time_clock_update_dict['cqId'] == id:
+                url = get_hd_url_cq(id)
+                redisKeyNormalM3U[id] = url
+                tv_dict_normal[id] = url
+                update_clock('cq')
 
     @after_this_request
     def add_header(response):
@@ -7172,8 +7377,7 @@ def process_file2():
     all_matches = re.findall(regex_pattern, file_content)
     group_dict = {}
     for i in all_matches:
-        group_dict[convert(i, 'zh-tw')] = group
-        group_dict[convert(i, 'zh-cn')] = group
+        group_dict[i] = group
     # 将字典转换为JSON字符串并返回
     json_str = json.dumps(group_dict)
     filename = f'{secret_path}group.json'
@@ -7358,7 +7562,6 @@ def serverMode():
         switchSingleFunction('switch32', '1')
         switchSingleFunction('switch33', '0')
         switchSingleFunction('switch34', '0')
-        switchSingleFunction('switch35', '0')
     elif mode == 'client':
         switchSingleFunction('switch2', '0')
         switchSingleFunction('switch3', '0')
@@ -7393,7 +7596,6 @@ def serverMode():
         switchSingleFunction('switch32', '0')
         switchSingleFunction('switch33', '0')
         switchSingleFunction('switch34', '0')
-        switchSingleFunction('switch35', '0')
     return 'success'
 
 
@@ -7730,11 +7932,8 @@ def addnewm3u11():
     addurl = request.json.get('addurl')
     name = request.json.get('name')
     checkAndUpdateM3uRank(name, -99)
-    addurl_tw = convert(addurl, 'zh-tw')
-    addurl_cn = convert(addurl, 'zh-cn')
-    m3u_whitlist[addurl_tw] = name
-    m3u_whitlist[addurl_cn] = name
-    my_dict = {addurl_tw: name, addurl_cn: name}
+    m3u_whitlist[addurl] = name
+    my_dict = {addurl: name}
     redis_add_map(REDIS_KEY_M3U_WHITELIST, my_dict)
     return jsonify({'addresult': "add success"})
 

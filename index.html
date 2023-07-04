@@ -1459,6 +1459,15 @@
                     class="grid-item button stubbonsave">修改
             </button>
         </div>
+        <div style="display: flex;width: 100%;">
+            直播源失败默认推流URL
+        </div>
+        <div style="width:100%">
+            <input type="text" id="failTs" class="stubboninput" placeholder="http://aaa.ts"/>
+            <button onclick="changeFileName('failTs', 'failTs', failTs)"
+                    class="grid-item button stubbonsave">修改
+            </button>
+        </div>
     </div>
     <div id="page17" style="display: none;">
         <h1>功能开关</h1>
@@ -1602,10 +1611,6 @@
             <div class="grid-item">
                 <button id="switch34" class="switchfunctionbutton" onclick="toggleSwitch('switch34')">已关闭</button>
                 <span>下载解密-定时器</span>
-            </div>
-            <div class="grid-item">
-                <button id="switch35" class="switchfunctionbutton" onclick="toggleSwitch('switch35')">已关闭</button>
-                <span>项目直播源刷新模式-定时器刷新</span>
             </div>
         </div>
     </div>
@@ -2526,6 +2531,7 @@
     const autoDnsSwitchClock = document.getElementById('autoDnsSwitchClock');
     const syncClock = document.getElementById('syncClock');
     const reliveAlistTsTime = document.getElementById('reliveAlistTsTime');
+    const failTs = document.getElementById('failTs');
     const chinaTopDomain = document.getElementById('chinaTopDomain');
     const foreignTopDomain = document.getElementById('foreignTopDomain');
     const dnsMode = document.getElementById('dnsMode');
@@ -4393,6 +4399,7 @@
             getFileName('autoDnsSwitchClock', 'autoDnsSwitchClock', autoDnsSwitchClock)
             getFileName('syncClock', 'syncClock', syncClock)
             getFileName('reliveAlistTsTime', 'reliveAlistTsTime', reliveAlistTsTime)
+            getFileName('failTs', 'failTs', failTs)
         } else if (selectedPage === pages[16].id) {
             //生成有效M3U
             reloadFunctionOpenButton('switch')
@@ -4460,8 +4467,6 @@
             reloadFunctionOpenButton('switch33')
             //下载解密-定时器
             reloadFunctionOpenButton('switch34')
-            //youtube-定时器
-            reloadFunctionOpenButton('switch35')
         } else if (selectedPage === pages[17].id) {
             reloadDNSSIMPLEWhiteList()
         } else if (selectedPage === pages[18].id) {

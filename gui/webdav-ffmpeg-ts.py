@@ -404,17 +404,17 @@ class MyFrame(tk.Frame):
         self.file_button = tk.Button(self, text="第一步:选择视频文件", command=self.on_file_click)
         self.file_button.pack(fill='x', padx=10, pady=10)
 
-        self.convert_button2 = tk.Button(self, text="第二步:mkv转换成mp4(字幕硬转码)",
+        self.convert_button2 = tk.Button(self, text="第二步:转换成ts视频(字幕硬转码)",
                                          command=self.on_convert_click_mkv_to_mp4)
         self.convert_button2.pack(fill='x', padx=10, pady=10)
 
-        self.convert_button = tk.Button(self, text="第三步:mp4转换成ts切片", command=self.on_convert_click)
+        self.convert_button = tk.Button(self, text="第三步:转换成ts切片", command=self.on_convert_click)
         self.convert_button.pack(fill='x', padx=10, pady=10)
 
-        self.convert_button3 = tk.Button(self, text="第四步:切片数据加密", command=self.on_convert_click_secret)
+        self.convert_button3 = tk.Button(self, text="第四步:ts切片数据加密", command=self.on_convert_click_secret)
         self.convert_button3.pack(fill='x', padx=10, pady=10)
 
-        self.convert_button4 = tk.Button(self, text="一键生成加密切片", command=self.onekey)
+        self.convert_button4 = tk.Button(self, text="一键生成加密ts切片", command=self.onekey)
         self.convert_button4.pack(fill='x', padx=10, pady=10)
 
         self.convert_button5 = tk.Button(self, text="还原加密切片为完整解密视频", command=self.undone)
@@ -497,7 +497,6 @@ class MyFrame(tk.Frame):
         self.uuid_text.delete(0, 'end')
         self.convert_button5.config(bg=self.master.cget('bg'))
         self.convert_button4.config(bg=self.master.cget('bg'))
-        self.convert_button6.config(bg=self.master.cget('bg'))
         file_name_dict['name'] = ''
 
     def onekey(self):

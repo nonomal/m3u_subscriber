@@ -5473,12 +5473,18 @@ async def grab_normal_857(session, m3u_dict, mintimeout, maxTimeout, source_type
                 # 访问JSON对象的属性
                 pages = python_data["data"]
                 for page, pageListDict in pages.items():
-                    for pageDict in pageListDict:
-                        title = pageDict['title']
-                        logo = pageDict['cover']
-                        rid = pageDict['roomNum']
-                        m3u_dict[f'{source_type},{rid}'] = ''
-                        update_dict[f'{source_type},{rid}'] = f'{title},{logo}'
+                    try:
+                        for pageDict in pageListDict:
+                            try:
+                                title = pageDict['title']
+                                logo = pageDict['cover']
+                                rid = pageDict['roomNum']
+                                m3u_dict[f'{source_type},{rid}'] = ''
+                                update_dict[f'{source_type},{rid}'] = f'{title},{logo}'
+                            except:
+                                pass
+                    except:
+                        pass
                 if len(update_dict) > 0:
                     redisKeyNormal.update(update_dict)
             except Exception as e:
@@ -5495,12 +5501,18 @@ async def grab_normal_857(session, m3u_dict, mintimeout, maxTimeout, source_type
                 # 访问JSON对象的属性
                 pages = python_data["data"]
                 for page, pageListDict in pages.items():
-                    for pageDict in pageListDict:
-                        title = pageDict['title']
-                        logo = pageDict['cover']
-                        rid = pageDict['roomNum']
-                        m3u_dict[f'{source_type},{rid}'] = ''
-                        update_dict[f'{source_type},{rid}'] = f'{title},{logo}'
+                    try:
+                        for pageDict in pageListDict:
+                            try:
+                                title = pageDict['title']
+                                logo = pageDict['cover']
+                                rid = pageDict['roomNum']
+                                m3u_dict[f'{source_type},{rid}'] = ''
+                                update_dict[f'{source_type},{rid}'] = f'{title},{logo}'
+                            except:
+                                pass
+                    except:
+                        pass
                 if len(update_dict) > 0:
                     redisKeyNormal.update(update_dict)
             except Exception as e:

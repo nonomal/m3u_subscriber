@@ -106,50 +106,6 @@ class MyFrame(tk.Frame):
             video_bytes = f.read()
         return video_bytes
 
-    def on_convert_click_mkv_to_mp4_ignore_sub(self):
-        file_path = self.file_path.get()
-        if not os.path.exists(file_path):
-            messagebox.showerror('错误', '视频文件不存在')
-            return
-        file_path = self.file_path.get()
-        # 提取目录路径
-        dir_path = os.path.dirname(file_path)
-        # 提取文件名
-        file_name = os.path.basename(file_path)
-        video_types = file_name.split('.')[-1]
-        new_file_name = file_name.replace(video_types, 'ts')
-        slices_path = os.path.join(dir_path,
-                                   f"{new_file_name}")
-        # Windows系统下需要将路径分隔符从/替换成\
-        if os.name == 'nt':
-            escaped_path = file_path.replace('/', '\\\\')
-            slices_path = slices_path.replace('\\', '\\\\')
-            slices_path = slices_path.replace('/', '\\\\')
-        gputype = self.ts_type_gpu.get()
-        if gputype == '0':
-            cmd = f"ffmpeg  -i \"{escaped_path}\" -pix_fmt yuv420p -map 0:v:0 -map 0:a:0 -r 23.976  -c:v libx265 -b:v 2M  -c:a aac -b:a 128k -ac 2  \"{slices_path}\""
-        else:
-            cmd = f"ffmpeg -hwaccel cuvid -c:v hevc_cuvid  -i \"{escaped_path}\"  -map 0:v:0 -map 0:a:0 -r 23.976  -c:v hevc_nvenc -b:v 2M  -pix_fmt yuv420p -c:a aac -b:a 128k  \"{slices_path}\""
-        if not os.path.exists(slices_path):
-            process = subprocess.Popen(cmd, shell=True)
-            process.communicate()  # Wait for process to finish
-        else:
-            if slices_path.endswith('ts'):
-                # cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx265 -preset slow -crf 18 -c:a aac -b:a 128k -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\':force_style='FontName=微软雅黑,FontSize=19,PrimaryColour=&Hffffff,SecondaryColour=&H000000,TertiaryColour=&H800080,BackColour=&H0f0f0f,Bold=-1,Italic=0,BorderStyle=1,Outline=3,Shadow=2,Alignment=2,MarginL=30,MarginR=30,MarginV=12,AlphaLevel=0,Encoding=134'\" \"{slices_path.replace('.mp4', '2.mp4')}\""
-                if gputype == '0':
-                    cmd = f"ffmpeg   -i \"{escaped_path}\" -pix_fmt yuv420p -map 0:v:0 -map 0:a:0 -r 23.976 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2   \"{slices_path.replace('.ts', '2.ts')}\""
-                else:
-                    cmd = f"ffmpeg -hwaccel cuvid -c:v h264_cuvid   -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -r 23.976 -c:v h264_nvenc  -b:v 2M -pix_fmt yuv420p -c:a aac -b:a 128k   \"{slices_path.replace('.ts', '2.ts')}\""
-            process = subprocess.Popen(cmd, shell=True)
-            process.communicate()  # Wait for process to finish
-        # 将按钮变成绿色
-        self.convert_button6.config(bg='green')
-        with open('/gpu.txt', "wb") as f2:
-            pass
-        with open('/gpu.txt', "wb") as f2:
-            f2.write(gputype.encode('utf-8'))
-        return 'video_bytes'
-
     def on_convert_click_mkv_to_mp4(self):
         file_path = self.file_path.get()
         if not os.path.exists(file_path):
@@ -189,6 +145,16 @@ class MyFrame(tk.Frame):
                     cmd = f"ffmpeg -i \"{escaped_path}\"  -map 0:v:0 -map 0:a:0 -c:v hevc_nvenc -b:v 2M -pix_fmt yuv420p -c:a aac -b:a 128k   -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" -r 23.976  \"{slices_path}\""
                     process = subprocess.Popen(cmd, shell=True)
                     process.communicate()  # Wait for process to finish
+                with open(slices_path, "rb") as f2:
+                    data = f2.read()
+                if len(data) == 0:
+                    os.remove(slices_path)
+                    if gputype == '0':
+                        cmd = f"ffmpeg -i \"{escaped_path}\" -pix_fmt yuv420p -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2   -r 23.976 \"{slices_path}\""
+                    else:
+                        cmd = f"ffmpeg -hwaccel cuvid -c:v hevc_cuvid   -i \"{escaped_path}\"  -map 0:v:0 -map 0:a:0 -c:v h264_nvenc -b:v 2M -pix_fmt yuv420p -c:a aac -b:a 128k   -r 23.976 \"{slices_path}\""
+                    process = subprocess.Popen(cmd, shell=True)
+                    process.communicate()  # Wait for process to finish
         else:
             if slices_path.endswith('ts'):
                 # cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx265 -preset slow -crf 18 -c:a aac -b:a 128k -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\':force_style='FontName=微软雅黑,FontSize=19,PrimaryColour=&Hffffff,SecondaryColour=&H000000,TertiaryColour=&H800080,BackColour=&H0f0f0f,Bold=-1,Italic=0,BorderStyle=1,Outline=3,Shadow=2,Alignment=2,MarginL=30,MarginR=30,MarginV=12,AlphaLevel=0,Encoding=134'\" \"{slices_path.replace('.mp4', '2.mp4')}\""
@@ -205,6 +171,16 @@ class MyFrame(tk.Frame):
                 os.remove(slices_path.replace('.ts', '2.ts'))
                 if gputype == '1':
                     cmd = f"ffmpeg -i \"{escaped_path}\"  -map 0:v:0 -map 0:a:0 -c:v hevc_nvenc -b:v 2M -pix_fmt yuv420p -c:a aac -b:a 128k   -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" -r 23.976  \"{slices_path.replace('.ts', '2.ts')}\""
+                    process = subprocess.Popen(cmd, shell=True)
+                    process.communicate()  # Wait for process to finish
+                with open(slices_path.replace('.ts', '2.ts'), "rb") as f2:
+                    data = f2.read()
+                if len(data) == 0:
+                    os.remove(slices_path.replace('.ts', '2.ts'))
+                    if gputype == '0':
+                        cmd = f"ffmpeg -i \"{escaped_path}\" -pix_fmt yuv420p -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2   -r 23.976  \"{slices_path.replace('.ts', '2.ts')}\""
+                    else:
+                        cmd = f"ffmpeg -hwaccel cuvid -c:v hevc_cuvid    -i \"{escaped_path}\"  -map 0:v:0 -map 0:a:0 -c:v h264_nvenc -b:v 2M -pix_fmt yuv420p -c:a aac -b:a 128k    -r 23.976  \"{slices_path.replace('.ts', '2.ts')}\""
                     process = subprocess.Popen(cmd, shell=True)
                     process.communicate()  # Wait for process to finish
         # self.file_path = os.path.join(dir_path,
@@ -443,10 +419,6 @@ class MyFrame(tk.Frame):
 
         self.convert_button5 = tk.Button(self, text="还原加密切片为完整解密视频", command=self.undone)
         self.convert_button5.pack(fill='x', padx=10, pady=10)
-
-        self.convert_button6 = tk.Button(self, text="mkv转换成mp4(无视字幕,第三步失败时先用这个转一下)",
-                                         command=self.on_convert_click_mkv_to_mp4_ignore_sub)
-        self.convert_button6.pack(fill='x', padx=10, pady=10)
 
         # 创建一个Label小部件，用于显示文本框的用途
         label = tk.Label(self, text="密码:")

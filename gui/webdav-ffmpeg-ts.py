@@ -129,7 +129,7 @@ class MyFrame(tk.Frame):
         if gputype == '0':
             cmd = f"ffmpeg  -i \"{escaped_path}\" -pix_fmt yuv420p -map 0:v:0 -map 0:a:0 -r 23.976  -c:v libx265 -b:v 2M  -c:a aac -b:a 128k -ac 2  \"{slices_path}\""
         else:
-            cmd = f"ffmpeg -c:v hevc_cuvid    -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -r 23.976  -c:v hevc_nvenc -b:v 2M  -c:a aac -b:a 128k  \"{slices_path}\""
+            cmd = f"ffmpeg -hwaccel cuvid -c:v hevc_cuvid  -i \"{escaped_path}\"  -map 0:v:0 -map 0:a:0 -r 23.976  -c:v hevc_nvenc -b:v 2M  -pix_fmt yuv420p -c:a aac -b:a 128k  \"{slices_path}\""
         if not os.path.exists(slices_path):
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
@@ -139,7 +139,7 @@ class MyFrame(tk.Frame):
                 if gputype == '0':
                    cmd = f"ffmpeg   -i \"{escaped_path}\" -pix_fmt yuv420p -map 0:v:0 -map 0:a:0 -r 23.976 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2   \"{slices_path.replace('.ts', '2.ts')}\""
                 else:
-                   cmd = f"ffmpeg -c:v hevc_cuvid  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -r 23.976 -c:v hevc_nvenc -b:v 2M -c:a aac -b:a 128k   \"{slices_path.replace('.ts', '2.ts')}\""
+                   cmd = f"ffmpeg -hwaccel cuvid -c:v h264_cuvid   -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -r 23.976 -c:v h264_nvenc  -b:v 2M -pix_fmt yuv420p -c:a aac -b:a 128k   \"{slices_path.replace('.ts', '2.ts')}\""
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
         # 将按钮变成绿色
@@ -176,7 +176,7 @@ class MyFrame(tk.Frame):
         if gputype == '0':
             cmd = f"ffmpeg -i \"{escaped_path}\" -pix_fmt yuv420p -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2  -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" -r 23.976 \"{slices_path}\""
         else:
-            cmd = f"ffmpeg -c:v hevc_cuvid   -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v h264_nvenc -b:v 2M -c:a aac -b:a 128k  -vf  \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" -r 23.976 \"{slices_path}\""
+            cmd = f"ffmpeg -hwaccel cuvid -c:v hevc_cuvid   -i \"{escaped_path}\"  -map 0:v:0 -map 0:a:0 -c:v h264_nvenc -b:v 2M -pix_fmt yuv420p -c:a aac -b:a 128k  -vf  \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" -r 23.976 \"{slices_path}\""
         # cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -r 25 -g 60 -c:v libx265 -preset medium -c:a aac -b:a 128k -ac 2  -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" \"{slices_path}\""
         if not os.path.exists(slices_path):
             process = subprocess.Popen(cmd, shell=True)
@@ -187,7 +187,7 @@ class MyFrame(tk.Frame):
                 if gputype == '0':
                     cmd = f"ffmpeg -i \"{escaped_path}\" -pix_fmt yuv420p -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2  -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" -r 23.976  \"{slices_path.replace('.ts', '2.ts')}\""
                 else:
-                    cmd = f"ffmpeg -c:v hevc_cuvid    -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v h264_nvenc -b:v 2M -c:a aac -b:a 128k   -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" -r 23.976  \"{slices_path.replace('.ts', '2.ts')}\""
+                    cmd = f"ffmpeg -hwaccel cuvid -c:v hevc_cuvid    -i \"{escaped_path}\"  -map 0:v:0 -map 0:a:0 -c:v h264_nvenc -b:v 2M -pix_fmt yuv420p -c:a aac -b:a 128k   -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" -r 23.976  \"{slices_path.replace('.ts', '2.ts')}\""
                 new_file_name = new_file_name.replace('.ts', '2.ts')
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
@@ -225,7 +225,7 @@ class MyFrame(tk.Frame):
         if gputype == '0':
            cmd = f"ffmpeg -i \"{escaped_path}\" -pix_fmt yuv420p -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2   \"{slices_path}\""
         else:
-            cmd = f"ffmpeg -c:v hevc_cuvid   -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v h264_nvenc -b:v 2M -c:a aac -b:a 128k    \"{slices_path}\""
+            cmd = f"ffmpeg -hwaccel cuvid -c:v hevc_cuvid   -i \"{escaped_path}\"  -map 0:v:0 -map 0:a:0 -c:v h264_nvenc -b:v 2M -pix_fmt yuv420p -c:a aac -b:a 128k    \"{slices_path}\""
         if not os.path.exists(slices_path):
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
@@ -235,7 +235,7 @@ class MyFrame(tk.Frame):
                 if gputype == '0':
                    cmd = f"ffmpeg -i \"{escaped_path}\" -pix_fmt yuv420p -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2   \"{slices_path.replace('.ts', '2.ts')}\""
                 else:
-                    cmd = f"ffmpeg -c:v hevc_cuvid  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v h264_nvenc -b:v 2M -c:a aac -b:a 128k    \"{slices_path.replace('.ts', '2.ts')}\""
+                    cmd = f"ffmpeg -hwaccel cuvid -c:v hevc_cuvid  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v h264_nvenc -b:v 2M -pix_fmt yuv420p -c:a aac -b:a 128k    \"{slices_path.replace('.ts', '2.ts')}\""
                 new_file_name = new_file_name.replace('.ts', '2.ts')
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
@@ -603,8 +603,10 @@ class MyFrame(tk.Frame):
         if file_path.endswith('mkv') or file_path.endswith('avi'):
             self.on_convert_click_mkv_to_mp4()
         if not os.path.exists(file_path):
-            messagebox.showerror('错误', '视频文件不存在')
-            return
+
+            if not os.path.exists(file_path):
+                messagebox.showerror('错误', '视频文件不存在')
+                return
         # TODO: 根据需要实现视频处理代码
         self.read_video_file_to_slices()
         # 将按钮变成绿色

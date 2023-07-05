@@ -137,9 +137,9 @@ class MyFrame(tk.Frame):
             if slices_path.endswith('ts'):
                 # cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx265 -preset slow -crf 18 -c:a aac -b:a 128k -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\':force_style='FontName=微软雅黑,FontSize=19,PrimaryColour=&Hffffff,SecondaryColour=&H000000,TertiaryColour=&H800080,BackColour=&H0f0f0f,Bold=-1,Italic=0,BorderStyle=1,Outline=3,Shadow=2,Alignment=2,MarginL=30,MarginR=30,MarginV=12,AlphaLevel=0,Encoding=134'\" \"{slices_path.replace('.mp4', '2.mp4')}\""
                 if gputype == '0':
-                   cmd = f"ffmpeg   -i \"{escaped_path}\" -pix_fmt yuv420p -map 0:v:0 -map 0:a:0 -r 23.976 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2   \"{slices_path.replace('.ts', '2.ts')}\""
+                    cmd = f"ffmpeg   -i \"{escaped_path}\" -pix_fmt yuv420p -map 0:v:0 -map 0:a:0 -r 23.976 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2   \"{slices_path.replace('.ts', '2.ts')}\""
                 else:
-                   cmd = f"ffmpeg -hwaccel cuvid -c:v h264_cuvid   -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -r 23.976 -c:v h264_nvenc  -b:v 2M -pix_fmt yuv420p -c:a aac -b:a 128k   \"{slices_path.replace('.ts', '2.ts')}\""
+                    cmd = f"ffmpeg -hwaccel cuvid -c:v h264_cuvid   -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -r 23.976 -c:v h264_nvenc  -b:v 2M -pix_fmt yuv420p -c:a aac -b:a 128k   \"{slices_path.replace('.ts', '2.ts')}\""
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
         # 将按钮变成绿色
@@ -181,6 +181,14 @@ class MyFrame(tk.Frame):
         if not os.path.exists(slices_path):
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
+            with open(slices_path, "rb") as f2:
+                data = f2.read()
+            if len(data) == 0:
+                os.remove(slices_path)
+                if gputype == '1':
+                    cmd = f"ffmpeg -i \"{escaped_path}\"  -map 0:v:0 -map 0:a:0 -c:v hevc_nvenc -b:v 2M -pix_fmt yuv420p -c:a aac -b:a 128k   -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" -r 23.976  \"{slices_path}\""
+                    process = subprocess.Popen(cmd, shell=True)
+                    process.communicate()  # Wait for process to finish
         else:
             if slices_path.endswith('ts'):
                 # cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx265 -preset slow -crf 18 -c:a aac -b:a 128k -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\':force_style='FontName=微软雅黑,FontSize=19,PrimaryColour=&Hffffff,SecondaryColour=&H000000,TertiaryColour=&H800080,BackColour=&H0f0f0f,Bold=-1,Italic=0,BorderStyle=1,Outline=3,Shadow=2,Alignment=2,MarginL=30,MarginR=30,MarginV=12,AlphaLevel=0,Encoding=134'\" \"{slices_path.replace('.mp4', '2.mp4')}\""
@@ -191,6 +199,14 @@ class MyFrame(tk.Frame):
                 new_file_name = new_file_name.replace('.ts', '2.ts')
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
+            with open(slices_path.replace('.ts', '2.ts'), "rb") as f2:
+                data = f2.read()
+            if len(data) == 0:
+                os.remove(slices_path.replace('.ts', '2.ts'))
+                if gputype == '1':
+                    cmd = f"ffmpeg -i \"{escaped_path}\"  -map 0:v:0 -map 0:a:0 -c:v hevc_nvenc -b:v 2M -pix_fmt yuv420p -c:a aac -b:a 128k   -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" -r 23.976  \"{slices_path.replace('.ts', '2.ts')}\""
+                    process = subprocess.Popen(cmd, shell=True)
+                    process.communicate()  # Wait for process to finish
         # self.file_path = os.path.join(dir_path,
         #                               f"{new_file_name}")
         self.file_path.delete(0, 'end')
@@ -223,7 +239,7 @@ class MyFrame(tk.Frame):
             slices_path = slices_path.replace('/', '\\\\')
         gputype = self.ts_type_gpu.get()
         if gputype == '0':
-           cmd = f"ffmpeg -i \"{escaped_path}\" -pix_fmt yuv420p -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2   \"{slices_path}\""
+            cmd = f"ffmpeg -i \"{escaped_path}\" -pix_fmt yuv420p -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2   \"{slices_path}\""
         else:
             cmd = f"ffmpeg -hwaccel cuvid -c:v hevc_cuvid   -i \"{escaped_path}\"  -map 0:v:0 -map 0:a:0 -c:v h264_nvenc -b:v 2M -pix_fmt yuv420p -c:a aac -b:a 128k    \"{slices_path}\""
         if not os.path.exists(slices_path):
@@ -233,7 +249,7 @@ class MyFrame(tk.Frame):
             if slices_path.endswith('ts'):
                 # cmd = f"ffmpeg  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v libx265 -preset slow -crf 18 -c:a aac -b:a 128k -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\':force_style='FontName=微软雅黑,FontSize=19,PrimaryColour=&Hffffff,SecondaryColour=&H000000,TertiaryColour=&H800080,BackColour=&H0f0f0f,Bold=-1,Italic=0,BorderStyle=1,Outline=3,Shadow=2,Alignment=2,MarginL=30,MarginR=30,MarginV=12,AlphaLevel=0,Encoding=134'\" \"{slices_path.replace('.mp4', '2.mp4')}\""
                 if gputype == '0':
-                   cmd = f"ffmpeg -i \"{escaped_path}\" -pix_fmt yuv420p -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2   \"{slices_path.replace('.ts', '2.ts')}\""
+                    cmd = f"ffmpeg -i \"{escaped_path}\" -pix_fmt yuv420p -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k -ac 2   \"{slices_path.replace('.ts', '2.ts')}\""
                 else:
                     cmd = f"ffmpeg -hwaccel cuvid -c:v hevc_cuvid  -i \"{escaped_path}\" -map 0:v:0 -map 0:a:0 -c:v h264_nvenc -b:v 2M -pix_fmt yuv420p -c:a aac -b:a 128k    \"{slices_path.replace('.ts', '2.ts')}\""
                 new_file_name = new_file_name.replace('.ts', '2.ts')
@@ -485,6 +501,7 @@ class MyFrame(tk.Frame):
             self.ts_type_gpu.delete(0, 'end')
             self.ts_type_gpu.insert(0, typev.decode('utf-8'))
             self.ts_type_gpu.config(bg='green')
+
     def on_file_click(self):
         file_path = filedialog.askopenfilename(initialdir=os.getcwd(), title="选择视频文件",
                                                filetypes=(("all files", "*.*"),

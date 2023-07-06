@@ -35,8 +35,6 @@ docker run   -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p
 
 4-仅供个人使用，请勿商用，代码已经全部开源，后果自负
 
-6-有兴趣提供交流想法的朋友可以来电报群沟通https://t.me/+stAaKNYl3mtmN2Zl
-
 7-各位朋友有兴趣打赏一下叫花子吧,您的赞助可以更大地激励我维护该项目:
 
 比特币

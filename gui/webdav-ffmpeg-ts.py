@@ -223,6 +223,12 @@ class MyFrame(tk.Frame):
                                 cmd = f"ffmpeg -i \"{escaped_path}\"  -map 0:v:0 -map 0:a:0 -c:v h264_nvenc -b:v 2M -pix_fmt yuv420p -c:a aac -b:a 128k    -r 23.976  \"{slices_path.replace('.ts', '2.ts')}\""
                             process = subprocess.Popen(cmd, shell=True)
                             process.communicate()  # Wait for process to finish
+                            if not is_success_write_file(slices_path.replace('.ts', '2.ts')):
+                                os.remove(slices_path.replace('.ts', '2.ts'))
+                                # cpu解码,cpu编码
+                                cmd = f"ffmpeg -i \"{escaped_path}\" -pix_fmt yuv420p -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k   -r 23.976  \"{slices_path.replace('.ts', '2.ts')}\""
+                                process = subprocess.Popen(cmd, shell=True)
+                                process.communicate()  # Wait for process to finish
         # self.file_path = os.path.join(dir_path,
         #                               f"{new_file_name}")
         self.file_path.delete(0, 'end')

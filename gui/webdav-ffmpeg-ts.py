@@ -1,7 +1,6 @@
 import base64
 import concurrent
 import os
-import random
 import re
 import secrets
 import string
@@ -13,8 +12,6 @@ from tkinter import filedialog, messagebox
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-
-file_name_dict = {'name': ''}
 
 
 # 解密函数 str-password,bytes secretcont
@@ -115,19 +112,30 @@ def is_success_write_file(filepath):
     return True
 
 
+def str_2_list(pathstr):
+    return pathstr.split('@paperbluster@')
+
+
+def list_2_str(paths):
+    string = ''
+    for one in paths:
+        if string != '':
+            string += '@paperbluster@'
+        string += one
+    return string
+
+
 class MyFrame(tk.Frame):
+    ts_file_list = []
+    uuid_dict = {}
+
     def read_video_file(self):
         file_path = self.file_path.get()
         with open(file_path, 'rb') as f:
             video_bytes = f.read()
         return video_bytes
 
-    def on_convert_click_mkv_to_mp4(self):
-        file_path = self.file_path.get()
-        if not os.path.exists(file_path):
-            messagebox.showerror('错误', '视频文件不存在')
-            return
-        file_path = self.file_path.get()
+    def on_convert_click_mkv_to_mp4_single(self, file_path):
         # 提取目录路径
         dir_path = os.path.dirname(file_path)
         # 提取文件名
@@ -138,7 +146,7 @@ class MyFrame(tk.Frame):
                                    f"{new_file_name}")
 
         # Windows系统下需要将路径分隔符从/替换成\
-        #if os.name == 'nt':
+        # if os.name == 'nt':
         escaped_path = file_path.replace('/', '\\\\')
         escaped_path2 = file_path.replace('/', '\\\\')
         slices_path = slices_path.replace('\\', '\\\\')
@@ -229,83 +237,99 @@ class MyFrame(tk.Frame):
                                 cmd = f"ffmpeg -i \"{escaped_path}\" -pix_fmt yuv420p -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k   -r 23.976  \"{slices_path.replace('.ts', '2.ts')}\""
                                 process = subprocess.Popen(cmd, shell=True)
                                 process.communicate()  # Wait for process to finish
-        # self.file_path = os.path.join(dir_path,
-        #                               f"{new_file_name}")
-        self.file_path.delete(0, 'end')
-        self.file_path.insert(0, os.path.join(dir_path,
-                                              f"{new_file_name}"))
-        # 将按钮变成绿色
-        self.convert_button2.config(bg='green')
+        # self.file_path.delete(0, 'end')
+        # self.file_path.insert(0, os.path.join(dir_path,
+        #                                       f"{new_file_name}"))
         with open('/gpu.txt', "wb") as f2:
             pass
         with open('/gpu.txt', "wb") as f2:
             f2.write(gputype.encode('utf-8'))
-        return 'video_bytes'
+        return os.path.join(dir_path, f"{new_file_name}")
+
+    def on_convert_click_mkv_to_mp4(self):
+        file_paths = self.file_path.get()
+        file_paths_list = str_2_list(file_paths)
+        for path in file_paths_list:
+            ts_file_path = self.on_convert_click_mkv_to_mp4_single(path)
+            self.ts_file_list.append(ts_file_path)
+        # 将按钮变成绿色
+        self.convert_button2.config(bg='green')
+
+    def read_video_file_to_slices_single(self, file_path):
+        # # 视频格式
+        # videoType = file_path.split('.')[-1]
+        # 提取目录路径
+        dir_path = os.path.dirname(file_path)
+        # 提取文件名
+        file_name = os.path.basename(file_path)
+        new_file_and_path_name = generate_only_uuid(file_name)
+        # 创建新文件夹
+        new_folder_path = os.path.join(dir_path, new_file_and_path_name)
+        os.makedirs(new_folder_path, exist_ok=True)
+        slices_path = os.path.join(new_folder_path,
+                                   f"{new_file_and_path_name}_%05d.ts")
+        # if os.name == 'nt':
+        slices_path = slices_path.replace('/', '\\')
+        escaped_path = file_path
+        # Windows系统下需要将路径分隔符从/替换成\
+        # if os.name == 'nt':
+        escaped_path = escaped_path.replace('/', '\\')
+        outputfilepath = os.path.join(new_folder_path, new_file_and_path_name)
+        # if os.name == 'nt':
+        outputfilepath = outputfilepath.replace('/', '\\')
+        ts_type = self.ts_type.get()
+        if not ts_type or ts_type == '':
+            ts_type = 'copy'
+        cmd = f"ffmpeg -i \"{escaped_path}\"  -c:v {ts_type} -c:a copy  -map 0:v:0 -map 0:a:0? -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path} -f hls {outputfilepath}.m3u8"
+        process = subprocess.Popen(cmd, shell=True)
+        process.communicate()  # Wait for process to finish
+        if not check_files_in_path(new_folder_path):
+            cmd = f"ffmpeg -i \"{escaped_path}\"  -c:v {ts_type} -c:a aac  -map 0:v:0 -map 0:a:0? -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path} -f hls {outputfilepath}.m3u8"
+            process = subprocess.Popen(cmd, shell=True)
+            process.communicate()  # Wait for process to finish
+        match = re.search(r'(.+?)\.[^.]*$', file_name)
+        if match:
+            result = match.group(1)
+        video_file_name_tag = b'#my_video_true_name_is=' + result.encode()
+        video_type = self.video_type.get()
+        if video_type and video_type != '':
+            video_file_name_tag += b'\n'
+            video_file_name_tag += b'#my_video_group_name_is='
+            video_file_name_tag += video_type.encode()
+            with open('/cdcdf.txt', "wb") as f2:
+                pass
+            with open('/cdcdf.txt', "wb") as f2:
+                f2.write(video_type.encode('utf-8'))
+        # 读取M3U8播放列表文件并返回给客户端
+        with open(f'{outputfilepath}.m3u8', "rb") as f:
+            m3u8_data = f.read()
+        # 在字符串的第一行插入标签信息
+        m3u8_data = m3u8_data + b'\n' + video_file_name_tag
+        # 将修改后的字符串重新写回到m3u8文件中
+        thread_write_bytes_to_file(f'{outputfilepath}.m3u8', m3u8_data)
+        self.uuid_dict[new_file_and_path_name] = file_path
+        return new_file_and_path_name, file_path
 
     def read_video_file_to_slices(self):
         try:
-            file_path = self.file_path.get().replace('mkv', 'ts')
-            # 视频格式
-            videoType = file_path.split('.')[-1]
-            # 提取目录路径
-            dir_path = os.path.dirname(file_path)
-            # 提取文件名
-            file_name = os.path.basename(file_path)
-            new_file_and_path_name = generate_only_uuid(file_name)
-            # 创建新文件夹
-            new_folder_path = os.path.join(dir_path, new_file_and_path_name)
-            os.makedirs(new_folder_path, exist_ok=True)
-            slices_path = os.path.join(new_folder_path,
-                                       f"{new_file_and_path_name}_%05d.ts")
-            #if os.name == 'nt':
-            slices_path = slices_path.replace('/', '\\')
-            escaped_path = file_path
-            # Windows系统下需要将路径分隔符从/替换成\
-            #if os.name == 'nt':
-            escaped_path = escaped_path.replace('/', '\\')
-            outputfilepath = os.path.join(new_folder_path, new_file_and_path_name)
-            #if os.name == 'nt':
-            outputfilepath = outputfilepath.replace('/', '\\')
-            ts_type = self.ts_type.get()
-            if not ts_type or ts_type == '':
-                ts_type = 'copy'
-            cmd = f"ffmpeg -i \"{escaped_path}\"  -c:v {ts_type} -c:a copy  -map 0:v:0 -map 0:a:0? -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path} -f hls {outputfilepath}.m3u8"
-            process = subprocess.Popen(cmd, shell=True)
-            process.communicate()  # Wait for process to finish
-            if not check_files_in_path(new_folder_path):
-                cmd = f"ffmpeg -i \"{escaped_path}\"  -c:v {ts_type} -c:a aac  -map 0:v:0 -map 0:a:0? -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path} -f hls {outputfilepath}.m3u8"
-                process = subprocess.Popen(cmd, shell=True)
-                process.communicate()  # Wait for process to finish
-            match = re.search(r'(.+?)\.[^.]*$', file_name)
-            if match:
-                result = match.group(1)
-            video_file_name_tag = b'#my_video_true_name_is=' + result.encode()
-            video_type = self.video_type.get()
-            if video_type and video_type != '':
-                video_file_name_tag += b'\n'
-                video_file_name_tag += b'#my_video_group_name_is='
-                video_file_name_tag += video_type.encode()
-                with open('/cdcdf.txt', "wb") as f2:
-                    pass
-                with open('/cdcdf.txt', "wb") as f2:
-                    f2.write(video_type.encode('utf-8'))
-            # 读取M3U8播放列表文件并返回给客户端
-            with open(f'{outputfilepath}.m3u8', "rb") as f:
-                m3u8_data = f.read()
-            # 在字符串的第一行插入标签信息
-            m3u8_data = m3u8_data + b'\n' + video_file_name_tag
-            # 将修改后的字符串重新写回到m3u8文件中
-            thread_write_bytes_to_file(f'{outputfilepath}.m3u8', m3u8_data)
-            self.uuid_text.delete(0, 'end')
-            self.uuid_text.insert(0, new_file_and_path_name)
+            file_paths = self.file_path.get()
+            # 顺序执行，应该有ts文件，则进行ts文件转换
+            if len(self.ts_file_list) > 0:
+                for path in self.ts_file_list:
+                    self.read_video_file_to_slices_single(path)
+            else:  # 没有则是直接对源文件进行切片
+                file_paths_list = str_2_list(file_paths)
+                for path in file_paths_list:
+                    self.read_video_file_to_slices_single(path)
             self.uuid_text.config(bg='green')
-            file_name_dict['name'] = result
             return 'video_bytes'
         except Exception as e:
             messagebox.showerror('错误', 'ts视频文件不存在')
 
     def undone(self):
-        file_path = self.file_path.get()
+        file_paths = self.file_path.get()
+        file_paths_list = str_2_list(file_paths)
+        file_path = file_paths_list[0]
         if not os.path.exists(file_path):
             messagebox.showerror('错误', '加密文件不存在')
             return
@@ -325,7 +349,7 @@ class MyFrame(tk.Frame):
         # 还原m3u8文件
         dir_path2 = os.path.join(dir_path,
                                  f"{uuid}")
-        #if os.name == 'nt':
+        # if os.name == 'nt':
         dir_path2 = dir_path2.replace('/', '\\')
         with open(dir_path2, "rb") as f2:
             m3u8_data_secret = f2.read()
@@ -333,7 +357,7 @@ class MyFrame(tk.Frame):
         # 还原m3u8文件内容
         dir_path3 = os.path.join(dir_path,
                                  f"{uuid}.m3u8")
-        #if os.name == 'nt':
+        # if os.name == 'nt':
         dir_path3 = dir_path3.replace('/', '\\')
         # 恢复明文m3u8
         thread_write_bytes_to_file(dir_path3, m3u8_data)
@@ -345,7 +369,7 @@ class MyFrame(tk.Frame):
         for line in m3u8_data.splitlines():
             if uuid.encode() in line:
                 slices_path_ts = os.path.join(dir_path, line.decode())
-                #if os.name == 'nt':
+                # if os.name == 'nt':
                 slices_path_ts = slices_path_ts.replace('/', '\\')
                 # 读取密文ts切块
                 with open(slices_path_ts, "rb") as f2:
@@ -358,14 +382,14 @@ class MyFrame(tk.Frame):
                 if line.startswith(b"#my_video_true_name_is="):
                     source_file_name = line.split(b"=")[1].decode()
         list_path = os.path.join(dir_path, 'list.txt')
-        #if os.name == 'nt':
+        # if os.name == 'nt':
         list_path = list_path.replace('/', '\\')
         # 生成恢复列表
         thread_write_bytes_to_file(list_path, ts_list)
         # 恢复成一个mp4
         mp4_path = os.path.join(dir_path,
                                 f"{source_file_name}.mp4")
-        #if os.name == 'nt':
+        # if os.name == 'nt':
         mp4_path = mp4_path.replace('/', '\\')
         cmd = f"ffmpeg -f concat -safe 0 -i \"{list_path}\" -c copy \"{mp4_path}\""
         process = subprocess.Popen(cmd, shell=True)
@@ -378,7 +402,7 @@ class MyFrame(tk.Frame):
             # 不是以uuid开始的文件，包括m3u8和ts文件
             if filename.startswith(uuid) or filename.startswith('list.txt'):
                 removePath = os.path.join(dir_path, filename)
-                #if os.name == 'nt':
+                # if os.name == 'nt':
                 removePath = removePath.replace('/', '\\')
                 os.remove(removePath)
 
@@ -458,15 +482,15 @@ class MyFrame(tk.Frame):
             self.ts_type_gpu.config(bg='green')
 
     def on_file_click(self):
-        file_path = filedialog.askopenfilename(initialdir=os.getcwd(), title="选择视频文件",
-                                               filetypes=(("all files", "*.*"),
-                                                          ("mkv files", "*.mkv"), ("mp4 files", "*.mp4"),
-                                                          ("avi files", "*.avi"), ("rm files", "*.rm"),
-                                                          ("rmvb files", "*.rmvb"), ("fly files", "*.fly")))
-        if file_path:
+        file_paths = filedialog.askopenfilenames(initialdir=os.getcwd(), title="选择视频文件",
+                                                 filetypes=(("all files", "*.*"),
+                                                            ("mkv files", "*.mkv"), ("mp4 files", "*.mp4"),
+                                                            ("avi files", "*.avi"), ("rm files", "*.rm"),
+                                                            ("rmvb files", "*.rmvb"), ("fly files", "*.fly")))
+        if file_paths:
             self.file_path.configure(state='normal')
             self.file_path.delete(0, 'end')
-            self.file_path.insert(0, file_path)
+            self.file_path.insert(0, list_2_str(file_paths))
             self.file_path.configure(state='readonly')
 
         # 将所有按钮颜色重置为原来的颜色
@@ -480,52 +504,64 @@ class MyFrame(tk.Frame):
         self.uuid_text.delete(0, 'end')
         self.convert_button5.config(bg=self.master.cget('bg'))
         self.convert_button4.config(bg=self.master.cget('bg'))
-        file_name_dict['name'] = ''
+        self.ts_file_list.clear()
+        self.uuid_dict.clear()
 
     def onekey(self):
-        self.on_convert_click_mkv_to_mp4()
-        self.on_convert_click()
-        self.on_convert_click_secret()
+        file_paths = self.file_path.get()
+        file_paths_list = str_2_list(file_paths)
+        for path in file_paths_list:
+            try:
+                ts_file_path = self.on_convert_click_mkv_to_mp4_single(path)
+                uuid, file_path = self.read_video_file_to_slices_single(ts_file_path)
+                self.on_convert_click_secret_single(file_path, uuid)
+            except:
+                pass
+        self.password_text.config(bg='green')
+        # 将按钮变成绿色
+        self.convert_button3.config(bg='green')
+        # 将按钮变成绿色
+        self.convert_button2.config(bg='green')
+        self.uuid_text.config(bg='green')
         self.convert_button4.config(bg='green')
 
-    def on_convert_click_secret(self):
-        file_path = self.file_path.get()
+    def on_convert_click_secret_single(self, file_path, uuid):
         # 提取目录路径
         dir_path = os.path.dirname(file_path)
         dir_path2 = os.path.join(dir_path,
-                                 f"{self.uuid_text.get()}")
-        #if os.name == 'nt':
+                                 f"{uuid}")
+        # if os.name == 'nt':
         dir_path2 = dir_path2.replace('/', '\\')
         slices_path = os.path.join(dir_path2,
-                                   f"{self.uuid_text.get()}.m3u8")
-        #if os.name == 'nt':
+                                   f"{uuid}.m3u8")
+        # if os.name == 'nt':
         slices_path = slices_path.replace('/', '\\')
         if not os.path.exists(slices_path):
-            self.on_convert_click()
+            return
         dir_path2 = os.path.join(dir_path,
-                                 f"{self.uuid_text.get()}")
-        #if os.name == 'nt':
+                                 f"{uuid}")
+        # if os.name == 'nt':
         dir_path2 = dir_path2.replace('/', '\\')
         slices_path = os.path.join(dir_path2,
-                                   f"{self.uuid_text.get()}.m3u8")
-        #if os.name == 'nt':
+                                   f"{uuid}.m3u8")
+        # if os.name == 'nt':
         slices_path = slices_path.replace('/', '\\')
         # 读取M3U8播放列表文件并返回给客户端
         with open(slices_path, "rb") as f:
             m3u8_data = f.read()
         # m3u8的uuid
         slices_path2 = os.path.join(dir_path2,
-                                    f"{self.uuid_text.get()}")
-        #if os.name == 'nt':
+                                    f"{uuid}")
+        # if os.name == 'nt':
         slices_path2 = slices_path2.replace('/', '\\')
         data = b''
         password = self.password_text.get()
         if password == '':
             password = generateEncryptPassword()
         for line in m3u8_data.splitlines():
-            if self.uuid_text.get().encode() in line:
+            if uuid.encode() in line:
                 slices_path_ts = os.path.join(dir_path2, line.decode())
-                #if os.name == 'nt':
+                # if os.name == 'nt':
                 slices_path_ts = slices_path_ts.replace('/', '\\')
                 # 读取明文ts切块
                 with open(slices_path_ts, "rb") as f2:
@@ -533,7 +569,7 @@ class MyFrame(tk.Frame):
                     secretContent = encrypt2(ts_data, password)
                     new_file = line.decode().split('.')[0]
                     slices_path_secret = os.path.join(dir_path2, new_file)
-                    #if os.name == 'nt':
+                    # if os.name == 'nt':
                     slices_path_secret = slices_path_secret.replace('/', '\\')
                     # 密文ts切块
                     thread_write_bytes_to_file(slices_path_secret, secretContent)
@@ -547,18 +583,15 @@ class MyFrame(tk.Frame):
         # thread_write_bytes_to_file(slices_path2, data)
         secretContent = encrypt2(data, password)
         # 密文m3u8
-        thread_write_bytes_to_file(f'{dir_path}/{self.uuid_text.get()}C', secretContent)
-        # 将按钮变成绿色
-        self.convert_button3.config(bg='green')
+        thread_write_bytes_to_file(f'{dir_path}/{uuid}C', secretContent)
         self.password_text.delete(0, 'end')
         self.password_text.insert(0, password)
-        self.password_text.config(bg='green')
         with open('/dhjfkhjag.txt', "wb") as f2:
             pass
         with open('/dhjfkhjag.txt', "wb") as f2:
             f2.write(password.encode('utf-8'))
         # 密码和文件名字，uuid记录
-        # uuid_password_data = self.uuid_text.get() + '\n' + self.password_text.get() + '\n' + file_name_dict.get('name')
+        # uuid_password_data = uuid + '\n' + self.password_text.get() + '\n' + file_name_dict.get('name')
         # # m3u8的uuid
         # slices_path2 = os.path.join(dir_path2,
         #                             f"uuid_password.txt")
@@ -566,7 +599,16 @@ class MyFrame(tk.Frame):
         #     slices_path2 = slices_path2.replace('/', '\\')
         # thread_write_bytes_to_file(slices_path2, uuid_password_data.encode())
         os.remove(slices_path)
-        file_name_dict['name'] = ''
+
+    def on_convert_click_secret(self):
+        if len(self.uuid_dict) == 0:
+            messagebox.showerror('错误', '视频文件不存在')
+            return
+        for uuid, file_path in self.uuid_dict.items():
+            self.on_convert_click_secret_single(file_path, uuid)
+        self.password_text.config(bg='green')
+        # 将按钮变成绿色
+        self.convert_button3.config(bg='green')
 
     def on_convert_click(self):
         # TODO: 根据需要实现视频处理代码

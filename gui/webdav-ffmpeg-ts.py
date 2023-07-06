@@ -138,11 +138,11 @@ class MyFrame(tk.Frame):
                                    f"{new_file_name}")
 
         # Windows系统下需要将路径分隔符从/替换成\
-        if os.name == 'nt':
-            escaped_path = file_path.replace('/', '\\\\')
-            escaped_path2 = file_path.replace('/', '\\\\')
-            slices_path = slices_path.replace('\\', '\\\\')
-            slices_path = slices_path.replace('/', '\\\\')
+        #if os.name == 'nt':
+        escaped_path = file_path.replace('/', '\\\\')
+        escaped_path2 = file_path.replace('/', '\\\\')
+        slices_path = slices_path.replace('\\', '\\\\')
+        slices_path = slices_path.replace('/', '\\\\')
         ss = '\:'
         gputype = self.ts_type_gpu.get()
         if gputype == '0':
@@ -257,15 +257,15 @@ class MyFrame(tk.Frame):
             os.makedirs(new_folder_path, exist_ok=True)
             slices_path = os.path.join(new_folder_path,
                                        f"{new_file_and_path_name}_%05d.ts")
-            if os.name == 'nt':
-                slices_path = slices_path.replace('/', '\\')
+            #if os.name == 'nt':
+            slices_path = slices_path.replace('/', '\\')
             escaped_path = file_path
             # Windows系统下需要将路径分隔符从/替换成\
-            if os.name == 'nt':
-                escaped_path = escaped_path.replace('/', '\\')
+            #if os.name == 'nt':
+            escaped_path = escaped_path.replace('/', '\\')
             outputfilepath = os.path.join(new_folder_path, new_file_and_path_name)
-            if os.name == 'nt':
-                outputfilepath = outputfilepath.replace('/', '\\')
+            #if os.name == 'nt':
+            outputfilepath = outputfilepath.replace('/', '\\')
             ts_type = self.ts_type.get()
             if not ts_type or ts_type == '':
                 ts_type = 'copy'
@@ -325,16 +325,16 @@ class MyFrame(tk.Frame):
         # 还原m3u8文件
         dir_path2 = os.path.join(dir_path,
                                  f"{uuid}")
-        if os.name == 'nt':
-            dir_path2 = dir_path2.replace('/', '\\')
+        #if os.name == 'nt':
+        dir_path2 = dir_path2.replace('/', '\\')
         with open(dir_path2, "rb") as f2:
             m3u8_data_secret = f2.read()
         m3u8_data = decrypt(password, m3u8_data_secret)
         # 还原m3u8文件内容
         dir_path3 = os.path.join(dir_path,
                                  f"{uuid}.m3u8")
-        if os.name == 'nt':
-            dir_path3 = dir_path3.replace('/', '\\')
+        #if os.name == 'nt':
+        dir_path3 = dir_path3.replace('/', '\\')
         # 恢复明文m3u8
         thread_write_bytes_to_file(dir_path3, m3u8_data)
         # 根据m3u8文件内容恢复每个明文ts切块
@@ -345,8 +345,8 @@ class MyFrame(tk.Frame):
         for line in m3u8_data.splitlines():
             if uuid.encode() in line:
                 slices_path_ts = os.path.join(dir_path, line.decode())
-                if os.name == 'nt':
-                    slices_path_ts = slices_path_ts.replace('/', '\\')
+                #if os.name == 'nt':
+                slices_path_ts = slices_path_ts.replace('/', '\\')
                 # 读取密文ts切块
                 with open(slices_path_ts, "rb") as f2:
                     ts_data_secret = f2.read()
@@ -358,15 +358,15 @@ class MyFrame(tk.Frame):
                 if line.startswith(b"#my_video_true_name_is="):
                     source_file_name = line.split(b"=")[1].decode()
         list_path = os.path.join(dir_path, 'list.txt')
-        if os.name == 'nt':
-            list_path = list_path.replace('/', '\\')
+        #if os.name == 'nt':
+        list_path = list_path.replace('/', '\\')
         # 生成恢复列表
         thread_write_bytes_to_file(list_path, ts_list)
         # 恢复成一个mp4
         mp4_path = os.path.join(dir_path,
                                 f"{source_file_name}.mp4")
-        if os.name == 'nt':
-            mp4_path = mp4_path.replace('/', '\\')
+        #if os.name == 'nt':
+        mp4_path = mp4_path.replace('/', '\\')
         cmd = f"ffmpeg -f concat -safe 0 -i \"{list_path}\" -c copy \"{mp4_path}\""
         process = subprocess.Popen(cmd, shell=True)
         process.communicate()  # Wait for process to finish
@@ -378,8 +378,8 @@ class MyFrame(tk.Frame):
             # 不是以uuid开始的文件，包括m3u8和ts文件
             if filename.startswith(uuid) or filename.startswith('list.txt'):
                 removePath = os.path.join(dir_path, filename)
-                if os.name == 'nt':
-                    removePath = removePath.replace('/', '\\')
+                #if os.name == 'nt':
+                removePath = removePath.replace('/', '\\')
                 os.remove(removePath)
 
     def __init__(self, parent, title):
@@ -494,30 +494,30 @@ class MyFrame(tk.Frame):
         dir_path = os.path.dirname(file_path)
         dir_path2 = os.path.join(dir_path,
                                  f"{self.uuid_text.get()}")
-        if os.name == 'nt':
-            dir_path2 = dir_path2.replace('/', '\\')
+        #if os.name == 'nt':
+        dir_path2 = dir_path2.replace('/', '\\')
         slices_path = os.path.join(dir_path2,
                                    f"{self.uuid_text.get()}.m3u8")
-        if os.name == 'nt':
-            slices_path = slices_path.replace('/', '\\')
+        #if os.name == 'nt':
+        slices_path = slices_path.replace('/', '\\')
         if not os.path.exists(slices_path):
             self.on_convert_click()
         dir_path2 = os.path.join(dir_path,
                                  f"{self.uuid_text.get()}")
-        if os.name == 'nt':
-            dir_path2 = dir_path2.replace('/', '\\')
+        #if os.name == 'nt':
+        dir_path2 = dir_path2.replace('/', '\\')
         slices_path = os.path.join(dir_path2,
                                    f"{self.uuid_text.get()}.m3u8")
-        if os.name == 'nt':
-            slices_path = slices_path.replace('/', '\\')
+        #if os.name == 'nt':
+        slices_path = slices_path.replace('/', '\\')
         # 读取M3U8播放列表文件并返回给客户端
         with open(slices_path, "rb") as f:
             m3u8_data = f.read()
         # m3u8的uuid
         slices_path2 = os.path.join(dir_path2,
                                     f"{self.uuid_text.get()}")
-        if os.name == 'nt':
-            slices_path2 = slices_path2.replace('/', '\\')
+        #if os.name == 'nt':
+        slices_path2 = slices_path2.replace('/', '\\')
         data = b''
         password = self.password_text.get()
         if password == '':
@@ -525,16 +525,16 @@ class MyFrame(tk.Frame):
         for line in m3u8_data.splitlines():
             if self.uuid_text.get().encode() in line:
                 slices_path_ts = os.path.join(dir_path2, line.decode())
-                if os.name == 'nt':
-                    slices_path_ts = slices_path_ts.replace('/', '\\')
+                #if os.name == 'nt':
+                slices_path_ts = slices_path_ts.replace('/', '\\')
                 # 读取明文ts切块
                 with open(slices_path_ts, "rb") as f2:
                     ts_data = f2.read()
                     secretContent = encrypt2(ts_data, password)
                     new_file = line.decode().split('.')[0]
                     slices_path_secret = os.path.join(dir_path2, new_file)
-                    if os.name == 'nt':
-                        slices_path_secret = slices_path_secret.replace('/', '\\')
+                    #if os.name == 'nt':
+                    slices_path_secret = slices_path_secret.replace('/', '\\')
                     # 密文ts切块
                     thread_write_bytes_to_file(slices_path_secret, secretContent)
                     data += new_file.encode()
@@ -569,12 +569,6 @@ class MyFrame(tk.Frame):
         file_name_dict['name'] = ''
 
     def on_convert_click(self):
-        file_path = self.file_path.get().replace('mkv', 'ts')
-        file_path = file_path.replace('avi', 'ts')
-        if not os.path.exists(file_path):
-            if not os.path.exists(file_path):
-                messagebox.showerror('错误', '视频文件不存在')
-                return
         # TODO: 根据需要实现视频处理代码
         self.read_video_file_to_slices()
         # 将按钮变成绿色

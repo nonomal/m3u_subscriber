@@ -1,4 +1,8 @@
-# 最近查询的黑名单域名，目标是减少重复域名入库行为
-latest_mins_update_dict_black = {}
-# 最近查询的白名单域名，目标是减少重复域名入库行为
-latest_mins_update_dict_white = {}
+now_uuid = update_uuid_action('douyinlockuuid')
+        if not is_same_action_uuid(now_uuid, 'twitchlockuuid'):
+            return
+
+            now_uuid = time_clock_update_dict.get('twitchlockuuid')
+            twitchlockuuid
+            'twitchlockuuid': '0',
+                          'bilibililockuuid': '0', 'huyalockuuid': '0', 'yylockuuid': '0', 'douyinlockuuid': '0'

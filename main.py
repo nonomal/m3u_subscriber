@@ -594,13 +594,17 @@ tv_dict_normal = {}
 
 
 ##############################################################bilibili############################################
-async def pingM3u(session, value, real_dict, key, mintimeout, maxTimeout):
+async def pingM3u(session, value, real_dict, key, mintimeout, maxTimeout, now_uuid, uuid_cache):
     try:
+        if not is_same_action_uuid(now_uuid, uuid_cache):
+            return
         async with  session.get(value, timeout=mintimeout) as response:
             if response.status == 200:
                 real_dict[key] = value
     except asyncio.TimeoutError:
         try:
+            if not is_same_action_uuid(now_uuid, uuid_cache):
+                return
             async with  session.get(value, timeout=maxTimeout) as response:
                 if response.status == 200:
                     real_dict[key] = value
@@ -830,7 +834,9 @@ time_clock_update_dict = {'proxySubscriberClock': '0', 'normalM3uClock': '0', 'y
                           'bilibili': '0', 'huya': '0', 'yy': '0', 'twitch': '0', 'douyin': '0',
                           'autoDnsSwitchClock': '0', 'normalSubscriberClock': '0', 'syncClock': '0', 'recycle': '0',
                           'checkAlive': '0', 'migu': '0', 'miguId': '0', 'cq': '0', 'cqId': '0', 'youtubeId': '0',
-                          'bilibiliId': '0', 'huyaId': '0', 'yyId': '0', 'twitchId': '0', 'douyinId': '0'}
+                          'bilibiliId': '0', 'huyaId': '0', 'yyId': '0', 'twitchId': '0', 'douyinId': '0',
+                          'youtubelockuuid': '0', 'twitchlockuuid': '0',
+                          'bilibililockuuid': '0', 'huyalockuuid': '0', 'yylockuuid': '0', 'douyinlockuuid': '0'}
 
 
 def is_same_action_uuid(old_uuid, cachekey):
@@ -4816,15 +4822,20 @@ biliurl = 'https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo
 
 
 async def grab2(session, id, m3u_dict, mintimeout, maxTimeout):
+    now_uuid = time_clock_update_dict.get('bilibililockuuid')
     try:
         param = {
             'id': id
         }
         try:
+            if not is_same_action_uuid(now_uuid, 'bilibililockuuid'):
+                return
             async with  session.get(bilibili_real_url, headers=cim_headers, params=param,
                                     timeout=mintimeout) as response:
                 res = await response.json()
         except asyncio.TimeoutError:
+            if not is_same_action_uuid(now_uuid, 'bilibililockuuid'):
+                return
             async with  session.get(bilibili_real_url, headers=cim_headers, params=param,
                                     timeout=maxTimeout) as response:
                 res = await response.json()
@@ -4844,10 +4855,14 @@ async def grab2(session, id, m3u_dict, mintimeout, maxTimeout):
             'ptype': 8,
         }
         try:
+            if not is_same_action_uuid(now_uuid, 'bilibililockuuid'):
+                return
             async with  session.get(biliurl, headers=cim_headers, params=param2,
                                     timeout=mintimeout) as response2:
                 res = await response2.json()
         except asyncio.TimeoutError:
+            if not is_same_action_uuid(now_uuid, 'bilibililockuuid'):
+                return
             async with  session.get(biliurl, headers=cim_headers, params=param2,
                                     timeout=maxTimeout) as response2:
                 res = await response2.json()
@@ -4881,7 +4896,8 @@ async def grab2(session, id, m3u_dict, mintimeout, maxTimeout):
             tasks = []
             for real_ in real_lists:
                 for key, value in real_.items():
-                    task = asyncio.ensure_future(pingM3u(session, value, real_dict, key, mintimeout, maxTimeout))
+                    task = asyncio.ensure_future(
+                        pingM3u(session, value, real_dict, key, mintimeout, maxTimeout, now_uuid, 'bilibililockuuid'))
                     tasks.append(task)
             await asyncio.gather(*tasks)
             if real_dict:
@@ -4940,15 +4956,19 @@ headers_YY = {
 }
 
 
-async def room_id_(session, id, mintimeout, maxTimeout):
+async def room_id_(session, id, mintimeout, maxTimeout, now_uuid):
     url = 'https://www.yy.com/{}'.format(id)
     try:
+        if not is_same_action_uuid(now_uuid, 'yylockuuid'):
+            return
         async with session.get(url, headers=headers_web_YY,
                                timeout=mintimeout) as response:
             if response.status == 200:
                 room_id = re.findall('ssid : "(\d+)', response.text)[0]
                 return room_id
     except asyncio.TimeoutError:
+        if not is_same_action_uuid(now_uuid, 'yylockuuid'):
+            return
         async with session.get(url, headers=headers_web_YY,
                                timeout=maxTimeout) as response:
             if response.status == 200:
@@ -4956,8 +4976,10 @@ async def room_id_(session, id, mintimeout, maxTimeout):
                 return room_id
 
 
-async def fetch_room_url(session, room_url, headers, mintimeout, maxTimeout):
+async def fetch_room_url(session, room_url, headers, mintimeout, maxTimeout, now_uuid):
     try:
+        if not is_same_action_uuid(now_uuid, 'yylockuuid'):
+            return
         async with  session.get(room_url, headers=headers,
                                 timeout=mintimeout) as response:
             if response.status == 200:
@@ -4965,6 +4987,8 @@ async def fetch_room_url(session, room_url, headers, mintimeout, maxTimeout):
             else:
                 return None
     except asyncio.TimeoutError:
+        if not is_same_action_uuid(now_uuid, 'yylockuuid'):
+            return
         async with  session.get(room_url, headers=headers,
                                 timeout=maxTimeout) as response:
             if response.status == 200:
@@ -4973,14 +4997,18 @@ async def fetch_room_url(session, room_url, headers, mintimeout, maxTimeout):
                 return None
 
 
-async def fetch_real_url(session, url, headers, mintimeout, maxTimeout):
+async def fetch_real_url(session, url, headers, mintimeout, maxTimeout, now_uuid):
     try:
+        if not is_same_action_uuid(now_uuid, 'yylockuuid'):
+            return
         async with  session.get(url, headers=headers, timeout=mintimeout) as response:
             if response.status == 200:
                 return await response.text()
             else:
                 return None
     except asyncio.TimeoutError:
+        if not is_same_action_uuid(now_uuid, 'yylockuuid'):
+            return
         async with  session.get(url, headers=headers, timeout=maxTimeout) as response:
             if response.status == 200:
                 return await response.text()
@@ -4988,13 +5016,17 @@ async def fetch_real_url(session, url, headers, mintimeout, maxTimeout):
                 return None
 
 
-async def get_client_id(rid, session, mintimeout, maxTimeout):
+async def get_client_id(rid, session, mintimeout, maxTimeout, now_uuid):
     try:
         twitch_room_url = f'https://www.twitch.tv/{rid}'
         try:
+            if not is_same_action_uuid(now_uuid, 'twitchlockuuid'):
+                return
             async with session.get(twitch_room_url, timeout=mintimeout) as response:
                 res = await response.text()
         except asyncio.TimeoutError:
+            if not is_same_action_uuid(now_uuid, 'twitchlockuuid'):
+                return
             async with session.get(twitch_room_url, timeout=maxTimeout) as response:
                 res = await response.text()
         client_id = re.search(r'clientId="(.*?)"', res).group(1)
@@ -5003,7 +5035,7 @@ async def get_client_id(rid, session, mintimeout, maxTimeout):
         raise Exception('ConnectionError')
 
 
-async def get_sig_token(rid, session, mintimeout, maxTimeout):
+async def get_sig_token(rid, session, mintimeout, maxTimeout, now_uuid):
     data = {
         "operationName": "PlaybackAccessToken_Template",
         "query": "query PlaybackAccessToken_Template($login: String!, $isLive: Boolean!, $vodID: ID!, "
@@ -5022,7 +5054,7 @@ async def get_sig_token(rid, session, mintimeout, maxTimeout):
     }
 
     headers = {
-        'Client-ID': await get_client_id(rid, session, mintimeout, maxTimeout),
+        'Client-ID': await get_client_id(rid, session, mintimeout, maxTimeout, now_uuid),
         'Referer': 'https://www.twitch.tv/',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
                       'Chrome/90.0.4430.93 Safari/537.36',
@@ -5030,10 +5062,14 @@ async def get_sig_token(rid, session, mintimeout, maxTimeout):
     posturl = 'https://gql.twitch.tv/gql'
     json_data = json.dumps(data)
     try:
+        if not is_same_action_uuid(now_uuid, 'twitchlockuuid'):
+            return
         async with session.post(posturl, headers=headers, data=json_data,
                                 timeout=mintimeout) as response:
             res = await response.json()
     except asyncio.TimeoutError:
+        if not is_same_action_uuid(now_uuid, 'twitchlockuuid'):
+            return
         async with session.post(posturl, headers=headers, data=json_data,
                                 timeout=maxTimeout) as response:
             res = await response.json()
@@ -5045,8 +5081,9 @@ async def get_sig_token(rid, session, mintimeout, maxTimeout):
 
 
 async def grab5(session, rid, m3u_dict, mintimeout, maxTimeout):
+    now_uuid = time_clock_update_dict.get('twitchlockuuid')
     try:
-        signature, token = await get_sig_token(rid, session, mintimeout, maxTimeout)
+        signature, token = await get_sig_token(rid, session, mintimeout, maxTimeout, now_uuid)
         params = {
             'allow_source': 'true',
             'dt': 2,
@@ -5061,7 +5098,7 @@ async def grab5(session, rid, m3u_dict, mintimeout, maxTimeout):
             'player_version': '1.4.0',
         }
         url = f'https://usher.ttvnw.net/api/channel/hls/{rid}.m3u8?{urlencode(params)}'
-        final_url = await get_resolution(session, url, mintimeout, maxTimeout)
+        final_url = await get_resolution(session, url, mintimeout, maxTimeout, now_uuid, 'twitchlockuuid')
         if final_url:
             m3u_dict[rid] = final_url
         else:
@@ -5604,21 +5641,23 @@ async def grab_normal_chongqin(session, rid, m3u_dict, mintimeout, maxTimeout, s
     except Exception as e:
         print(f"chongqing An error occurred while processing {rid}. Error: {e}")
 
+
 async def grab4(session, id, m3u_dict, mintimeout, maxTimeout):
+    now_uuid = time_clock_update_dict.get('yylockuuid')
     try:
         headers_YY['referer'] = f'https://wap.yy.com/mobileweb/{id}'
         real_lists = []
         real_dict = {}
         arr = []
         room_url = f'https://interface.yy.com/hls/new/get/{id}/{id}/1200?source=wapyy&callback='
-        res_text = await fetch_room_url(session, room_url, headers_YY, mintimeout, maxTimeout)
+        res_text = await fetch_room_url(session, room_url, headers_YY, mintimeout, maxTimeout, now_uuid)
         if not res_text:
             try:
-                room_id = await room_id_(session, id, mintimeout, maxTimeout)
+                room_id = await room_id_(session, id, mintimeout, maxTimeout, now_uuid)
             except Exception as e:
                 return
             room_url = f'https://interface.yy.com/hls/new/get/{room_id}/{room_id}/1200?source=wapyy&callback='
-            res_text = await fetch_room_url(session, room_url, headers_YY, mintimeout, maxTimeout)
+            res_text = await fetch_room_url(session, room_url, headers_YY, mintimeout, maxTimeout, now_uuid)
         if res_text:
             data = json.loads(res_text[1:-1])
             if data.get('hls', 0):
@@ -5626,7 +5665,7 @@ async def grab4(session, id, m3u_dict, mintimeout, maxTimeout):
                 xv = data['video']
                 xv = re.sub(r'_0_\d+_0', '_0_0_0', xv)
                 url = f'https://interface.yy.com/hls/get/stream/15013/{xv}/15013/{xa}?source=h5player&type=m3u8'
-                res_json = await  fetch_real_url(session, url, headers_YY, mintimeout, maxTimeout)
+                res_json = await  fetch_real_url(session, url, headers_YY, mintimeout, maxTimeout, now_uuid)
                 if not res_json:
                     return
                 res_json = json.loads(res_json)
@@ -5640,7 +5679,7 @@ async def grab4(session, id, m3u_dict, mintimeout, maxTimeout):
                 for real_ in real_lists:
                     for key, value in real_.items():
                         task = asyncio.ensure_future(
-                            pingM3u(session, value, real_dict, key, mintimeout, maxTimeout))
+                            pingM3u(session, value, real_dict, key, mintimeout, maxTimeout, now_uuid, 'yylockuuid'))
                         tasks.append(task)
                 await asyncio.gather(*tasks)
                 if real_dict:
@@ -5663,18 +5702,22 @@ async def grab4(session, id, m3u_dict, mintimeout, maxTimeout):
         print(f"YY An error occurred while processing {id}. Error: {e}")
 
 
-async def get_room_id_douyin(url, session, mintimeout, maxTimeout):
+async def get_room_id_douyin(url, session, mintimeout, maxTimeout, now_uuid):
     headers = {
         'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
     }
     url = re.search(r'(https.*)', url).group(1)
 
     try:
+        if not is_same_action_uuid(now_uuid, 'douyinlockuuid'):
+            return
         async with  session.get(url, headers=headers, timeout=mintimeout) as response:
             if response.status == 200:
                 url = response.headers['location']
                 room_id = re.search(r'\d{19}', url).group(0)
     except asyncio.TimeoutError:
+        if not is_same_action_uuid(now_uuid, 'douyinlockuuid'):
+            return
         async with  session.get(url, headers=headers, timeout=maxTimeout) as response:
             if response.status == 200:
                 url = response.headers['location']
@@ -5695,12 +5738,16 @@ async def get_room_id_douyin(url, session, mintimeout, maxTimeout):
     )
 
     try:
+        if not is_same_action_uuid(now_uuid, 'douyinlockuuid'):
+            return
         async with session.get('https://webcast.amemv.com/webcast/room/reflow/info/?', headers=headers,
                                params=params, timeout=mintimeout) as response:
             if response.status == 200:
                 json_data = await response.json()
                 return json_data['data']['room']['owner']['web_rid']
     except asyncio.TimeoutError:
+        if not is_same_action_uuid(now_uuid, 'douyinlockuuid'):
+            return
         async with session.get('https://webcast.amemv.com/webcast/room/reflow/info/?', headers=headers,
                                params=params, timeout=maxTimeout) as response:
             if response.status == 200:
@@ -5711,9 +5758,10 @@ async def get_room_id_douyin(url, session, mintimeout, maxTimeout):
 
 
 async def grab_douyin(session, id, m3u_dict, mintimeout, maxTimeout):
+    now_uuid = time_clock_update_dict.get('douyinlockuuid')
     try:
         if 'v.douyin.com' in id:
-            rid = await get_room_id_douyin(id, session, mintimeout, maxTimeout)
+            rid = await get_room_id_douyin(id, session, mintimeout, maxTimeout, now_uuid)
             if not rid:
                 return
         else:
@@ -5726,11 +5774,15 @@ async def grab_douyin(session, id, m3u_dict, mintimeout, maxTimeout):
             "user-agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
         }
         try:
+            if not is_same_action_uuid(now_uuid, 'douyinlockuuid'):
+                return
             async with  session.get(url, headers=headers,
                                     timeout=mintimeout) as response:
                 if response.status == 200:
                     result = await response.text()
         except asyncio.TimeoutError:
+            if not is_same_action_uuid(now_uuid, 'douyinlockuuid'):
+                return
             async with session.get(url, headers=headers,
                                    timeout=maxTimeout) as response:
                 if response.status == 200:
@@ -5775,7 +5827,7 @@ async def grab_douyin(session, id, m3u_dict, mintimeout, maxTimeout):
             for real_ in real_lists:
                 for key, value in real_.items():
                     task = asyncio.ensure_future(
-                        pingM3u(session, value, real_dict, key, mintimeout, maxTimeout))
+                        pingM3u(session, value, real_dict, key, mintimeout, maxTimeout, now_uuid, 'douyinlockuuid'))
                     tasks.append(task)
             await asyncio.gather(*tasks)
             if real_dict:
@@ -5803,6 +5855,7 @@ async def grab_douyin(session, id, m3u_dict, mintimeout, maxTimeout):
 
 
 async def grab3(session, id, m3u_dict, mintimeout, maxTimeout):
+    now_uuid = time_clock_update_dict.get('huyalockuuid')
     try:
         param = {
             'id': id
@@ -5812,10 +5865,14 @@ async def grab3(session, id, m3u_dict, mintimeout, maxTimeout):
         arr = []
         huya_room_url = 'https://m.huya.com/{}'.format(id)
         try:
+            if not is_same_action_uuid(now_uuid, 'huyalockuuid'):
+                return
             async with session.get(huya_room_url, headers=cim_headers_huya, params=param,
                                    timeout=mintimeout) as response:
                 res = await response.text()
         except asyncio.TimeoutError:
+            if not is_same_action_uuid(now_uuid, 'huyalockuuid'):
+                return
             async with session.get(huya_room_url, headers=cim_headers_huya, params=param,
                                    timeout=maxTimeout) as response:
                 res = await response.text()
@@ -5849,7 +5906,7 @@ async def grab3(session, id, m3u_dict, mintimeout, maxTimeout):
                 for real_ in real_lists:
                     for key, value in real_.items():
                         task = asyncio.ensure_future(
-                            pingM3u(session, value, real_dict, key, mintimeout, maxTimeout))
+                            pingM3u(session, value, real_dict, key, mintimeout, maxTimeout, now_uuid, 'huyalockuuid'))
                         tasks.append(task)
                 await asyncio.gather(*tasks)
                 if real_dict:
@@ -5901,11 +5958,15 @@ async def download_files4():
 youtubeUrl = 'https://www.youtube.com/watch?v='
 
 
-async def get_resolution(session, liveurl, mintimeout, maxTimeout):
+async def get_resolution(session, liveurl, mintimeout, maxTimeout, now_uuid, uuid_cache):
     try:
+        if not is_same_action_uuid(now_uuid, uuid_cache):
+            return
         async with session.get(liveurl, timeout=mintimeout) as response:
             playlist_text = await response.text()
     except asyncio.TimeoutError:
+        if not is_same_action_uuid(now_uuid, uuid_cache):
+            return
         async with session.get(liveurl, timeout=maxTimeout) as response:
             playlist_text = await response.text()
     playlist = m3u8.loads(playlist_text)
@@ -5923,9 +5984,12 @@ async def get_resolution(session, liveurl, mintimeout, maxTimeout):
 
 
 async def grab(session, id, m3u_dict, mintimeout, maxTimeout):
+    now_uuid = time_clock_update_dict.get('youtubelockuuid')
     try:
         url = youtubeUrl + id
         try:
+            if not is_same_action_uuid(now_uuid, 'youtubelockuuid'):
+                return
             async with session.get(url, timeout=mintimeout) as response:
                 content = await response.text()
                 if '.m3u8' not in content:
@@ -5934,6 +5998,8 @@ async def grab(session, id, m3u_dict, mintimeout, maxTimeout):
                         if '.m3u8' not in content:
                             return
         except asyncio.TimeoutError:
+            if not is_same_action_uuid(now_uuid, 'youtubelockuuid'):
+                return
             async with session.get(url, timeout=maxTimeout) as response:
                 content = await response.text()
                 if '.m3u8' not in content:
@@ -5946,7 +6012,8 @@ async def grab(session, id, m3u_dict, mintimeout, maxTimeout):
                 link = content[end - tuner: end]
                 start = link.find('https://')
                 end = link.find('.m3u8') + 5
-                match = await  get_resolution(session, link[start: end], mintimeout, maxTimeout)
+                match = await get_resolution(session, link[start: end], mintimeout, maxTimeout, now_uuid,
+                                             'youtubelockuuid')
                 if match:
                     highest_quality_link = match
                 break
@@ -5954,7 +6021,6 @@ async def grab(session, id, m3u_dict, mintimeout, maxTimeout):
                 tuner += 5
         if highest_quality_link:
             m3u_dict[id] = highest_quality_link
-            # print(highest_quality_link)
         else:
             m3u_dict[id] = link[start: end]
     except Exception as e:
@@ -5976,7 +6042,7 @@ def chaoronghe25():
         redisKeyBililiM3uFake = {}
         redisKeyBililiM3u.clear()
         redis_del_map(REDIS_KEY_BILIBILI_M3U)
-        #fakeurl = f'http://127.0.0.1:22771/bilibili/'
+        # fakeurl = f'http://127.0.0.1:22771/bilibili/'
         fakeurl = f"http://{ip}:{port_live}/bilibili/"
         for id, url in m3u_dict.items():
             try:
@@ -6010,7 +6076,7 @@ def chaoronghe26():
         redisKeyHuyaM3uFake = {}
         redisKeyHuyaM3u.clear()
         redis_del_map(REDIS_KEY_HUYA_M3U)
-        #fakeurl = 'http://127.0.0.1:22771/huya/'
+        # fakeurl = 'http://127.0.0.1:22771/huya/'
         fakeurl = f"http://{ip}:{port_live}/huya/"
         for id, url in m3u_dict.items():
             try:
@@ -6044,7 +6110,7 @@ def chaoronghe27():
         redisKeyYYM3uFake = {}
         redisKeyYYM3u.clear()
         redis_del_map(REDIS_KEY_YY_M3U)
-        #fakeurl='http://127.0.0.1:22771/YY/'
+        # fakeurl='http://127.0.0.1:22771/YY/'
         fakeurl = f"http://{ip}:{port_live}/YY/"
         for id, url in m3u_dict.items():
             try:
@@ -7027,225 +7093,272 @@ def serve_files2(filename):
     return send_from_directory(root_dir, filename, as_attachment=True)
 
 
+youtube_lock = threading.Lock()
+
+
 # 路由youtube
 @app.route('/youtube/<path:filename>')
 def serve_youtube(filename):
     id = filename.split('.')[0]
-    url = tv_dict_youtube.get(id)
-    if not url:
-        url = redisKeyYoutubeM3u.get(id)
-        if url is None or url == '':
-            try:
-                url = get_hd_url_youtube(id)
-            except:
-                return redirect(getFileNameByTagName('failTs'))
-            redisKeyYoutubeM3u[id] = url
-            reset_clock('youtube')
-        tv_dict_youtube.clear()
-        tv_dict_youtube[id] = url
-    else:
-        if is_update_clock_live('youtube') and time_clock_update_dict['youtubeId'] == id:
-            try:
-                url = get_hd_url_youtube(id)
-            except:
-                return redirect(getFileNameByTagName('failTs'))
-            redisKeyYoutubeM3u[id] = url
+    # 切换
+    if id not in tv_dict_youtube.keys():
+        update_uuid_action('youtubelockuuid')
+    with youtube_lock:
+        url = tv_dict_youtube.get(id)
+        if not url:
+            url = redisKeyYoutubeM3u.get(id)
+            if url is None or url == '':
+                try:
+                    url = get_hd_url_youtube(id)
+                except:
+                    return redirect(getFileNameByTagName('failTs'))
+                redisKeyYoutubeM3u[id] = url
+                reset_clock('youtube')
+            tv_dict_youtube.clear()
             tv_dict_youtube[id] = url
-            update_clock('youtube')
+        else:
+            if is_update_clock_live('youtube') and time_clock_update_dict['youtubeId'] == id:
+                try:
+                    url = get_hd_url_youtube(id)
+                except:
+                    return redirect(getFileNameByTagName('failTs'))
+                redisKeyYoutubeM3u[id] = url
+                tv_dict_youtube[id] = url
+                update_clock('youtube')
 
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Content-Type'] = 'text/html; charset=utf-8'
-        return response
+        @after_this_request
+        def add_header(response):
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Content-Type'] = 'text/html; charset=utf-8'
+            return response
 
-    return redirect(url)
+        return redirect(url)
+
+
+bilibili_lock = threading.Lock()
 
 
 # 路由bilibili
 @app.route('/bilibili/<path:filename>')
 def serve_files4(filename):
     id = filename.split('.')[0]
-    url = tv_dict_bilibili.get(id)
-    if not url:
-        url = redisKeyBililiM3u.get(id)
-        if url is None or url == '':
-            try:
-                url = get_hd_url_bilibili(id)
-            except:
-                return redirect(getFileNameByTagName('failTs'))
+    # 切换
+    if id not in tv_dict_bilibili.keys():
+        update_uuid_action('bilibililockuuid')
+    with bilibili_lock:
+        url = tv_dict_bilibili.get(id)
+        if not url:
+            url = redisKeyBililiM3u.get(id)
+            if url is None or url == '':
+                try:
+                    url = get_hd_url_bilibili(id)
+                except:
+                    return redirect(getFileNameByTagName('failTs'))
+                tv_dict_bilibili[id] = url
+                reset_clock('bilibili')
+            tv_dict_bilibili.clear()
             tv_dict_bilibili[id] = url
-            reset_clock('bilibili')
-        tv_dict_bilibili.clear()
-        tv_dict_bilibili[id] = url
-    else:
-        if is_update_clock_live('bilibili') and time_clock_update_dict['bilibiliId'] == id:
-            try:
-                url = get_hd_url_bilibili(id)
-            except:
-                return redirect(getFileNameByTagName('failTs'))
-            redisKeyBililiM3u[id] = url
-            tv_dict_bilibili[id] = url
-            update_clock('bilibili')
+        else:
+            if is_update_clock_live('bilibili') and time_clock_update_dict['bilibiliId'] == id:
+                try:
+                    url = get_hd_url_bilibili(id)
+                except:
+                    return redirect(getFileNameByTagName('failTs'))
+                redisKeyBililiM3u[id] = url
+                tv_dict_bilibili[id] = url
+                update_clock('bilibili')
 
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Content-Type'] = 'text/html; charset=utf-8'
-        return response
+        @after_this_request
+        def add_header(response):
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Content-Type'] = 'text/html; charset=utf-8'
+            return response
 
-    return redirect(url)
+        return redirect(url)
+
+
+huya_lock = threading.Lock()
 
 
 # 路由huya
 @app.route('/huya/<path:filename>')
 def serve_files5(filename):
     id = filename.split('.')[0]
-    url = tv_dict_huya.get(id)
-    if not url:
-        url = redisKeyHuyaM3u.get(id)
-        if url is None or url == '':
-            try:
-                url = get_hd_url_huya(id)
-            except:
-                return redirect(getFileNameByTagName('failTs'))
+    # 切换
+    if id not in tv_dict_huya.keys():
+        update_uuid_action('huyalockuuid')
+    with huya_lock:
+        url = tv_dict_huya.get(id)
+        if not url:
+            url = redisKeyHuyaM3u.get(id)
+            if url is None or url == '':
+                try:
+                    url = get_hd_url_huya(id)
+                except:
+                    return redirect(getFileNameByTagName('failTs'))
+                tv_dict_huya[id] = url
+                reset_clock('huya')
+            tv_dict_huya.clear()
             tv_dict_huya[id] = url
-            reset_clock('huya')
-        tv_dict_huya.clear()
-        tv_dict_huya[id] = url
-    else:
-        if is_update_clock_live('huya') and time_clock_update_dict['huyaId'] == id:
-            try:
-                url = get_hd_url_huya(id)
-            except:
-                return redirect(getFileNameByTagName('failTs'))
-            redisKeyHuyaM3u[id] = url
-            tv_dict_huya[id] = url
-            update_clock('huya')
+        else:
+            if is_update_clock_live('huya') and time_clock_update_dict['huyaId'] == id:
+                try:
+                    url = get_hd_url_huya(id)
+                except:
+                    return redirect(getFileNameByTagName('failTs'))
+                redisKeyHuyaM3u[id] = url
+                tv_dict_huya[id] = url
+                update_clock('huya')
 
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Content-Type'] = 'text/html; charset=utf-8'
-        return response
+        @after_this_request
+        def add_header(response):
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Content-Type'] = 'text/html; charset=utf-8'
+            return response
 
-    return redirect(url)
+        return redirect(url)
+
+
+yy_lock = threading.Lock()
 
 
 # 路由YY
 @app.route('/YY/<path:filename>')
 def serve_files6(filename):
     id = filename.split('.')[0]
-    url = tv_dict_yy.get(id)
-    if not url:
-        url = redisKeyYYM3u.get(id)
-        if url is None or url == '':
-            try:
-                url = get_hd_url_yy(id)
-            except:
-                return redirect(getFileNameByTagName('failTs'))
+    # 切换
+    if id not in tv_dict_yy.keys():
+        update_uuid_action('yylockuuid')
+    with yy_lock:
+        url = tv_dict_yy.get(id)
+        if not url:
+            url = redisKeyYYM3u.get(id)
+            if url is None or url == '':
+                try:
+                    url = get_hd_url_yy(id)
+                except:
+                    return redirect(getFileNameByTagName('failTs'))
+                tv_dict_yy[id] = url
+                reset_clock('yy')
+            tv_dict_yy.clear()
             tv_dict_yy[id] = url
-            reset_clock('yy')
-        tv_dict_yy.clear()
-        tv_dict_yy[id] = url
-    else:
-        if is_update_clock_live('yy') and time_clock_update_dict['yyId'] == id:
-            try:
-                url = get_hd_url_yy(id)
-            except:
-                return redirect(getFileNameByTagName('failTs'))
-            redisKeyYYM3u[id] = url
-            tv_dict_yy[id] = url
-            update_clock('yy')
+        else:
+            if is_update_clock_live('yy') and time_clock_update_dict['yyId'] == id:
+                try:
+                    url = get_hd_url_yy(id)
+                except:
+                    return redirect(getFileNameByTagName('failTs'))
+                redisKeyYYM3u[id] = url
+                tv_dict_yy[id] = url
+                update_clock('yy')
 
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Content-Type'] = 'text/html; charset=utf-8'
-        return response
+        @after_this_request
+        def add_header(response):
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Content-Type'] = 'text/html; charset=utf-8'
+            return response
 
-    return redirect(url)
+        return redirect(url)
+
+
+douyin_lock = threading.Lock()
 
 
 # 路由DOUYIN
 @app.route('/DOUYIN/<path:filename>')
 def serve_files_DOUYIN(filename):
     id = filename.split('.')[0]
-    url = tv_dict_douyin.get(id)
-    if not url:
-        url = redisKeyDOUYINM3u.get(id)
-        if url is None or url == '':
-            try:
-                url = get_hd_url_douyin(id)
-            except:
-                return redirect(getFileNameByTagName('failTs'))
+    # 切换
+    if id not in tv_dict_douyin.keys():
+        update_uuid_action('douyinlockuuid')
+    with douyin_lock:
+        url = tv_dict_douyin.get(id)
+        if not url:
+            url = redisKeyDOUYINM3u.get(id)
+            if url is None or url == '':
+                try:
+                    url = get_hd_url_douyin(id)
+                except:
+                    return redirect(getFileNameByTagName('failTs'))
+                tv_dict_douyin[id] = url
+                reset_clock('douyin')
+            tv_dict_douyin.clear()
             tv_dict_douyin[id] = url
-            reset_clock('douyin')
-        tv_dict_douyin.clear()
-        tv_dict_douyin[id] = url
-    else:
-        if is_update_clock_live('douyin') and time_clock_update_dict['douyinId'] == id:
-            try:
-                url = get_hd_url_douyin(id)
-            except:
-                return redirect(getFileNameByTagName('failTs'))
-            redisKeyDOUYINM3u[id] = url
-            tv_dict_douyin[id] = url
-            update_clock('douyin')
+        else:
+            if is_update_clock_live('douyin') and time_clock_update_dict['douyinId'] == id:
+                try:
+                    url = get_hd_url_douyin(id)
+                except:
+                    return redirect(getFileNameByTagName('failTs'))
+                redisKeyDOUYINM3u[id] = url
+                tv_dict_douyin[id] = url
+                update_clock('douyin')
 
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Content-Type'] = 'text/html; charset=utf-8'
-        return response
+        @after_this_request
+        def add_header(response):
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Content-Type'] = 'text/html; charset=utf-8'
+            return response
 
-    return redirect(url)
+        return redirect(url)
+
+
+twitch_lock = threading.Lock()
 
 
 # 路由twitch
 @app.route('/TWITCH/<path:filename>')
 def serve_files7(filename):
     id = filename.split('.')[0]
-    url = tv_dict_twitch.get(id)
-    if not url:
-        url = redisKeyTWITCHM3u.get(id)
-        if url is None or url == '':
-            try:
-                url = get_hd_url_twitch(id)
-            except:
-                return redirect(getFileNameByTagName('failTs'))
+    # 切换
+    if id not in tv_dict_twitch.keys():
+        update_uuid_action('twitchlockuuid')
+    with twitch_lock:
+        url = tv_dict_twitch.get(id)
+        if not url:
+            url = redisKeyTWITCHM3u.get(id)
+            if url is None or url == '':
+                try:
+                    url = get_hd_url_twitch(id)
+                except:
+                    return redirect(getFileNameByTagName('failTs'))
+                tv_dict_twitch[id] = url
+                reset_clock('twitch')
+            tv_dict_twitch.clear()
             tv_dict_twitch[id] = url
-            reset_clock('twitch')
-        tv_dict_twitch.clear()
-        tv_dict_twitch[id] = url
-    else:
-        if is_update_clock_live('twitch') and time_clock_update_dict['twitchId'] == id:
-            try:
-                url = get_hd_url_twitch(id)
-            except:
-                return redirect(getFileNameByTagName('failTs'))
-            redisKeyTWITCHM3u[id] = url
-            tv_dict_twitch[id] = url
-            update_clock('twitch')
+        else:
+            if is_update_clock_live('twitch') and time_clock_update_dict['twitchId'] == id:
+                try:
+                    url = get_hd_url_twitch(id)
+                except:
+                    return redirect(getFileNameByTagName('failTs'))
+                redisKeyTWITCHM3u[id] = url
+                tv_dict_twitch[id] = url
+                update_clock('twitch')
 
-    @after_this_request
-    def add_header(response):
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Content-Type'] = 'text/html; charset=utf-8'
-        return response
+        @after_this_request
+        def add_header(response):
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Content-Type'] = 'text/html; charset=utf-8'
+            return response
 
-    return redirect(url)
+        return redirect(url)
 
 
 def reset_clock(key):
     global time_clock_update_dict
     time_clock_update_dict[key] = '0'
+
+
+migu_lock = threading.Lock()
+cq_lock = threading.Lock()
+efs_lock = threading.Lock()
 
 
 # 路由normal
@@ -7267,31 +7380,44 @@ def serve_files_normal(filename):
         url = redisKeyNormalM3U.get(id)
         if url is None or url == '':
             if id.startswith('857,'):
-                url = get_hd_url_857(id)
-                redisKeyNormalM3U[id] = url
+                with efs_lock:
+                    url = tv_dict_normal.get(id)
+                    if not url:
+                        url = get_hd_url_857(id)
+                        redisKeyNormalM3U[id] = url
         if id.startswith('migu,'):
-            url = get_hd_url_migu(id)
-            redisKeyNormalM3U[id] = url
-            reset_clock('migu')
+            with migu_lock:
+                url = tv_dict_normal.get(id)
+                if not url:
+                    url = get_hd_url_migu(id)
+                    redisKeyNormalM3U[id] = url
+                    reset_clock('migu')
         if id.startswith('cq,'):
-            url = get_hd_url_cq(id)
-            redisKeyNormalM3U[id] = url
-            reset_clock('cq')
+            with cq_lock:
+                url = tv_dict_normal.get(id)
+                if not url:
+                    url = get_hd_url_cq(id)
+                    redisKeyNormalM3U[id] = url
+                    reset_clock('cq')
         tv_dict_normal.clear()
         tv_dict_normal[id] = url
     else:
         if id.startswith('migu,'):
             if is_update_clock_live('migu') and time_clock_update_dict['miguId'] == id:
-                url = get_hd_url_migu(id)
-                redisKeyNormalM3U[id] = url
-                tv_dict_normal[id] = url
-                update_clock('migu')
+                with migu_lock:
+                    if is_update_clock_live('migu') and time_clock_update_dict['miguId'] == id:
+                        url = get_hd_url_migu(id)
+                        redisKeyNormalM3U[id] = url
+                        tv_dict_normal[id] = url
+                        update_clock('migu')
         if id.startswith('cq,'):
             if is_update_clock_live('cq') and time_clock_update_dict['cqId'] == id:
-                url = get_hd_url_cq(id)
-                redisKeyNormalM3U[id] = url
-                tv_dict_normal[id] = url
-                update_clock('cq')
+                with cq_lock:
+                    if is_update_clock_live('cq') and time_clock_update_dict['cqId'] == id:
+                        url = get_hd_url_cq(id)
+                        redisKeyNormalM3U[id] = url
+                        tv_dict_normal[id] = url
+                        update_clock('cq')
 
     @after_this_request
     def add_header(response):

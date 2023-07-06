@@ -99,6 +99,21 @@ def write_bytes_to_file(filename, plaintext):
         f.write(plaintext)
 
 
+def check_files_in_path(path):
+    if os.path.exists(path):  # 判断路径是否存在
+        files = os.listdir(path)  # 获取路径下的所有文件和文件夹
+        if files:  # 判断文件列表是否为空
+            return True  # 存在文件
+    return False  # 不存在文件
+
+
+def is_success_write_file(filepath):
+    with open(filepath, "rb") as f2:
+        data = f2.read()
+    if len(data) == 0:
+        return False
+    return True
+
 class MyFrame(tk.Frame):
     def read_video_file(self):
         file_path = self.file_path.get()
@@ -137,17 +152,13 @@ class MyFrame(tk.Frame):
         if not os.path.exists(slices_path):
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
-            with open(slices_path, "rb") as f2:
-                data = f2.read()
-            if len(data) == 0:
+            if not is_success_write_file(slices_path):
                 os.remove(slices_path)
                 if gputype == '1':
                     cmd = f"ffmpeg -i \"{escaped_path}\"  -map 0:v:0 -map 0:a:0 -c:v hevc_nvenc -b:v 2M -pix_fmt yuv420p -c:a aac -b:a 128k   -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" -r 23.976  \"{slices_path}\""
                     process = subprocess.Popen(cmd, shell=True)
                     process.communicate()  # Wait for process to finish
-                with open(slices_path, "rb") as f2:
-                    data = f2.read()
-                if len(data) == 0:
+                if not is_success_write_file(slices_path):
                     os.remove(slices_path)
                     if gputype == '0':
                         cmd = f"ffmpeg -i \"{escaped_path}\" -pix_fmt yuv420p -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k  -r 23.976 \"{slices_path}\""
@@ -165,17 +176,13 @@ class MyFrame(tk.Frame):
                 new_file_name = new_file_name.replace('.ts', '2.ts')
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
-            with open(slices_path.replace('.ts', '2.ts'), "rb") as f2:
-                data = f2.read()
-            if len(data) == 0:
+            if not is_success_write_file(slices_path.replace('.ts', '2.ts')):
                 os.remove(slices_path.replace('.ts', '2.ts'))
                 if gputype == '1':
                     cmd = f"ffmpeg -i \"{escaped_path}\"  -map 0:v:0 -map 0:a:0 -c:v hevc_nvenc -b:v 2M -pix_fmt yuv420p -c:a aac -b:a 128k   -vf \"subtitles=filename=\'{escaped_path2.replace(':', ss)}\'\" -r 23.976  \"{slices_path.replace('.ts', '2.ts')}\""
                     process = subprocess.Popen(cmd, shell=True)
                     process.communicate()  # Wait for process to finish
-                with open(slices_path.replace('.ts', '2.ts'), "rb") as f2:
-                    data = f2.read()
-                if len(data) == 0:
+                if not is_success_write_file(slices_path.replace('.ts', '2.ts')):
                     os.remove(slices_path.replace('.ts', '2.ts'))
                     if gputype == '0':
                         cmd = f"ffmpeg -i \"{escaped_path}\" -pix_fmt yuv420p -map 0:v:0 -map 0:a:0 -c:v libx265 -b:v 2M -c:a aac -b:a 128k   -r 23.976  \"{slices_path.replace('.ts', '2.ts')}\""
@@ -223,9 +230,13 @@ class MyFrame(tk.Frame):
             ts_type = self.ts_type.get()
             if not ts_type or ts_type == '':
                 ts_type = 'copy'
-            cmd = f"ffmpeg -i \"{escaped_path}\"  -c:v {ts_type} -c:a aac  -map 0:v:0 -map 0:a:0? -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path} -f hls {outputfilepath}.m3u8"
+            cmd = f"ffmpeg -i \"{escaped_path}\"  -c:v {ts_type} -c:a copy  -map 0:v:0 -map 0:a:0? -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path} -f hls {outputfilepath}.m3u8"
             process = subprocess.Popen(cmd, shell=True)
             process.communicate()  # Wait for process to finish
+            if not check_files_in_path(new_folder_path):
+                cmd = f"ffmpeg -i \"{escaped_path}\"  -c:v {ts_type} -c:a aac  -map 0:v:0 -map 0:a:0? -hls_time 10 -hls_list_size 0 -hls_segment_filename {slices_path} -f hls {outputfilepath}.m3u8"
+                process = subprocess.Popen(cmd, shell=True)
+                process.communicate()  # Wait for process to finish
             match = re.search(r'(.+?)\.[^.]*$', file_name)
             if match:
                 result = match.group(1)

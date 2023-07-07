@@ -1,8 +1,3 @@
-now_uuid = update_uuid_action('douyinlockuuid')
-        if not is_same_action_uuid(now_uuid, 'twitchlockuuid'):
-            return
-
-            now_uuid = time_clock_update_dict.get('twitchlockuuid')
-            twitchlockuuid
-            'twitchlockuuid': '0',
-                          'bilibililockuuid': '0', 'huyalockuuid': '0', 'yylockuuid': '0', 'douyinlockuuid': '0'
+now_uuid = time_clock_update_dict.get('youtubelockuuid')
+            if not is_same_action_uuid(now_uuid, 'youtubelockuuid'):
+                return

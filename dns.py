@@ -154,10 +154,10 @@ REDIS_KEY_EXTRA_DNS_PORT = "extradnsport"
 extradnsport = {REDIS_KEY_EXTRA_DNS_PORT: 7874}
 
 REDIS_KEY_DNS_QUERY_NUM = "dnsquerynum"
-dnsquerynum = {REDIS_KEY_DNS_QUERY_NUM: 150}
+dnsquerynum = {REDIS_KEY_DNS_QUERY_NUM: 1000}
 
 REDIS_KEY_DNS_TIMEOUT = "dnstimeout"
-dnstimeout = {REDIS_KEY_DNS_TIMEOUT: 15}
+dnstimeout = {REDIS_KEY_DNS_TIMEOUT: 30}
 
 
 # 获取软路由主路由ip
@@ -1634,14 +1634,14 @@ def init_dns_query_num():
         try:
             num = int(num)
         except:
-            num = 150
+            num = 1000
         if num == 0:
-            num = 150
+            num = 1000
             dnsquerynum[REDIS_KEY_DNS_QUERY_NUM] = num
         else:
             dnsquerynum[REDIS_KEY_DNS_QUERY_NUM] = num
     else:
-        num = 150
+        num = 1000
         dnsquerynum[REDIS_KEY_DNS_QUERY_NUM] = num
     return num
 
@@ -1654,14 +1654,14 @@ def init_dns_timeout():
         try:
             num = int(num)
         except:
-            num = 20
+            num = 30
         if num == 0:
-            num = 20
+            num = 30
             dnstimeout[REDIS_KEY_DNS_TIMEOUT] = num
         else:
             dnstimeout[REDIS_KEY_DNS_TIMEOUT] = num
     else:
-        num = 20
+        num = 30
         dnstimeout[REDIS_KEY_DNS_TIMEOUT] = num
     return num
 

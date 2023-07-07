@@ -511,10 +511,10 @@ REDIS_KEY_EXTRA_DNS_PORT = "extradnsport"
 extradnsport = {REDIS_KEY_EXTRA_DNS_PORT: 0}
 
 REDIS_KEY_DNS_QUERY_NUM = "dnsquerynum"
-dnsquerynum = {REDIS_KEY_DNS_QUERY_NUM: 0}
+dnsquerynum = {REDIS_KEY_DNS_QUERY_NUM: 1000}
 
 REDIS_KEY_DNS_TIMEOUT = "dnstimeout"
-dnstimeout = {REDIS_KEY_DNS_TIMEOUT: 0}
+dnstimeout = {REDIS_KEY_DNS_TIMEOUT: 30}
 
 REDIS_KEY_IP = "ip"
 ip = {REDIS_KEY_IP: ""}
@@ -3634,15 +3634,15 @@ def init_dns_timeout():
         try:
             num = int(num)
         except:
-            num = 20
+            num = 30
         if num == 0:
-            num = 20
+            num = 30
             redis_add(REDIS_KEY_DNS_TIMEOUT, num)
             dnstimeout[REDIS_KEY_DNS_TIMEOUT] = num
         else:
             dnstimeout[REDIS_KEY_DNS_TIMEOUT] = num
     else:
-        num = 20
+        num = 30
         redis_add(REDIS_KEY_DNS_TIMEOUT, num)
         dnstimeout[REDIS_KEY_DNS_TIMEOUT] = num
     return num
@@ -3659,15 +3659,15 @@ def init_dns_query_num():
         try:
             num = int(num)
         except:
-            num = 150
+            num = 1000
         if num == 0:
-            num = 150
+            num = 1000
             redis_add(REDIS_KEY_DNS_QUERY_NUM, num)
             dnsquerynum[REDIS_KEY_DNS_QUERY_NUM] = num
         else:
             dnsquerynum[REDIS_KEY_DNS_QUERY_NUM] = num
     else:
-        num = 150
+        num = 1000
         redis_add(REDIS_KEY_DNS_QUERY_NUM, num)
         dnsquerynum[REDIS_KEY_DNS_QUERY_NUM] = num
     return num
@@ -6655,7 +6655,7 @@ def chaoronghe31_single(type):
         removeredisKeyNormalKeys = []
         for key in redisKeyNormal.keys():
             if key.startswith(type):
-                if type != 'migu,' and type != 'cq,':
+                if type != 'migu,' and type != 'cq,' and type != 'hkdtmb,':
                     removeredisKeyNormalKeys.append(key)
         map_remove_keys(redisKeyNormal, removeredisKeyNormalKeys)
         redis_del_map_keys(REDIS_KEY_NORMAL, removeredisKeyNormalKeys)
@@ -6667,6 +6667,18 @@ def chaoronghe31_single(type):
         redisKeyM3uFake = {}
         # fakeurl = f"http://127.0.0.1:22771/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
+        for id, name in redisKeyNormal.items():
+            if not id.startswith('hkdtmb,'):
+                continue
+            try:
+                name, logo = name.split(',')
+            except Exception as e:
+                logo = None
+            if logo is None:
+                link = f'#EXTINF:-1 group-title="香港地面波"  tvg-name="{name}",{name}\n'
+            else:
+                link = f'#EXTINF:-1 group-title="香港地面波" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+            redisKeyM3uFake[f'{fakeurl}{id}.m3u8'] = link
         for id, url in redisKeyNormalM3U.items():
             try:
                 if id in m3u_dict.keys():
@@ -6706,6 +6718,11 @@ def chaoronghe31_single(type):
                         link = f'#EXTINF:-1 group-title="体育直播3"  tvg-name="{name}",{name}\n'
                     else:
                         link = f'#EXTINF:-1 group-title="体育直播3" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                elif id.startswith('hkdtmb,'):
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="香港地面波"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="香港地面波" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 else:
                     if logo is None:
                         link = f'#EXTINF:-1 group-title="国内"  tvg-name="{name}",{name}\n'
@@ -6780,8 +6797,20 @@ def chaoronghe31():
         redisKeyM3uFake = {}
         redisKeyNormalM3U.clear()
         redis_del_map(REDIS_KEY_NORMAL_M3U)
-        # fakeurl = f"http://127.0.0.1:22771/normal/"
+        #fakeurl = f"http://127.0.0.1:22771/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
+        for id, name in redisKeyNormal.items():
+            if not id.startswith('hkdtmb,'):
+                continue
+            try:
+                name, logo = name.split(',')
+            except Exception as e:
+                logo = None
+            if logo is None:
+                link = f'#EXTINF:-1 group-title="香港地面波"  tvg-name="{name}",{name}\n'
+            else:
+                link = f'#EXTINF:-1 group-title="香港地面波" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+            redisKeyM3uFake[f'{fakeurl}{id}.m3u8'] = link
         for id, url in m3u_dict.items():
             try:
                 redisKeyNormalM3U[id] = url
@@ -6860,7 +6889,7 @@ def chaoronghe24():
             return "empty"
         ip = init_IP()
         redisKeyYoutubeM3uFake = {}
-        #fakeurl = 'http://127.0.0.1:22771/youtube/'
+        # fakeurl = 'http://127.0.0.1:22771/youtube/'
         fakeurl = f"http://{ip}:{port_live}/youtube/"
         for id, url in m3u_dict.items():
             try:
@@ -7281,9 +7310,60 @@ def reset_clock(key):
     time_clock_update_dict[key] = '0'
 
 
+def get_m3u8_link(id):
+    url = f"https://hklive.tv/{id}"
+
+    headers = {
+        "Referer": f"https://hklive.tv/{id}",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67",
+    }
+
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        content = response.content.decode("utf-8")  # 解码为字符串
+        # 使用正则表达式提取file对应的字符串
+        pattern = r'file:\s*"(.*?)"'
+        match = re.search(pattern, content)
+        if match:
+            file_url = match.group(1)
+            return file_url
+        else:
+            return None
+    else:
+        return None
+
+
+def get_m3u8_raw_content(url, id):
+    if not url:
+        return None
+    headers = {
+        "Referer": f"https://hkdtmb.com/{id}",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67",
+    }
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        content = response.content.decode('utf-8')
+        ts_url = f"https://hklive.tv/dtmb/{id}/"
+        new_m3u8_data = ''
+        for line in content.splitlines():
+            if line.startswith(
+                    ('#EXTM3U', '#EXT-X-VERSION:', '#EXT-X-MEDIA-SEQUENCE', '#EXT-X-TARGETDURATION', '#EXTINF')):
+                new_m3u8_data += line
+                new_m3u8_data += '\n'
+            else:
+                new_m3u8_data += ts_url
+                new_m3u8_data += line
+                new_m3u8_data += '\n'
+        return new_m3u8_data
+    else:
+        return None
+
+
 migu_lock = threading.Lock()
 cq_lock = threading.Lock()
 efs_lock = threading.Lock()
+hkdtmb_lock = threading.Lock()
+
 
 
 # 路由normal
@@ -7310,20 +7390,98 @@ def serve_files_normal(filename):
                     if not url:
                         url = get_hd_url_857(id)
                         redisKeyNormalM3U[id] = url
-        if id.startswith('migu,'):
-            with migu_lock:
-                url = tv_dict_normal.get(id)
-                if not url:
-                    url = get_hd_url_migu(id)
-                    redisKeyNormalM3U[id] = url
-                    reset_clock('migu')
-        if id.startswith('cq,'):
-            with cq_lock:
-                url = tv_dict_normal.get(id)
-                if not url:
-                    url = get_hd_url_cq(id)
-                    redisKeyNormalM3U[id] = url
-                    reset_clock('cq')
+            elif id.startswith('migu,'):
+                with migu_lock:
+                    url = tv_dict_normal.get(id)
+                    if not url:
+                        url = get_hd_url_migu(id)
+                        redisKeyNormalM3U[id] = url
+                        reset_clock('migu')
+            elif id.startswith('cq,'):
+                with cq_lock:
+                    url = tv_dict_normal.get(id)
+                    if not url:
+                        url = get_hd_url_cq(id)
+                        redisKeyNormalM3U[id] = url
+                        reset_clock('cq')
+            elif id.startswith('hkdtmb,'):
+                with hkdtmb_lock:
+                    hkid = id.split(',')[1]
+                    url = tv_dict_normal.get(id)
+                    if not url:
+                        url = redisKeyNormalM3U.get(id)
+                        if not url:
+                            m3u8_url = get_m3u8_link(hkid)
+                        if not m3u8_url:
+                            return redirect(getFileNameByTagName('failTs'))
+                        m3u8_data = get_m3u8_raw_content(m3u8_url, hkid)
+                        if not m3u8_data:
+                            return redirect(getFileNameByTagName('failTs'))
+                        tv_dict_normal.clear()
+                        tv_dict_normal[id] = m3u8_url
+                        # 特殊的，这个url可能失效
+                        redisKeyNormalM3U[id] = m3u8_url
+                        return Response(m3u8_data, headers={'Accept': '*/*',
+                                                            'Accept-Encoding': 'gzip, deflate, br',
+                                                            'Referer': f'https://hklive.tv/{hkid}',
+                                                            'Sec-Ch-Ua-Platform': "Windows",
+                                                            'Sec-Fetch-Dest': 'empty',
+                                                            'Sec-Fetch-Mode': 'cors',
+                                                            'Sec-Fetch-Site': 'same-origin',
+                                                            'Cache-Control': 'no-store, no-cache, must-revalidate',
+                                                            'Pragma': 'no-cache',
+                                                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'})
+                    else:
+                        m3u8_data = get_m3u8_raw_content(url, hkid)
+                        m3u8_url = url
+                        if not m3u8_data:
+                            m3u8_url = get_m3u8_link(hkid)
+                            if not m3u8_url:
+                                return redirect(getFileNameByTagName('failTs'))
+                            m3u8_data = get_m3u8_raw_content(m3u8_url, hkid)
+                        if not m3u8_data:
+                            return redirect(getFileNameByTagName('failTs'))
+                        tv_dict_normal.clear()
+                        tv_dict_normal[id] = m3u8_url
+                        # 特殊的，这个url可能失效
+                        redisKeyNormalM3U[id] = m3u8_url
+                        return Response(m3u8_data, headers={'Accept': '*/*',
+                                                            'Accept-Encoding': 'gzip, deflate, br',
+                                                            'Referer': f'https://hklive.tv/{hkid}',
+                                                            'Sec-Ch-Ua-Platform': "Windows",
+                                                            'Sec-Fetch-Dest': 'empty',
+                                                            'Sec-Fetch-Mode': 'cors',
+                                                            'Sec-Fetch-Site': 'same-origin',
+                                                            'Cache-Control': 'no-store, no-cache, must-revalidate',
+                                                            'Pragma': 'no-cache',
+                                                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'})
+        else:
+            if id.startswith('hkdtmb,'):
+                with hkdtmb_lock:
+                    hkid = id.split(',')[1]
+                    m3u8_data = get_m3u8_raw_content(url, hkid)
+                    m3u8_url = url
+                    if not m3u8_data:
+                        m3u8_url = get_m3u8_link(hkid)
+                        if not m3u8_url:
+                            return redirect(getFileNameByTagName('failTs'))
+                        m3u8_data = get_m3u8_raw_content(m3u8_url, hkid)
+                    if not m3u8_data:
+                        return redirect(getFileNameByTagName('failTs'))
+                    tv_dict_normal.clear()
+                    tv_dict_normal[id] = m3u8_url
+                    # 特殊的，这个url可能失效
+                    redisKeyNormalM3U[id] = m3u8_url
+                    return Response(m3u8_data, headers={'Accept': '*/*',
+                                                        'Accept-Encoding': 'gzip, deflate, br',
+                                                        'Referer': f'https://hklive.tv/{hkid}',
+                                                        'Sec-Ch-Ua-Platform': "Windows",
+                                                        'Sec-Fetch-Dest': 'empty',
+                                                        'Sec-Fetch-Mode': 'cors',
+                                                        'Sec-Fetch-Site': 'same-origin',
+                                                        'Cache-Control': 'no-store, no-cache, must-revalidate',
+                                                        'Pragma': 'no-cache',
+                                                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'})
         tv_dict_normal.clear()
         tv_dict_normal[id] = url
     else:
@@ -7335,7 +7493,7 @@ def serve_files_normal(filename):
                         redisKeyNormalM3U[id] = url
                         tv_dict_normal[id] = url
                         update_clock('migu')
-        if id.startswith('cq,'):
+        elif id.startswith('cq,'):
             if is_update_clock_live('cq') and time_clock_update_dict['cqId'] == id:
                 with cq_lock:
                     if is_update_clock_live('cq') and time_clock_update_dict['cqId'] == id:
@@ -7343,6 +7501,32 @@ def serve_files_normal(filename):
                         redisKeyNormalM3U[id] = url
                         tv_dict_normal[id] = url
                         update_clock('cq')
+        elif id.startswith('hkdtmb,'):
+            with hkdtmb_lock:
+                hkid = id.split(',')[1]
+                m3u8_data = get_m3u8_raw_content(url, hkid)
+                m3u8_url = url
+                if not m3u8_data:
+                    m3u8_url = get_m3u8_link(hkid)
+                    if not m3u8_url:
+                        return redirect(getFileNameByTagName('failTs'))
+                    m3u8_data = get_m3u8_raw_content(m3u8_url, hkid)
+                if not m3u8_data:
+                    return redirect(getFileNameByTagName('failTs'))
+                tv_dict_normal.clear()
+                tv_dict_normal[id] = m3u8_url
+                # 特殊的，这个url可能失效
+                redisKeyNormalM3U[id] = m3u8_url
+                return Response(m3u8_data, headers={'Accept': '*/*',
+                                                    'Accept-Encoding': 'gzip, deflate, br',
+                                                    'Referer': f'https://hklive.tv/{hkid}',
+                                                    'Sec-Ch-Ua-Platform': "Windows",
+                                                    'Sec-Fetch-Dest': 'empty',
+                                                    'Sec-Fetch-Mode': 'cors',
+                                                    'Sec-Fetch-Site': 'same-origin',
+                                                    'Cache-Control':'no-store, no-cache, must-revalidate',
+                                                    'Pragma':'no-cache',
+                                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'})
 
     @after_this_request
     def add_header(response):

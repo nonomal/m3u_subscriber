@@ -7381,7 +7381,7 @@ def get_m3u8_raw_content(url, id):
         old_m3u8_data_hk['lastnumber'] = lastnumber
         old_m3u8_data_hk['id'] = id
         old_m3u8_data_hk['end'] = '0'
-        return new_m3u8_data
+        return new_m3u8_data.encode()
     else:
         return None
 
@@ -7418,7 +7418,7 @@ def video_m3u8_normal_ts(path):
     return video_m3u8_normal_ts(path)
 
 
-old_m3u8_data_hk = {'id': '0', 'data': '', 'end': '0', 'lastnumber': ''}
+old_m3u8_data_hk = {'id': '0', 'data': b'', 'end': '0', 'lastnumber': ''}
 
 
 def get_m3u8_data_by_hkid(hkid):

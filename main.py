@@ -18,6 +18,7 @@ import hashlib
 import urllib
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
+from functools import wraps
 
 import m3u8
 import aiohttp
@@ -7314,10 +7315,10 @@ def get_m3u8_link(id):
 
     headers = {
         "Referer": f"https://hklive.tv/{id}",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67",
+        "User-Agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
     }
 
-    response = requests.get(url, timeout=360, headers=headers)
+    response = requests.get(url, headers=headers)
     if response.status_code == 200:
         content = response.content.decode("utf-8")  # 解码为字符串
         # 使用正则表达式提取file对应的字符串
@@ -7337,15 +7338,17 @@ def get_ts_data(id, number):
 
     headers = {
         "Referer": f"https://hklive.tv/{id}",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67",
+        "User-Agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
     }
-    response = requests.get(url, headers=headers, stream=True)
+    response = requests.get(url, headers=headers)
     if response.status_code == 200:
-        bytes_data = b''
-        for chunk in response.iter_content(chunk_size=(1024 * 64)):
-            if chunk:
-                bytes_data += chunk
-        return bytes_data
+        # bytes_data = b''
+        # for chunk in response.iter_content(chunk_size=(1024 * 64)):
+        #     if chunk:
+        #         bytes_data += chunk
+        if old_m3u8_data_hk['lastnumber'].startswith(number):
+            old_m3u8_data_hk['end'] = '1'
+        return response.content
     else:
         return None
 
@@ -7355,14 +7358,16 @@ def get_m3u8_raw_content(url, id):
         return None
     headers = {
         "Referer": f"https://hkdtmb.com/{id}",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67",
+        "User-Agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
     }
-    response = requests.get(url, timeout=360, headers=headers)
+    response = requests.get(url, headers=headers)
     if response.status_code == 200:
         content = response.content.decode('utf-8')
         new_m3u8_data = ''
+        ip = init_IP()
         #fakeurl = f"http://127.0.0.1:5000/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
+        lastnumber = ''
         for line in content.splitlines():
             if line.startswith(
                     ('#EXTM3U', '#EXT-X-VERSION:', '#EXT-X-MEDIA-SEQUENCE', '#EXT-X-TARGETDURATION', '#EXTINF')):
@@ -7371,6 +7376,11 @@ def get_m3u8_raw_content(url, id):
             else:
                 # new_m3u8_data += f'https://hklive.tv/dtmb/{line}\n'
                 new_m3u8_data += f'{fakeurl}hkdtmb,{id},{line}\n'
+                lastnumber = line
+        old_m3u8_data_hk['data'] = new_m3u8_data
+        old_m3u8_data_hk['lastnumber'] = lastnumber
+        old_m3u8_data_hk['id'] = id
+        old_m3u8_data_hk['end'] = '0'
         return new_m3u8_data
     else:
         return None
@@ -7382,11 +7392,23 @@ efs_lock = threading.Lock()
 hkdtmb_lock = threading.Lock()
 
 
+def jump_hk(id, number):
+    if '0' == old_m3u8_data_hk['id']:
+        return True
+    elif id == old_m3u8_data_hk['id']:
+        return True
+    elif int(number) / 1000 - time.time() > -60:
+        return True
+    return False
+
+
 # 推流普通ts文件
 @app.route('/normal/<path:path>.ts')
 def video_m3u8_normal_ts(path):
     type, id, number = path.split(',')
     if type == 'hkdtmb':
+        if not jump_hk(id, number):
+            return
         try:
             bytesdata = get_ts_data(id, number)
             if bytesdata:
@@ -7394,6 +7416,19 @@ def video_m3u8_normal_ts(path):
         except:
             pass
     return video_m3u8_normal_ts(path)
+
+
+old_m3u8_data_hk = {'id': '0', 'data': '', 'end': '0', 'lastnumber': ''}
+
+
+def get_m3u8_data_by_hkid(hkid):
+    if hkid != old_m3u8_data_hk['id']:
+        return None
+    if old_m3u8_data_hk['data'] == '':
+        return None
+    if old_m3u8_data_hk['end'] == '1':
+        return None
+    return old_m3u8_data_hk['data']
 
 
 # 路由normal
@@ -7411,39 +7446,44 @@ def serve_files_normal(filename):
         chaoronghe31_single('857,')
         return redirect(getFileNameByTagName('failTs'))
     elif id.startswith('hkdtmb,'):
-        # with hkdtmb_lock:
-        hkid = id.split(',')[1]
-        url = tv_dict_normal.get(id)
-        if not url:
-            url = redisKeyNormalM3U.get(id)
-            m3u8_url = url
+        with hkdtmb_lock:
+            hkid = id.split(',')[1]
+            m3u8_data = get_m3u8_data_by_hkid(hkid)
+            if m3u8_data:
+                return Response(m3u8_data,headers=headers_default)
+            # 强制换id，打断ts推送
+            old_m3u8_data_hk['id'] = id
+            url = tv_dict_normal.get(id)
             if not url:
-                m3u8_url = get_m3u8_link(hkid)
-            if not m3u8_url:
-                return redirect(getFileNameByTagName('failTs'))
-            m3u8_data = get_m3u8_raw_content(m3u8_url, hkid)
-            if not m3u8_data:
-                return redirect(getFileNameByTagName('failTs'))
-            tv_dict_normal.clear()
-            tv_dict_normal[id] = m3u8_url
-            # 特殊的，这个url可能失效
-            redisKeyNormalM3U[id] = m3u8_url
-            return Response(m3u8_data)
-        else:
-            m3u8_data = get_m3u8_raw_content(url, hkid)
-            m3u8_url = url
-            if not m3u8_data:
-                m3u8_url = get_m3u8_link(hkid)
+                url = redisKeyNormalM3U.get(id)
+                m3u8_url = url
+                if not url:
+                    m3u8_url = get_m3u8_link(hkid)
                 if not m3u8_url:
                     return redirect(getFileNameByTagName('failTs'))
                 m3u8_data = get_m3u8_raw_content(m3u8_url, hkid)
-            if not m3u8_data:
-                return redirect(getFileNameByTagName('failTs'))
-            tv_dict_normal.clear()
-            tv_dict_normal[id] = m3u8_url
-            # 特殊的，这个url可能失效
-            redisKeyNormalM3U[id] = m3u8_url
-            return Response(m3u8_data)
+                if not m3u8_data:
+                    return redirect(getFileNameByTagName('failTs'))
+                tv_dict_normal.clear()
+                tv_dict_normal[id] = m3u8_url
+                # 特殊的，这个url可能失效
+                redisKeyNormalM3U[id] = m3u8_url
+                return Response(m3u8_data,headers=headers_default)
+            else:
+                m3u8_data = get_m3u8_raw_content(url, hkid)
+                m3u8_url = url
+                if not m3u8_data:
+                    m3u8_url = get_m3u8_link(hkid)
+                    if not m3u8_url:
+                        return redirect(getFileNameByTagName('failTs'))
+                    m3u8_data = get_m3u8_raw_content(m3u8_url, hkid)
+                if not m3u8_data:
+                    return redirect(getFileNameByTagName('failTs'))
+                tv_dict_normal.clear()
+                tv_dict_normal[id] = m3u8_url
+                # 特殊的，这个url可能失效
+                redisKeyNormalM3U[id] = m3u8_url
+                return Response(m3u8_data,headers=headers_default)
     url = tv_dict_normal.get(id)
     if not url:
         url = redisKeyNormalM3U.get(id)

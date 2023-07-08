@@ -347,7 +347,9 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
                   'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
                   'usernameSys': 'admin', 'passwordSys': 'password', 'normalM3uClock': '7200',
-                  'normalSubscriberClock': '10800', 'proxys': 'http://127.0.0.1:7890||http://127.0.0.1:5336',
+                  'normalSubscriberClock': '10800',
+                  'proxys': 'http://127.0.0.1:7890@@username=Ldggz@@password=@S!WCMt%EC6T@vCLy!4R||http://192.168.5.1:7890@@username=Ldggz@@password=@S!WCMt%EC6T@vCLy!4R',
+                  'proxyschina': 'http://192.168.5.1:5244||http://127.0.0.1:5244',
                   'failTs': 'https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4',
                   'proxySubscriberClock': '3600', 'autoDnsSwitchClock': '600', 'syncClock': '10',
                   'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国', 'foreignTopDomain':
@@ -1154,7 +1156,7 @@ def checkToDecrydecrypt2(url, redis_dict, m3u_string, filenameDict, secretNameDi
 
 def fetch_url(url, redis_dict):
     try:
-        response = requests.get(url, timeout=5, verify=False)
+        response = download_with_proxy(url, bili_header, 1, True, True)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1165,8 +1167,8 @@ def fetch_url(url, redis_dict):
         m3u_string += "\n"
         # print(f"success to fetch URL: {url}")
         return m3u_string
-    except requests.exceptions.Timeout:
-        response = requests.get(url, timeout=30, verify=False)
+    except requests.exceptions.SSLError:
+        response = download_with_proxy(url, bili_header, 1, False, True)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1182,7 +1184,7 @@ def fetch_url(url, redis_dict):
             url = url.decode('utf-8')
         except:
             pass
-        response = requests.get(url, timeout=15, verify=False)
+        response = download_with_proxy(url, bili_header, 1, True, True)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1248,15 +1250,15 @@ def download_files(urls, redis_dict):
 
 def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, uploadGithub, uploadWebdav):
     try:
-        response = requests.get(url, timeout=5, verify=False)
+        response = download_with_proxy(url, bili_header, 1, True, True)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
         # 加密文件检测和解码
         checkToDecrydecrypt2(url, passwordDict, m3u_string, filenameDict, secretNameDict, uploadGitee,
                              uploadGithub, uploadWebdav)
-    except requests.exceptions.Timeout:
-        response = requests.get(url, timeout=30, verify=False)
+    except requests.exceptions.SSLError:
+        response = download_with_proxy(url, bili_header, 1, False, True)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1268,7 +1270,7 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
             url = url.decode('utf-8')
         except:
             pass
-        response = requests.get(url, timeout=15, verify=False)
+        response = download_with_proxy(url, bili_header, 1, True, True)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1282,14 +1284,14 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
 
 def fetch_url3(url, passwordDict, filenameDict):
     try:
-        response = requests.get(url, timeout=5, verify=False)
+        response = download_with_proxy(url, bili_header, 1, True, True)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
         # 加密文件检测和解码
         checkToDecrydecrypt3(url, passwordDict, m3u_string, filenameDict)
-    except requests.exceptions.Timeout:
-        response = requests.get(url, timeout=30, verify=False)
+    except requests.exceptions.SSLError:
+        response = download_with_proxy(url, bili_header, 1, False, True)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1300,7 +1302,7 @@ def fetch_url3(url, passwordDict, filenameDict):
             url = url.decode('utf-8')
         except:
             pass
-        response = requests.get(url, timeout=15, verify=False)
+        response = download_with_proxy(url, bili_header, 1, True, True)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1582,7 +1584,7 @@ def removeIfExist(username, repo_name, path, access_token, file_name):
     bakenStr = f'{username}/{repo_name}/contents/{path}/{file_name}'
     url = f'https://gitee.com/api/v5/repos/{getCorrectUrl(bakenStr)}'
     headers = {'Authorization': f'token {access_token}'}
-    response = requests.get(url, headers=headers)
+    response = download_with_proxy(url, headers, 1, True, True)
     if response.status_code == 200:
         file_details = response.json()
         sha = file_details['sha']
@@ -1663,7 +1665,7 @@ def removeIfExistGithub(username, repo_name, path, access_token, file_name):
     bakenStr = f'{username}/{repo_name}/contents/{path}/{file_name}'
     url = f'https://api.github.com/repos/{getCorrectUrl(bakenStr)}'
     headers = {'Authorization': f'token {access_token}'}
-    response = requests.get(url, headers=headers)
+    response = download_with_proxy(url, headers, 1, True, True)
     if response.status_code == 200:
         file_details = response.json()
         sha = file_details['sha']
@@ -3051,270 +3053,6 @@ def formatdata_multithread(data, num_threads):
     return my_dict
 
 
-# # 节点去重复做不了，数据落库挺麻烦就不做了，节点转配置随缘，应该能命中一些简单的配置
-# def download_from_url(url):
-#     try:
-#         # 下载订阅链接内容
-#         response = requests.get(url, timeout=10)
-#         if response.status_code == 200:
-#             try:
-#                 content = base64.b64decode(response.content).decode('utf-8')
-#             except:
-#                 content = response.content.decode("utf-8")
-#         else:
-#             return None
-#         if content.startswith(
-#                 ("ss://", "ssr://", "vmess://", "vless://", "https://", "trojan://", "http://")):
-#             temp_dict = []
-#             mutil_proxie_methods(content, temp_dict)
-#             return temp_dict
-#         else:
-#             temp_dict = []
-#             multi_proxies_yaml(temp_dict, content)
-#             return temp_dict
-#     except Exception as e:
-#         print(f"下载或处理链接 {url} 出错：{e}")
-#         return None
-
-
-# 暂时不考虑自己写节点解析，重复造轮子很累，这个方法暂时不维护了，实际使用时BUG太多了
-# def download_proxies(SUBSCRIPTION_URLS):
-#     my_dict = []
-#     with concurrent.futures.ThreadPoolExecutor(max_workers=len(SUBSCRIPTION_URLS)) as executor:
-#         future_to_url = {executor.submit(download_from_url, url): url for url in SUBSCRIPTION_URLS}
-#         for future in concurrent.futures.as_completed(future_to_url):
-#             url = future_to_url[future]
-#             result = future.result()
-#             if result is not None and len(result) > 0:
-#                 my_dict.extend(result)
-#
-#     return my_dict
-
-
-# 随缘节点转换配置
-# def mutil_proxie_methods(content, my_dict):
-#     # 根据订阅链接格式处理不同类型的节点
-#     for proxy_str in content.splitlines():
-#         try:
-#             proxy_str = proxy_str.strip()
-#             if not proxy_str:
-#                 continue
-#             # 根据代理协议关键字来判断协议类型并解析代理配置
-#             if proxy_str.startswith("ss://"):
-#                 try:
-#                     method, password, server, port = base64.b64decode(proxy_str[5:]).decode().split(":")
-#                 except:
-#                     method, passwordandserver, port = base64.b64decode(proxy_str[5:]).decode().split(":")
-#                     password, server = passwordandserver.split("@")
-#                 new_dict = {
-#                     'name': proxy_str.split('#')[-1].strip(),
-#                     'server': server,
-#                     "type": "ss",
-#                     'port': port,
-#                     'cipher': method or "auto",
-#                     'password': password,
-#                 }
-#                 my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
-#                 # my_dict.append(f"- {new_dict}\n")
-#             # 严格匹配openclash中ssr节点的格式
-#             elif proxy_str.startswith("ssr://"):
-#                 decoded = base64.b64decode(proxy_str[6:]).decode("utf-8")
-#                 parts = decoded.split(":")
-#                 server, port, protocol, method, obfs, password_and_params = parts[0], parts[1], parts[2], parts[3], \
-#                     parts[
-#                         4], parts[5]
-#                 password_and_params = password_and_params.split("/?")
-#                 password, params = password_and_params[0], password_and_params[1]
-#                 params_dict = dict(re.findall(r'(\w+)=([^\&]+)', params))
-#                 group = params_dict.get("group", "")
-#                 udp = params_dict.get("udp", "true").lower() == "true"
-#                 obfs_param = params_dict.get("obfsparam", "")
-#                 protocol_param = params_dict.get("protoparam", "")
-#                 remarks_base64 = params_dict.get("remarks", "").encode('utf-8')
-#                 remarks = base64.b64decode(remarks_base64).decode('utf-8') if remarks_base64 else ""
-#                 name = f"{remarks}-[{group}]"
-#                 new_dict = {
-#                     "name": name,
-#                     "server": server,
-#                     "type": "ssr",
-#                     "port": int(port),
-#                     "udp": udp,
-#                     "password": password,
-#                     "cipher": method,
-#                     "protocol": protocol,
-#                     "protocol_param": protocol_param,
-#                     "obfs": obfs,
-#                     "obfs_param": obfs_param
-#                 }
-#                 my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
-#             # 严格匹配openclash中vmess节点的格式
-#             elif proxy_str.startswith("vmess://"):
-#                 vmess_data = base64.urlsafe_b64decode(proxy_str[8:]).decode()
-#                 vmess_json = json.loads(vmess_data)
-#                 new_dict = {
-#                     'server': vmess_json["add"] or vmess_json["address"] or vmess_json["server"] or vmess_json[
-#                         "host"] or vmess_json["remote"],
-#                     'port': vmess_json["port"] or vmess_json["server_port"],
-#                     'alterId': vmess_json["aid"] or vmess_json["alterId"] or "0",
-#                     'uuid': vmess_json["id"] or vmess_json["aid"] or vmess_json["uuid"],
-#                     'type': "vmess",
-#                     'sni': vmess_json["sni"] or vmess_json["host"] or "",
-#                     'cipher': vmess_json['cipher'] or vmess_json['method'] or vmess_json['security'] or vmess_json[
-#                         'encryption'] or "auto",
-#                     'name': vmess_json["ps"] or vmess_json["name"] or vmess_json["remarks"] or "unkown",
-#                     'protocol': vmess_json["v"] or "2",
-#                     'network': vmess_json["net"] or vmess_json["network"] or "ws",
-#                     'ws-path': vmess_json["ws-path"] or vmess_json["path"] or "",
-#                     'tls': vmess_json["tls"] or vmess_json["security"] or False,
-#                     'skip-cert-verify': vmess_json["skip-cert-verify"] or vmess_json["insecure"] or True,
-#                     'udp': vmess_json["udp"] or True,
-#                     'ws-opts': vmess_json["ws-opts"] or vmess_json["ws-headers"] or "",
-#                 }
-#                 my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
-#             elif proxy_str.startswith("vless://"):
-#                 vless_data = base64.urlsafe_b64decode(proxy_str[8:]).decode()
-#                 vless_json = json.loads(vless_data)
-#                 new_dict = {
-#                     'name': vless_json.get('ps', ''),
-#                     'server': vless_json['add'],
-#                     'server_port': vless_json['port'],
-#                     'protocol': vless_json['net'],
-#                     'cipher': vless_json['type'],
-#                     'password': vless_json['id'],
-#                     'plugin': '',
-#                     'plugin_opts': {}
-#                 }
-#                 my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
-#             elif proxy_str.startswith("https://"):
-#                 https_parts = proxy_str.split(":")
-#                 server, port = https_parts[1], https_parts[2].split("/")[0]
-#                 new_dict = {
-#                     'remarks': proxy_str.split('#')[-1].strip(),
-#                     'server': server,
-#                     'server_port': port,
-#                     'protocol': 'http',
-#                     'cipher': 'GET',
-#                     'password': '',
-#                     'plugin': '',
-#                     'plugin_opts': {},
-#                 }
-#                 my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
-#             elif proxy_str.startswith("trojan://"):
-#                 # 解析链接中的各个部分
-#                 parsed_link = urlparse(proxy_str)
-#                 password = parsed_link.username  # 密码
-#                 server = parsed_link.hostname  # 服务器地址
-#                 port = parsed_link.port  # 端口号（如果未指定则为 None）
-#                 remarks = unquote(parsed_link.fragment)  # 备注信息（需进行 URL 解码）
-#                 new_dict = {
-#                     "name": remarks,
-#                     "server": server,
-#                     "type": "trojan",
-#                     "port": port or 443,
-#                     "password": password,
-#                     "udp": True,
-#                     "skip-cert-verify": True,
-#                 }
-#                 my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
-#             else:
-#                 print(f"无法解析代理链接：{proxy_str}")
-#         except:
-#             pass
-
-
-# def str_constructor(loader, node):
-#     return loader.construct_scalar(node)
-#
-
-# def dict_constructor(loader, node):
-#     data = {}
-#     yield data
-#     if isinstance(node, yaml.MappingNode):
-#         for key_node, value_node in node.value:
-#             key = loader.construct_object(key_node)
-#             # 如果遇到 `!<str>` 标签，使用自定义的 `str_constructor` 处理
-#             if key == "password":
-#                 value = loader.construct_scalar(value_node)
-#                 data[key] = str_constructor(loader, value_node)
-#             else:
-#                 value = loader.construct_object(value_node)
-#                 data[key] = value
-
-
-#
-#
-# def multi_proxies_yaml(my_dict, yaml_data):
-#     try:
-#         data = yaml.load(yaml_data, Loader=yaml.FullLoader)
-#     except:
-#         # 特殊标签
-#         yaml.add_constructor("!<str>", str_constructor)
-#         yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, dict_constructor)
-#         # 加载 YAML 数据
-#         data = yaml.load(yaml_data, Loader=yaml.FullLoader)
-#     if data:
-#         # 标准clash代理，提取proxies部分的字典，直接复制不做任何改变
-#         if 'proxies' in data:
-#             proxies = data['proxies']
-#             for proxy in proxies:
-#                 my_dict.append("- " + json.dumps(proxy, ensure_ascii=False))
-#                 # my_dict.append(f"- {proxy}\n")
-#         else:
-#             # 直接全部是代理配置字典，随缘提取
-#             proxy_list = json.loads(yaml_data)
-#             for proxy in proxy_list:
-#                 try:
-#                     new_dict = {}
-#                     for key, value in proxy.items():
-#                         if key == "name" or key == "remarks":
-#                             new_dict["name"] = value
-#                         elif key == "server" or key == "host" or key == "add" or key == "address":
-#                             new_dict["server"] = value
-#                         elif key == "port" or key == "server_port":
-#                             new_dict["port"] = value
-#                         elif key == "password":
-#                             new_dict["password"] = value
-#                         elif key == "type":
-#                             new_dict["type"] = value
-#                         elif key == "id" or key == "uuid":
-#                             new_dict["uuid"] = value
-#                         elif key == "cipher" or key == "method" or key == "security":
-#                             new_dict["cipher"] = value
-#                         elif key == "alterId" or key == "aid":
-#                             new_dict["alterId"] = value
-#                         elif key == "network" or key == "net":
-#                             new_dict["network"] = value
-#                         elif key == "flow":
-#                             new_dict["flow"] = value
-#                         else:
-#                             new_dict[key] = value
-#                     if 'type' not in new_dict:
-#                         new_dict["type"] = get_proxy_type(proxy)
-#                     if 'name' not in new_dict:
-#                         new_dict["name"] = "unkown"
-#                     my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
-#                 except:
-#                     pass
-#
-
-#
-#
-# def get_proxy_type(node):
-#     # 判断节点类型，返回代理类型字符串
-#     if "method" in node and "server_port" in node:
-#         if "protocol" in node and "obfs" in node:
-#             return "ssr"
-#         return "ss"
-#     elif "addr" in node:
-#         if "password" in node:
-#             return "trijan"
-#         if "aid" in node:
-#             return "vmess"
-#         return "vless"
-#     else:
-#         raise ValueError("Unknown proxy type")
-
-
 def getProxyButton():
     dict = redis_get_map(REDIS_KEY_PROXIES_TYPE)
     if not dict:
@@ -3482,7 +3220,7 @@ def chaorongheProxies(filename):
     # 网络配置   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini"
     try:
         response = requests.get(getProxyServerChosen(), params=params, timeout=360)
-        if response.status_code == 200 and response.content != '':
+        if response and response.status_code == 200 and response.content != '':
             # 合并加密下载的和普通的
             # 订阅成功处理逻辑
             # print(response.text)
@@ -4277,7 +4015,9 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
                           'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
                           'usernameSys': 'admin', 'passwordSys': 'password', 'normalM3uClock': '7200',
-                          'normalSubscriberClock': '10800', 'proxys': 'http://127.0.0.1:7890||http://127.0.0.1:5336',
+                          'normalSubscriberClock': '10800',
+                          'proxys': 'http://127.0.0.1:7890@@username=Ldggz@@password=@S!WCMt%EC6T@vCLy!4R||http://192.168.5.1:7890@@username=Ldggz@@password=@S!WCMt%EC6T@vCLy!4R',
+                          'proxyschina': 'http://192.168.5.1:5244||http://127.0.0.1:5244',
                           'failTs': 'https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4',
                           'proxySubscriberClock': '3600', 'autoDnsSwitchClock': '600',
                           'syncClock': '10', 'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国',
@@ -5347,7 +5087,7 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, min
 def get_hd_url_857(id):
     room = id.split(',')[1]
     url = f'https://json.yyres.co/room/{room}/detail.json?v=1'
-    response = requests.get(url)
+    response = download_with_proxy(url, bili_header, 1, True, True)
     if response.status_code == 200:
         data = response.content.decode()
         # 截取JSON字符串，去掉外部的无意义字符串和括号
@@ -5899,6 +5639,98 @@ async def grab3(session, id, m3u_dict, mintimeout, maxTimeout):
         print(f"huya An error occurred while processing {id}. Error: {e}")
 
 
+def get_proxy_name_password(proxy):
+    proxy, nameAndPass = proxy.split('@@username=')
+    name, password = nameAndPass.split('@@password=')
+    return proxy, name, password
+
+
+# 0-不使用代理 1-使用代理
+# 0-json 1-text 2-bytes 3-content
+async def get_response_async(url, mode, header, timeout, session, returnType, isForeign):
+    if mode == 0:
+        try:
+            async with  session.get(url, headers=header, timeout=timeout) as resp2:
+                if resp2 and resp2.status == 200:
+                    # return  resp2
+                    if returnType == 0:
+                        return await resp2.json()
+                    elif returnType == 1:
+                        return await resp2.text()
+                    elif returnType == 2:
+                        return await resp2.read()
+                    elif returnType == 3:
+                        return await resp2.content()
+        except Exception as e:
+            pass
+    else:
+        proxys = get_proxies(isForeign)
+        if not proxys:
+            try:
+                async with  session.get(url, headers=header, timeout=timeout) as resp2:
+                    if resp2 and resp2.status == 200:
+                        # return  resp2
+                        if returnType == 0:
+                            return await resp2.json()
+                        elif returnType == 1:
+                            return await resp2.text()
+                        elif returnType == 2:
+                            return await resp2.read()
+                        elif returnType == 3:
+                            return await resp2.content()
+            except Exception as e:
+                pass
+        for proxy in proxys:
+            if '@@username=' in proxy:
+                proxy, username, password = get_proxy_name_password(proxy)
+                proxy_auth = aiohttp.BasicAuth(username, password)
+                try:
+                    async with  session.get(url, headers=header, timeout=timeout, proxy=proxy,
+                                            proxy_auth=proxy_auth) as resp2:
+                        if resp2 and resp2.status == 200:
+                            # return  resp2
+                            if returnType == 0:
+                                return await resp2.json()
+                            elif returnType == 1:
+                                return await resp2.text()
+                            elif returnType == 2:
+                                return await resp2.read()
+                            elif returnType == 3:
+                                return await resp2.content()
+                except Exception as e:
+                    pass
+            else:
+                try:
+                    async with  session.get(url, headers=header, timeout=timeout, proxy=proxy) as resp2:
+                        if resp2 and resp2.status == 200:
+                            # return  resp2
+                            if returnType == 0:
+                                return await resp2.json()
+                            elif returnType == 1:
+                                return await resp2.text()
+                            elif returnType == 2:
+                                return await resp2.read()
+                            elif returnType == 3:
+                                return await resp2.content()
+                except Exception as e:
+                    pass
+        try:
+            async with  session.get(url, headers=header, timeout=timeout) as resp2:
+                if resp2 and resp2.status == 200:
+                    # return  resp2
+                    if returnType == 0:
+                        return await resp2.json()
+                    elif returnType == 1:
+                        return await resp2.text()
+                    elif returnType == 2:
+                        return await resp2.read()
+                    elif returnType == 3:
+                        return await resp2.content()
+        except Exception as e:
+            return None
+    return None
+
+
 async def download_files4():
     global redisKeyYoutube
     mintimeout = int(getFileNameByTagName('minTimeout'))
@@ -5915,13 +5747,15 @@ async def get_resolution(session, liveurl, mintimeout, maxTimeout, now_uuid, uui
     try:
         if not is_same_action_uuid(now_uuid, uuid_cache):
             return
-        async with session.get(liveurl, headers=bili_header, timeout=mintimeout) as response:
-            playlist_text = await response.text()
+        playlist_text = await get_response_async(liveurl, 1, bili_header, mintimeout, session, 1, True)
+        # async with session.get(liveurl, headers=bili_header, timeout=mintimeout) as response:
     except asyncio.TimeoutError:
         if not is_same_action_uuid(now_uuid, uuid_cache):
             return
-        async with session.get(liveurl, headers=bili_header, timeout=maxTimeout) as response:
-            playlist_text = await response.text()
+        playlist_text = await get_response_async(liveurl, 1, bili_header, maxTimeout, session, 1, True)
+        # async with session.get(liveurl, headers=bili_header, timeout=maxTimeout) as response:
+    if not playlist_text:
+        return None
     playlist = m3u8.loads(playlist_text)
     playlists = playlist.playlists
     if len(playlists) < 1:
@@ -5944,20 +5778,21 @@ async def grab(session, id, m3u_dict, mintimeout, maxTimeout):
         try:
             if not is_same_action_uuid(now_uuid, 'youtubelockuuid'):
                 return
-            async with session.get(url, headers=bili_header, timeout=mintimeout) as response:
-                content = await response.text()
+            content = await get_response_async(url, 1, bili_header, mintimeout, session, 1, True)
+            # async with session.get(url, headers=bili_header, timeout=mintimeout) as response:
+            if not content or '.m3u8' not in content:
+                response2 = await get_response_async(url, 1, bili_header, maxTimeout, session, 1, True)
+                # async with session.get(url, headers=bili_header, timeout=maxTimeout) as response2:
+                content = response2
                 if '.m3u8' not in content:
-                    async with session.get(url, headers=bili_header, timeout=maxTimeout) as response2:
-                        content = await response2.text()
-                        if '.m3u8' not in content:
-                            return
+                    return
         except asyncio.TimeoutError:
             if not is_same_action_uuid(now_uuid, 'youtubelockuuid'):
                 return
-            async with session.get(url, headers=bili_header, timeout=maxTimeout) as response:
-                content = await response.text()
-                if '.m3u8' not in content:
-                    return
+            content = await get_response_async(url, 1, bili_header, maxTimeout, session, 1, True)
+            # async with session.get(url, headers=bili_header, timeout=maxTimeout) as response:
+            if not content or '.m3u8' not in content:
+                return
         end = content.find('.m3u8') + 5
         tuner = 100
         highest_quality_link = None
@@ -6204,6 +6039,10 @@ def has_found_target(content, target_file_name):
     return None
 
 
+def get_alist_host(site):
+    if site.endswith('/'):
+        return site[-1]
+    return site
 # url-基础请求列表API地址(alist网站/alist/api/fs/list)
 # path-迭代查询路径
 # file_url_dict 已经捕获到的文件(只存储视频文件)
@@ -6212,6 +6051,13 @@ async def getPathBase(site, full_url, path, future_path_set, session, fakeurl, p
                       base_path, password):
     global redisKeyAlistM3u
     global redisKeyAlistM3uTsPath
+    headers = {
+        "User-Agent": '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67\"',
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Accept-Encoding": "gzip, deflate",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1"
+    }
     if path:
         if not path.startswith('/'):
             path = '/' + path
@@ -6264,7 +6110,7 @@ async def getPathBase(site, full_url, path, future_path_set, session, fakeurl, p
                         try:
                             tvg_name, groupname = await get_alist_uuid_file_data(encoded_url, password,
                                                                                  uuid_name,
-                                                                                 fakeurl, session)
+                                                                                 fakeurl, session,headers)
                         except Exception as e:
                             pass
                         if tvg_name:
@@ -6316,7 +6162,7 @@ async def getPathBase(site, full_url, path, future_path_set, session, fakeurl, p
                         try:
                             tvg_name, groupname = await get_alist_uuid_file_data(encoded_url, password,
                                                                                  uuid_name,
-                                                                                 fakeurl, session)
+                                                                                 fakeurl, session,headers)
                         except Exception as e:
                             pass
                         if tvg_name:
@@ -6411,6 +6257,7 @@ def get_true_alist_ts_url(ts_uuid_secret_name):
             continue
         # 签名
         sign = item['sign']
+        break
     future_path_ts = f'{redisKeyAlistM3uTsPath.get(uuid)}/{ts_uuid_secret_name}'
     encoded_url = urllib.parse.quote(future_path_ts, safe=':/')
     if sign and sign != '':
@@ -6465,19 +6312,24 @@ def download_file(url, headers, timeout, size):
 
 
 # 下载解密全部特殊加密直播文件
-async def get_alist_uuid_file_data(secret_uuid_m3u8_file_url, password, uuid_name, fakeurl, session):
-    user_agent = '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"'
-    headers = {'User-Agent': user_agent}
+async def get_alist_uuid_file_data(secret_uuid_m3u8_file_url, password, uuid_name, fakeurl, session,headers):
+    # user_agent = '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"'
+    # headers = {'User-Agent': user_agent}
     count = 0
+    content=None
     while count < 3:
         try:
-            async with  session.get(secret_uuid_m3u8_file_url, headers=headers,
-                                    timeout=30) as response:
-                content = await response.read()
+            content = await get_response_async(secret_uuid_m3u8_file_url, 1, headers, 30, session, 2, False)
+            # async with  session.get(secret_uuid_m3u8_file_url, headers=headers,
+            #                         timeout=30) as response:
+            #     content = await response.read()
         except asyncio.TimeoutError:
-            async with  session.get(secret_uuid_m3u8_file_url, headers=headers,
-                                    timeout=60) as response:
-                content = await response.read()
+            content = await get_response_async(secret_uuid_m3u8_file_url, 1, headers, 60, session, 2, False)
+            # async with  session.get(secret_uuid_m3u8_file_url, headers=headers,
+            #                         timeout=60) as response:
+            #     content = await response.read()
+        except Exception as e:
+            pass
         if content and len(content) > 0:
             break
         count += 1
@@ -6535,7 +6387,7 @@ def chaoronghe28():
             return "empty"
         ip = init_IP()
         redisKeyTWITCHM3uFake = {}
-        # fakeurl = f"http://127.0.0.1:22771/TWITCH/"
+        # fakeurl = f"http://127.0.0.1:5000/TWITCH/"
         fakeurl = f"http://{ip}:{port_live}/TWITCH/"
         for id, url in m3u_dict.items():
             try:
@@ -6889,7 +6741,7 @@ def chaoronghe24():
             return "empty"
         ip = init_IP()
         redisKeyYoutubeM3uFake = {}
-        # fakeurl = 'http://127.0.0.1:22771/youtube/'
+        # fakeurl = 'http://127.0.0.1:5000/youtube/'
         fakeurl = f"http://{ip}:{port_live}/youtube/"
         for id, url in m3u_dict.items():
             try:
@@ -7310,9 +7162,13 @@ def reset_clock(key):
     time_clock_update_dict[key] = '0'
 
 
-def get_proxies():
+# true-foreign false-china
+def get_proxies(type):
     try:
-        strData = getFileNameByTagName('proxys')
+        if type:
+            strData = getFileNameByTagName('proxys')
+        else:
+            strData = getFileNameByTagName('proxyschina')
         arr = strData.split('||')
         if len(arr) == 0:
             return None
@@ -7322,26 +7178,40 @@ def get_proxies():
 
 
 # 0-不使用代理 1-使用代理
-def download_with_proxy(url, header, mode):
+def download_with_proxy(url, header, mode, verify, isForeign):
     if mode != 0:
-        proxys = get_proxies()
+        proxys = get_proxies(isForeign)
         if not proxys:
-            return requests.get(url, headers=header)
+            return requests.get(url, headers=header, verify=verify)
         for proxy in proxys:
-            dict = {}
-            if proxy.startswith('https://'):
-                dict['https'] = proxy
+            if '@@username=' in proxy:
+                proxy, username, password = get_proxy_name_password(proxy)
+                dict = {}
+                if proxy.startswith('https://'):
+                    dict['https'] = f'http://{username}:{password}@{proxy}'
+                else:
+                    dict['http'] = f'http://{username}:{password}@{proxy}'
+                try:
+                    response = requests.get(url, headers=header, proxies=dict, verify=verify)
+                    if response and response.status_code == 200:
+                        return response
+                except Exception as e:
+                    pass
             else:
-                dict['http'] = proxy
-            try:
-                response = requests.get(url, headers=header, proxies=dict)
-                if response.status_code == 200:
-                    return response
-            except:
-                pass
-        return requests.get(url, headers=header)
+                dict = {}
+                if proxy.startswith('https://'):
+                    dict['https'] = proxy
+                else:
+                    dict['http'] = proxy
+                try:
+                    response = requests.get(url, headers=header, proxies=dict, verify=verify)
+                    if response and response.status_code == 200:
+                        return response
+                except Exception as e:
+                    pass
+        return requests.get(url, headers=header, verify=verify)
     else:
-        return requests.get(url, headers=header)
+        return requests.get(url, headers=header, verify=verify)
 
 
 def get_m3u8_link(id):
@@ -7351,7 +7221,7 @@ def get_m3u8_link(id):
         "Referer": f"https://hklive.tv/{id}",
         "User-Agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
     }
-    response = download_with_proxy(url, headers, 1)
+    response = download_with_proxy(url, headers, 1, True, True)
     if response and response.status_code == 200:
         content = response.content.decode("utf-8")  # 解码为字符串
         # 使用正则表达式提取file对应的字符串
@@ -7373,7 +7243,7 @@ def get_ts_data(id, number):
         "Referer": f"https://hklive.tv/{id}",
         "User-Agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
     }
-    response = download_with_proxy(url, headers, 1)
+    response = download_with_proxy(url, headers, 1, True, True)
     if response and response.status_code == 200:
         # bytes_data = b''
         # for chunk in response.iter_content(chunk_size=(1024 * 64)):
@@ -7393,12 +7263,12 @@ def get_m3u8_raw_content(url, id):
         "Referer": f"https://hkdtmb.com/{id}",
         "User-Agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
     }
-    response = download_with_proxy(url, headers, 1)
-    if response and  response.status_code == 200:
+    response = download_with_proxy(url, headers, 1, True, True)
+    if response and response.status_code == 200:
         content = response.content.decode('utf-8')
         new_m3u8_data = ''
         ip = init_IP()
-        #fakeurl = f"http://127.0.0.1:5000/normal/"
+        # fakeurl = f"http://127.0.0.1:5000/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
         lastnumber = ''
         for line in content.splitlines():
@@ -7414,6 +7284,8 @@ def get_m3u8_raw_content(url, id):
         old_m3u8_data_hk['lastnumber'] = lastnumber
         old_m3u8_data_hk['id'] = id
         old_m3u8_data_hk['end'] = '0'
+        if len(new_m3u8_data) == 0:
+            return None
         return new_m3u8_data.encode()
     else:
         return None
@@ -7482,9 +7354,9 @@ def serve_files_normal(filename):
             m3u8_data = get_m3u8_data_by_hkid(hkid)
             if m3u8_data:
                 return Response(m3u8_data, headers={
-                   'Expect': '100-continue',
-                   'Connection': 'Keep-Alive'
-                   })
+                    'Expect': '100-continue',
+                    'Connection': 'Keep-Alive'
+                })
             # 强制换id，打断ts推送
             old_m3u8_data_hk['id'] = id
             url = tv_dict_normal.get(id)
@@ -7503,9 +7375,9 @@ def serve_files_normal(filename):
                 # 特殊的，这个url可能失效
                 redisKeyNormalM3U[id] = m3u8_url
                 return Response(m3u8_data, headers={
-                   'Expect': '100-continue',
-                   'Connection': 'Keep-Alive'
-                   })
+                    'Expect': '100-continue',
+                    'Connection': 'Keep-Alive'
+                })
             else:
                 m3u8_data = get_m3u8_raw_content(url, hkid)
                 m3u8_url = url
@@ -7521,9 +7393,9 @@ def serve_files_normal(filename):
                 # 特殊的，这个url可能失效
                 redisKeyNormalM3U[id] = m3u8_url
                 return Response(m3u8_data, headers={
-                   'Expect': '100-continue',
-                   'Connection': 'Keep-Alive'
-                   })
+                    'Expect': '100-continue',
+                    'Connection': 'Keep-Alive'
+                })
     url = tv_dict_normal.get(id)
     if not url:
         url = redisKeyNormalM3U.get(id)

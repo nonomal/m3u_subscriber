@@ -1,3 +1,33 @@
-now_uuid = time_clock_update_dict.get('youtubelockuuid')
-            if not is_same_action_uuid(now_uuid, 'youtubelockuuid'):
-                return
+# 0-不使用代理 1-使用代理
+async def get_response_async(url, mode, header, timeout, session):
+    if mode == 0:
+        async with  session.get(url, headers=header, timeout=timeout) as resp2:
+            if resp2 and resp2.status_code == 200:
+                return resp2
+    else:
+        proxys = get_proxies()
+        if not proxys:
+            async with  session.get(url, headers=header, timeout=timeout) as resp2:
+                if resp2 and resp2.status_code == 200:
+                    return resp2
+        for proxy in proxys:
+            if '@@username=' in proxy:
+                proxy, username, password = get_proxy_name_password(proxy)
+                proxy_auth = aiohttp.BasicAuth(username, password)
+                async with  session.get(url, headers=header, timeout=timeout, proxy=proxy,
+                                        proxy_auth=proxy_auth) as resp2:
+                    if resp2 and resp2.status_code == 200:
+                        return resp2
+            else:
+                async with  session.get(url, headers=header, timeout=timeout, proxy=proxy) as resp2:
+                    if resp2 and resp2.status_code == 200:
+                        return resp2
+
+        async with  session.get(url, headers=header, timeout=timeout) as resp2:
+            if resp2 and resp2.status_code == 200:
+                return resp2
+    return None
+
+
+    http://192.168.5.1:7890@@username=Ldggz@@password=@S!WCMt%EC6T@vCLy!4R
+     playlist_text = await get_response_async(liveurl, 1, bili_header, mintimeout, session, 1, True)

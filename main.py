@@ -347,7 +347,7 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
                   'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
                   'usernameSys': 'admin', 'passwordSys': 'password', 'normalM3uClock': '7200',
-                  'normalSubscriberClock': '10800',
+                  'normalSubscriberClock': '10800', 'proxys': 'http://127.0.0.1:7890||http://127.0.0.1:5336',
                   'failTs': 'https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4',
                   'proxySubscriberClock': '3600', 'autoDnsSwitchClock': '600', 'syncClock': '10',
                   'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国', 'foreignTopDomain':
@@ -4277,7 +4277,7 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
                           'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
                           'usernameSys': 'admin', 'passwordSys': 'password', 'normalM3uClock': '7200',
-                          'normalSubscriberClock': '10800',
+                          'normalSubscriberClock': '10800', 'proxys': 'http://127.0.0.1:7890||http://127.0.0.1:5336',
                           'failTs': 'https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4',
                           'proxySubscriberClock': '3600', 'autoDnsSwitchClock': '600',
                           'syncClock': '10', 'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国',
@@ -7310,6 +7310,40 @@ def reset_clock(key):
     time_clock_update_dict[key] = '0'
 
 
+def get_proxies():
+    try:
+        strData = getFileNameByTagName('proxys')
+        arr = strData.split('||')
+        if len(arr) == 0:
+            return None
+        return arr
+    except:
+        return None
+
+
+# 0-不使用代理 1-使用代理
+def download_with_proxy(url, header, mode):
+    if mode != 0:
+        proxys = get_proxies()
+        if not proxys:
+            return requests.get(url, headers=header)
+        for proxy in proxys:
+            dict = {}
+            if proxy.startswith('https://'):
+                dict['https'] = proxy
+            else:
+                dict['http'] = proxy
+            try:
+                response = requests.get(url, headers=header, proxies=dict)
+                if response.status_code == 200:
+                    return response
+            except:
+                pass
+        return requests.get(url, headers=header)
+    else:
+        return requests.get(url, headers=header)
+
+
 def get_m3u8_link(id):
     url = f"https://hklive.tv/{id}"
 
@@ -7317,9 +7351,8 @@ def get_m3u8_link(id):
         "Referer": f"https://hklive.tv/{id}",
         "User-Agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
     }
-
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
+    response = download_with_proxy(url, headers, 1)
+    if response and response.status_code == 200:
         content = response.content.decode("utf-8")  # 解码为字符串
         # 使用正则表达式提取file对应的字符串
         pattern = r'file:\s*"(.*?)"'
@@ -7340,8 +7373,8 @@ def get_ts_data(id, number):
         "Referer": f"https://hklive.tv/{id}",
         "User-Agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
     }
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
+    response = download_with_proxy(url, headers, 1)
+    if response and response.status_code == 200:
         # bytes_data = b''
         # for chunk in response.iter_content(chunk_size=(1024 * 64)):
         #     if chunk:
@@ -7360,8 +7393,8 @@ def get_m3u8_raw_content(url, id):
         "Referer": f"https://hkdtmb.com/{id}",
         "User-Agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
     }
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
+    response = download_with_proxy(url, headers, 1)
+    if response and  response.status_code == 200:
         content = response.content.decode('utf-8')
         new_m3u8_data = ''
         ip = init_IP()
@@ -7377,7 +7410,7 @@ def get_m3u8_raw_content(url, id):
                 # new_m3u8_data += f'https://hklive.tv/dtmb/{line}\n'
                 new_m3u8_data += f'{fakeurl}hkdtmb,{id},{line}\n'
                 lastnumber = line
-        old_m3u8_data_hk['data'] = new_m3u8_data
+        old_m3u8_data_hk['data'] = new_m3u8_data.encode()
         old_m3u8_data_hk['lastnumber'] = lastnumber
         old_m3u8_data_hk['id'] = id
         old_m3u8_data_hk['end'] = '0'
@@ -7392,12 +7425,10 @@ efs_lock = threading.Lock()
 hkdtmb_lock = threading.Lock()
 
 
-def jump_hk(id, number):
+def jump_hk(id):
     if '0' == old_m3u8_data_hk['id']:
         return True
     elif id == old_m3u8_data_hk['id']:
-        return True
-    elif int(number) / 1000 - time.time() > -60:
         return True
     return False
 
@@ -7407,7 +7438,7 @@ def jump_hk(id, number):
 def video_m3u8_normal_ts(path):
     type, id, number = path.split(',')
     if type == 'hkdtmb':
-        if not jump_hk(id, number):
+        if not jump_hk(id):
             return
         try:
             bytesdata = get_ts_data(id, number)
@@ -7415,7 +7446,7 @@ def video_m3u8_normal_ts(path):
                 return Response(bytesdata, mimetype='video/MP2T')
         except:
             pass
-    return video_m3u8_normal_ts(path)
+    return
 
 
 old_m3u8_data_hk = {'id': '0', 'data': b'', 'end': '0', 'lastnumber': ''}
@@ -7450,7 +7481,10 @@ def serve_files_normal(filename):
             hkid = id.split(',')[1]
             m3u8_data = get_m3u8_data_by_hkid(hkid)
             if m3u8_data:
-                return Response(m3u8_data,headers=headers_default)
+                return Response(m3u8_data, headers={
+                   'Expect': '100-continue',
+                   'Connection': 'Keep-Alive'
+                   })
             # 强制换id，打断ts推送
             old_m3u8_data_hk['id'] = id
             url = tv_dict_normal.get(id)
@@ -7468,7 +7502,10 @@ def serve_files_normal(filename):
                 tv_dict_normal[id] = m3u8_url
                 # 特殊的，这个url可能失效
                 redisKeyNormalM3U[id] = m3u8_url
-                return Response(m3u8_data,headers=headers_default)
+                return Response(m3u8_data, headers={
+                   'Expect': '100-continue',
+                   'Connection': 'Keep-Alive'
+                   })
             else:
                 m3u8_data = get_m3u8_raw_content(url, hkid)
                 m3u8_url = url
@@ -7483,7 +7520,10 @@ def serve_files_normal(filename):
                 tv_dict_normal[id] = m3u8_url
                 # 特殊的，这个url可能失效
                 redisKeyNormalM3U[id] = m3u8_url
-                return Response(m3u8_data,headers=headers_default)
+                return Response(m3u8_data, headers={
+                   'Expect': '100-continue',
+                   'Connection': 'Keep-Alive'
+                   })
     url = tv_dict_normal.get(id)
     if not url:
         url = redisKeyNormalM3U.get(id)

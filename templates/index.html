@@ -1468,6 +1468,15 @@
                     class="grid-item button stubbonsave">修改
             </button>
         </div>
+        <div style="display: flex;width: 100%;">
+            容器内部网络请求代理服务器
+        </div>
+        <div style="width:100%">
+            <input type="text" id="proxys" class="stubboninput" placeholder="http://ip:port||http://ip2:port2"/>
+            <button onclick="changeFileName('proxys', 'proxys', proxys)"
+                    class="grid-item button stubbonsave">修改
+            </button>
+        </div>
     </div>
     <div id="page17" style="display: none;">
         <h1>功能开关</h1>
@@ -2532,6 +2541,7 @@
     const syncClock = document.getElementById('syncClock');
     const reliveAlistTsTime = document.getElementById('reliveAlistTsTime');
     const failTs = document.getElementById('failTs');
+    const proxys = document.getElementById('proxys');
     const chinaTopDomain = document.getElementById('chinaTopDomain');
     const foreignTopDomain = document.getElementById('foreignTopDomain');
     const dnsMode = document.getElementById('dnsMode');
@@ -4400,6 +4410,7 @@
             getFileName('syncClock', 'syncClock', syncClock)
             getFileName('reliveAlistTsTime', 'reliveAlistTsTime', reliveAlistTsTime)
             getFileName('failTs', 'failTs', failTs)
+            getFileName('proxys', 'proxys', proxys)
         } else if (selectedPage === pages[16].id) {
             //生成有效M3U
             reloadFunctionOpenButton('switch')

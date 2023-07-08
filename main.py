@@ -6043,6 +6043,8 @@ def get_alist_host(site):
     if site.endswith('/'):
         return site[-1]
     return site
+
+
 # url-基础请求列表API地址(alist网站/alist/api/fs/list)
 # path-迭代查询路径
 # file_url_dict 已经捕获到的文件(只存储视频文件)
@@ -6110,7 +6112,7 @@ async def getPathBase(site, full_url, path, future_path_set, session, fakeurl, p
                         try:
                             tvg_name, groupname = await get_alist_uuid_file_data(encoded_url, password,
                                                                                  uuid_name,
-                                                                                 fakeurl, session,headers)
+                                                                                 fakeurl, session, headers)
                         except Exception as e:
                             pass
                         if tvg_name:
@@ -6162,7 +6164,7 @@ async def getPathBase(site, full_url, path, future_path_set, session, fakeurl, p
                         try:
                             tvg_name, groupname = await get_alist_uuid_file_data(encoded_url, password,
                                                                                  uuid_name,
-                                                                                 fakeurl, session,headers)
+                                                                                 fakeurl, session, headers)
                         except Exception as e:
                             pass
                         if tvg_name:
@@ -6312,11 +6314,11 @@ def download_file(url, headers, timeout, size):
 
 
 # 下载解密全部特殊加密直播文件
-async def get_alist_uuid_file_data(secret_uuid_m3u8_file_url, password, uuid_name, fakeurl, session,headers):
+async def get_alist_uuid_file_data(secret_uuid_m3u8_file_url, password, uuid_name, fakeurl, session, headers):
     # user_agent = '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"'
     # headers = {'User-Agent': user_agent}
     count = 0
-    content=None
+    content = None
     while count < 3:
         try:
             content = await get_response_async(secret_uuid_m3u8_file_url, 1, headers, 30, session, 2, False)
@@ -7236,6 +7238,17 @@ def get_m3u8_link(id):
         return None
 
 
+def check_ts_update_m3u8_hk():
+    now = int(time.time())
+    try:
+        old = int(old_m3u8_data_hk['lastnumber'].split('.')[0]) / 1000
+    except:
+        old = 0
+    num = now - old
+    if num > 0 or num <= -60:
+        old_m3u8_data_hk['end'] = '1'
+
+
 def get_ts_data(id, number):
     url = f"https://hklive.tv/dtmb/{id}/{number}.ts"
 
@@ -7249,8 +7262,7 @@ def get_ts_data(id, number):
         # for chunk in response.iter_content(chunk_size=(1024 * 64)):
         #     if chunk:
         #         bytes_data += chunk
-        if old_m3u8_data_hk['lastnumber'].startswith(number):
-            old_m3u8_data_hk['end'] = '1'
+        check_ts_update_m3u8_hk()
         return response.content
     else:
         return None
@@ -7268,7 +7280,7 @@ def get_m3u8_raw_content(url, id):
         content = response.content.decode('utf-8')
         new_m3u8_data = ''
         ip = init_IP()
-        # fakeurl = f"http://127.0.0.1:5000/normal/"
+        #fakeurl = f"http://127.0.0.1:5000/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
         lastnumber = ''
         for line in content.splitlines():
@@ -7316,7 +7328,7 @@ def video_m3u8_normal_ts(path):
             bytesdata = get_ts_data(id, number)
             if bytesdata:
                 return Response(bytesdata, mimetype='video/MP2T')
-        except:
+        except Exception as e:
             pass
     return
 
@@ -7330,6 +7342,7 @@ def get_m3u8_data_by_hkid(hkid):
     if old_m3u8_data_hk['data'] == '':
         return None
     if old_m3u8_data_hk['end'] == '1':
+        old_m3u8_data_hk['data'] = b''
         return None
     return old_m3u8_data_hk['data']
 
@@ -7351,6 +7364,7 @@ def serve_files_normal(filename):
     elif id.startswith('hkdtmb,'):
         with hkdtmb_lock:
             hkid = id.split(',')[1]
+            check_ts_update_m3u8_hk()
             m3u8_data = get_m3u8_data_by_hkid(hkid)
             if m3u8_data:
                 return Response(m3u8_data, headers={

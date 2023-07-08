@@ -7333,6 +7333,20 @@ def get_m3u8_link(id):
         return None
 
 
+def get_ts_data(id, number):
+    url = f"https://hklive.tv/dtmb/{id}/{number}.ts"
+
+    headers = {
+        "Referer": f"https://hklive.tv/{id}",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67",
+    }
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        return response.content
+    else:
+        return None
+
+
 def get_m3u8_raw_content(url, id):
     if not url:
         return None
@@ -7343,15 +7357,17 @@ def get_m3u8_raw_content(url, id):
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         content = response.content.decode('utf-8')
-        ts_url = f"https://hklive.tv/dtmb/{id}/"
         new_m3u8_data = ''
+        #fakeurl = f"http://127.0.0.1:22771/normal/"
+        fakeurl = f"http://{ip}:{port_live}/normal/"
         for line in content.splitlines():
             if line.startswith(
                     ('#EXTM3U', '#EXT-X-VERSION:', '#EXT-X-MEDIA-SEQUENCE', '#EXT-X-TARGETDURATION', '#EXTINF')):
                 new_m3u8_data += line
                 new_m3u8_data += '\n'
             else:
-                new_m3u8_data += ts_url
+                new_m3u8_data += fakeurl
+                new_m3u8_data += f'hkdtmb,{id},'
                 new_m3u8_data += line
                 new_m3u8_data += '\n'
         return new_m3u8_data
@@ -7365,9 +7381,22 @@ efs_lock = threading.Lock()
 hkdtmb_lock = threading.Lock()
 
 
+# 推流普通ts文件
+@app.route('/normal/<path:path>.ts')
+def video_m3u8_normal_ts(path):
+    type, id, number = path.split(',')
+    if type == 'hkdtmb':
+        try:
+            bytesdata = get_ts_data(id, number)
+            if bytesdata:
+                return Response(bytesdata, mimetype='video/MP2T')
+        except:
+            pass
+    return video_m3u8_normal_ts(path)
+
 
 # 路由normal
-@app.route('/normal/<path:filename>')
+@app.route('/normal/<path:filename>.m3u8')
 def serve_files_normal(filename):
     global redisKeyNormalM3U
     id = filename.split('.')[0]
@@ -7410,6 +7439,7 @@ def serve_files_normal(filename):
                     url = tv_dict_normal.get(id)
                     if not url:
                         url = redisKeyNormalM3U.get(id)
+                        m3u8_url = url
                         if not url:
                             m3u8_url = get_m3u8_link(hkid)
                         if not m3u8_url:
@@ -7421,16 +7451,7 @@ def serve_files_normal(filename):
                         tv_dict_normal[id] = m3u8_url
                         # 特殊的，这个url可能失效
                         redisKeyNormalM3U[id] = m3u8_url
-                        return Response(m3u8_data, headers={'Accept': '*/*',
-                                                            'Accept-Encoding': 'gzip, deflate, br',
-                                                            'Referer': f'https://hklive.tv/{hkid}',
-                                                            'Sec-Ch-Ua-Platform': "Windows",
-                                                            'Sec-Fetch-Dest': 'empty',
-                                                            'Sec-Fetch-Mode': 'cors',
-                                                            'Sec-Fetch-Site': 'same-origin',
-                                                            'Cache-Control': 'no-store, no-cache, must-revalidate',
-                                                            'Pragma': 'no-cache',
-                                                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'})
+                        return Response(m3u8_data, headers=headers_default)
                     else:
                         m3u8_data = get_m3u8_raw_content(url, hkid)
                         m3u8_url = url
@@ -7445,16 +7466,7 @@ def serve_files_normal(filename):
                         tv_dict_normal[id] = m3u8_url
                         # 特殊的，这个url可能失效
                         redisKeyNormalM3U[id] = m3u8_url
-                        return Response(m3u8_data, headers={'Accept': '*/*',
-                                                            'Accept-Encoding': 'gzip, deflate, br',
-                                                            'Referer': f'https://hklive.tv/{hkid}',
-                                                            'Sec-Ch-Ua-Platform': "Windows",
-                                                            'Sec-Fetch-Dest': 'empty',
-                                                            'Sec-Fetch-Mode': 'cors',
-                                                            'Sec-Fetch-Site': 'same-origin',
-                                                            'Cache-Control': 'no-store, no-cache, must-revalidate',
-                                                            'Pragma': 'no-cache',
-                                                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'})
+                        return Response(m3u8_data, headers=headers_default)
         else:
             if id.startswith('hkdtmb,'):
                 with hkdtmb_lock:
@@ -7472,16 +7484,7 @@ def serve_files_normal(filename):
                     tv_dict_normal[id] = m3u8_url
                     # 特殊的，这个url可能失效
                     redisKeyNormalM3U[id] = m3u8_url
-                    return Response(m3u8_data, headers={'Accept': '*/*',
-                                                        'Accept-Encoding': 'gzip, deflate, br',
-                                                        'Referer': f'https://hklive.tv/{hkid}',
-                                                        'Sec-Ch-Ua-Platform': "Windows",
-                                                        'Sec-Fetch-Dest': 'empty',
-                                                        'Sec-Fetch-Mode': 'cors',
-                                                        'Sec-Fetch-Site': 'same-origin',
-                                                        'Cache-Control': 'no-store, no-cache, must-revalidate',
-                                                        'Pragma': 'no-cache',
-                                                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'})
+                    return Response(m3u8_data, headers=headers_default)
         tv_dict_normal.clear()
         tv_dict_normal[id] = url
     else:
@@ -7517,16 +7520,7 @@ def serve_files_normal(filename):
                 tv_dict_normal[id] = m3u8_url
                 # 特殊的，这个url可能失效
                 redisKeyNormalM3U[id] = m3u8_url
-                return Response(m3u8_data, headers={'Accept': '*/*',
-                                                    'Accept-Encoding': 'gzip, deflate, br',
-                                                    'Referer': f'https://hklive.tv/{hkid}',
-                                                    'Sec-Ch-Ua-Platform': "Windows",
-                                                    'Sec-Fetch-Dest': 'empty',
-                                                    'Sec-Fetch-Mode': 'cors',
-                                                    'Sec-Fetch-Site': 'same-origin',
-                                                    'Cache-Control':'no-store, no-cache, must-revalidate',
-                                                    'Pragma':'no-cache',
-                                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'})
+                return Response(m3u8_data, headers=headers_default)
 
     @after_this_request
     def add_header(response):

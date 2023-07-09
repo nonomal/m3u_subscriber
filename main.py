@@ -855,7 +855,7 @@ def recycle():
     CHANNEL_GROUP.clear()
     stupid_has_pushed_ts.clear()
     old_m3u8_data_hk.clear()
-    old_m3u8_data_hk.update({'id': '0',  'end': '0', 'lastnumber': '', 'newdata': b''})
+    old_m3u8_data_hk.update({'id': '0', 'end': '0', 'lastnumber': '', 'newdata': b''})
 
 
 def clock_thread():
@@ -7186,15 +7186,19 @@ def hungry_get_sync_in_multi_proxy(url, verify, proxies, header, openstream):
     proxies["none"] = 'none'
     executor = None
     try:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=len(proxies)) as executor:
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(proxies) * 2) as executor:
             # 为各个任务分配ThreadPoolExecutor
-            futures = [executor.submit(get_response_sync, url, verify, header, type, proxy, openstream) for type, proxy
+            futures = [executor.submit(get_response_sync, url, verify, header, type, proxy, openstream, 5) for
+                       type, proxy
                        in
                        proxies.items()]
-            # 使用wait等待第一个非None结果
-            done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
+            futures2 = [executor.submit(get_response_sync, url, verify, header, type, proxy, openstream, 60) for
+                        type, proxy
+                        in
+                        proxies.items()]
             # 使用as_completed以非阻塞的方式返回第一个非None结果
-            for future in done:
+            for future in concurrent.futures.as_completed(futures + futures2):
                 result = future.result()
                 if result is not None:
                     return result
@@ -7205,17 +7209,18 @@ def hungry_get_sync_in_multi_proxy(url, verify, proxies, header, openstream):
     return None
 
 
-def get_response_sync(url, verify, header, httpType, httpUrl, openstream):
+def get_response_sync(url, verify, header, httpType, httpUrl, openstream, timeout):
     if 'none' == httpType:
         try:
-            response = requests.get(url, headers=header, verify=verify, stream=openstream)
+            response = requests.get(url, headers=header, verify=verify, stream=openstream, timeout=timeout)
             if response and response.status_code == 200:
                 return response
         except Exception as e:
             pass
     else:
         try:
-            response = requests.get(url, headers=header, proxies={httpType: httpUrl}, verify=verify, stream=openstream)
+            response = requests.get(url, headers=header, proxies={httpType: httpUrl}, verify=verify, stream=openstream,
+                                    timeout=timeout)
             if response and response.status_code == 200:
                 return response
         except Exception as e:
@@ -7242,10 +7247,13 @@ def download_with_proxy(url, header, mode, verify, isForeign, openStream):
                     dict['https'] = proxy
                 else:
                     dict['http'] = proxy
-        response = hungry_get_sync_in_multi_proxy(url, verify, dict, header, openStream)
-        if response:
-            return response
-        return None
+        try:
+            response = hungry_get_sync_in_multi_proxy(url, verify, dict, header, openStream)
+            if response:
+                return response
+        except Exception as e:
+            pass
+        return requests.get(url, headers=header, verify=verify, stream=openStream)
     else:
         return requests.get(url, headers=header, verify=verify, stream=openStream)
 
@@ -7254,9 +7262,18 @@ def get_m3u8_link(id):
     url = f"https://hklive.tv/{id}"
 
     headers = {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Cache-Control": "max-age=0",
+        "Sec-Ch-Ua": "\"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"114\", \"Microsoft Edge\";v=\"114\"",
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": "\"Windows\"",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
         "Upgrade-Insecure-Requests": "1",
-        "Referer": f"https://hklive.tv/{id}",
-        "User-Agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67"
     }
     response = download_with_proxy(url, headers, 1, True, True, False)
     if response and response.status_code == 200:
@@ -7299,13 +7316,13 @@ def get_ts_data(id, number):
         "Sec-Fetch-Site": "same-origin",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67"
     }
-    response = download_with_proxy(url, headers, 1, True, True, True)
+    response = download_with_proxy(url, headers, 1, True, True, False)
     if response:
-        bytes_data = b''
-        for chunk in response.iter_content(chunk_size=(1024 * 32)):
-            if chunk:
-                bytes_data += chunk
-        return bytes_data
+        # bytes_data = b''
+        # for chunk in response.iter_content(chunk_size=(1024 * 32)):
+        #     if chunk:
+        #         bytes_data += chunk
+        return response.content
     else:
         return None
 
@@ -7315,7 +7332,14 @@ def get_m3u8_raw_content(url, id):
         return None
     headers = {
         "Accept": "*/*",
+        "Accept-Encoding": "gzip, deflate, br",
         "Referer": f"https://hkdtmb.com/{id}",
+        "Sec-Ch-Ua": "\"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"114\", \"Microsoft Edge\";v=\"114\"",
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": "\"Windows\"",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin",
         "User-Agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
     }
     response = download_with_proxy(url, headers, 1, True, True, False)
@@ -7391,7 +7415,7 @@ def video_m3u8_normal_ts(path):
     return video_m3u8_normal_ts(path)
 
 
-old_m3u8_data_hk = {'id': '0',  'end': '0', 'lastnumber': '', 'newdata': b''}
+old_m3u8_data_hk = {'id': '0', 'end': '0', 'lastnumber': '', 'newdata': b''}
 
 
 def get_m3u8_data_by_hkid(hkid):

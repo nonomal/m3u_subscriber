@@ -855,7 +855,7 @@ def recycle():
     CHANNEL_GROUP.clear()
     stupid_has_pushed_ts.clear()
     old_m3u8_data_hk.clear()
-    old_m3u8_data_hk.update({'id': '0', 'data': b'', 'end': '0', 'lastnumber': '', 'newdata': b''})
+    old_m3u8_data_hk.update({'id': '0',  'end': '0', 'lastnumber': '', 'newdata': b''})
 
 
 def clock_thread():
@@ -7323,8 +7323,8 @@ def get_m3u8_raw_content(url, id):
         content = response.content
         new_m3u8_data = []
         ip = init_IP()
-        fakeurl = f"http://127.0.0.1:5000/normal/"
-        # fakeurl = f"http://{ip}:{port_live}/normal/"
+        #fakeurl = f"http://127.0.0.1:5000/normal/"
+        fakeurl = f"http://{ip}:{port_live}/normal/"
         now = int(time.time())
         for line in content.splitlines():
             if line.startswith(
@@ -7345,7 +7345,6 @@ def get_m3u8_raw_content(url, id):
             return None
         returndata = b'\n'.join(new_m3u8_data)
         old_m3u8_data_hk['newdata'] = returndata
-        # old_m3u8_data_hk['data'] = content
         old_m3u8_data_hk['lastnumber'] = str(now)
         old_m3u8_data_hk['id'] = id
         old_m3u8_data_hk['end'] = '0'
@@ -7392,7 +7391,7 @@ def video_m3u8_normal_ts(path):
     return video_m3u8_normal_ts(path)
 
 
-old_m3u8_data_hk = {'id': '0', 'data': b'', 'end': '0', 'lastnumber': '', 'newdata': b''}
+old_m3u8_data_hk = {'id': '0',  'end': '0', 'lastnumber': '', 'newdata': b''}
 
 
 def get_m3u8_data_by_hkid(hkid):
@@ -7443,11 +7442,9 @@ def serve_files_normal(filename):
                     m3u8_url = get_m3u8_link(hkid)
                 if not m3u8_url:
                     return serve_files_normal(filename)
-                    # return redirect(getFileNameByTagName('failTs'))
                 m3u8_data = get_m3u8_raw_content(m3u8_url, hkid)
                 if not m3u8_data:
                     return serve_files_normal(filename)
-                    # return redirect(getFileNameByTagName('failTs'))
                 tv_dict_normal.clear()
                 tv_dict_normal[id] = m3u8_url
                 # 特殊的，这个url可能失效
@@ -7465,11 +7462,9 @@ def serve_files_normal(filename):
                     m3u8_url = get_m3u8_link(hkid)
                     if not m3u8_url:
                         return serve_files_normal(filename)
-                        # return redirect(getFileNameByTagName('failTs'))
                     m3u8_data = get_m3u8_raw_content(m3u8_url, hkid)
                 if not m3u8_data:
                     return serve_files_normal(filename)
-                    # return redirect(getFileNameByTagName('failTs'))
                 tv_dict_normal.clear()
                 tv_dict_normal[id] = m3u8_url
                 # 特殊的，这个url可能失效

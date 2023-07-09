@@ -7341,7 +7341,7 @@ def get_m3u8_raw_content(url, id):
                     new_m3u8_data.append(result)
                 else:
                     new_m3u8_data.pop()
-        if len(new_m3u8_data) == 0 or len(new_m3u8_data) == 4:
+        if len(new_m3u8_data) == 0 or new_m3u8_data[-1].startswith(b'#EXT-X-TARGETDURATION'):
             return None
         returndata = b'\n'.join(new_m3u8_data)
         old_m3u8_data_hk['newdata'] = returndata
@@ -7398,7 +7398,7 @@ old_m3u8_data_hk = {'id': '0', 'data': b'', 'end': '0', 'lastnumber': '', 'newda
 def get_m3u8_data_by_hkid(hkid):
     if hkid != old_m3u8_data_hk['id']:
         return None
-    if old_m3u8_data_hk['newdata'] == b'':
+    if old_m3u8_data_hk['newdata'] == b'' or len(old_m3u8_data_hk['newdata'])==0:
         return None
     if old_m3u8_data_hk['end'] == '1':
         return None

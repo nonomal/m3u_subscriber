@@ -7441,10 +7441,12 @@ def serve_files_normal(filename):
                 if not url:
                     m3u8_url = get_m3u8_link(hkid)
                 if not m3u8_url:
-                    return redirect(getFileNameByTagName('failTs'))
+                    return serve_files_normal(filename)
+                    #return redirect(getFileNameByTagName('failTs'))
                 m3u8_data = get_m3u8_raw_content(m3u8_url, hkid)
                 if not m3u8_data:
-                    return redirect(getFileNameByTagName('failTs'))
+                    return serve_files_normal(filename)
+                    #return redirect(getFileNameByTagName('failTs'))
                 tv_dict_normal.clear()
                 tv_dict_normal[id] = m3u8_url
                 # 特殊的，这个url可能失效
@@ -7461,10 +7463,12 @@ def serve_files_normal(filename):
                 if not m3u8_data:
                     m3u8_url = get_m3u8_link(hkid)
                     if not m3u8_url:
-                        return redirect(getFileNameByTagName('failTs'))
+                        return serve_files_normal(filename)
+                        #return redirect(getFileNameByTagName('failTs'))
                     m3u8_data = get_m3u8_raw_content(m3u8_url, hkid)
                 if not m3u8_data:
-                    return redirect(getFileNameByTagName('failTs'))
+                    return serve_files_normal(filename)
+                    #return redirect(getFileNameByTagName('failTs'))
                 tv_dict_normal.clear()
                 tv_dict_normal[id] = m3u8_url
                 # 特殊的，这个url可能失效

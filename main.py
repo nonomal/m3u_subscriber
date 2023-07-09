@@ -853,6 +853,9 @@ def recycle():
     past_list_item.clear()
     CHANNEL_LOGO.clear()
     CHANNEL_GROUP.clear()
+    stupid_has_pushed_ts.clear()
+    old_m3u8_data_hk.clear()
+    old_m3u8_data_hk.update({'id': '0', 'data': b'', 'end': '0', 'lastnumber': '', 'newdata': b''})
 
 
 def clock_thread():
@@ -1156,7 +1159,7 @@ def checkToDecrydecrypt2(url, redis_dict, m3u_string, filenameDict, secretNameDi
 
 def fetch_url(url, redis_dict):
     try:
-        response = download_with_proxy(url, bili_header, 1, True, True)
+        response = download_with_proxy(url, bili_header, 1, True, True,False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1168,7 +1171,7 @@ def fetch_url(url, redis_dict):
         # print(f"success to fetch URL: {url}")
         return m3u_string
     except requests.exceptions.SSLError:
-        response = download_with_proxy(url, bili_header, 1, False, True)
+        response = download_with_proxy(url, bili_header, 1, False, True,False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1184,7 +1187,7 @@ def fetch_url(url, redis_dict):
             url = url.decode('utf-8')
         except:
             pass
-        response = download_with_proxy(url, bili_header, 1, True, True)
+        response = download_with_proxy(url, bili_header, 1, True, True,False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1250,7 +1253,7 @@ def download_files(urls, redis_dict):
 
 def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, uploadGithub, uploadWebdav):
     try:
-        response = download_with_proxy(url, bili_header, 1, True, True)
+        response = download_with_proxy(url, bili_header, 1, True, True,False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1258,7 +1261,7 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
         checkToDecrydecrypt2(url, passwordDict, m3u_string, filenameDict, secretNameDict, uploadGitee,
                              uploadGithub, uploadWebdav)
     except requests.exceptions.SSLError:
-        response = download_with_proxy(url, bili_header, 1, False, True)
+        response = download_with_proxy(url, bili_header, 1, False, True,False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1270,7 +1273,7 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
             url = url.decode('utf-8')
         except:
             pass
-        response = download_with_proxy(url, bili_header, 1, True, True)
+        response = download_with_proxy(url, bili_header, 1, True, True,False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1284,14 +1287,14 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
 
 def fetch_url3(url, passwordDict, filenameDict):
     try:
-        response = download_with_proxy(url, bili_header, 1, True, True)
+        response = download_with_proxy(url, bili_header, 1, True, True,False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
         # 加密文件检测和解码
         checkToDecrydecrypt3(url, passwordDict, m3u_string, filenameDict)
     except requests.exceptions.SSLError:
-        response = download_with_proxy(url, bili_header, 1, False, True)
+        response = download_with_proxy(url, bili_header, 1, False, True,False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1302,7 +1305,7 @@ def fetch_url3(url, passwordDict, filenameDict):
             url = url.decode('utf-8')
         except:
             pass
-        response = download_with_proxy(url, bili_header, 1, True, True)
+        response = download_with_proxy(url, bili_header, 1, True, True,False)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1584,7 +1587,7 @@ def removeIfExist(username, repo_name, path, access_token, file_name):
     bakenStr = f'{username}/{repo_name}/contents/{path}/{file_name}'
     url = f'https://gitee.com/api/v5/repos/{getCorrectUrl(bakenStr)}'
     headers = {'Authorization': f'token {access_token}'}
-    response = download_with_proxy(url, headers, 1, True, True)
+    response = download_with_proxy(url, headers, 1, True, True,False)
     if response.status_code == 200:
         file_details = response.json()
         sha = file_details['sha']
@@ -1665,7 +1668,7 @@ def removeIfExistGithub(username, repo_name, path, access_token, file_name):
     bakenStr = f'{username}/{repo_name}/contents/{path}/{file_name}'
     url = f'https://api.github.com/repos/{getCorrectUrl(bakenStr)}'
     headers = {'Authorization': f'token {access_token}'}
-    response = download_with_proxy(url, headers, 1, True, True)
+    response = download_with_proxy(url, headers, 1, True, True,False)
     if response.status_code == 200:
         file_details = response.json()
         sha = file_details['sha']
@@ -5087,7 +5090,7 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, min
 def get_hd_url_857(id):
     room = id.split(',')[1]
     url = f'https://json.yyres.co/room/{room}/detail.json?v=1'
-    response = download_with_proxy(url, bili_header, 1, True, True)
+    response = download_with_proxy(url, bili_header, 1, True, True,False)
     if response.status_code == 200:
         data = response.content.decode()
         # 截取JSON字符串，去掉外部的无意义字符串和括号
@@ -7179,53 +7182,84 @@ def get_proxies(type):
         return None
 
 
-# 0-不使用代理 1-使用代理
-def download_with_proxy(url, header, mode, verify, isForeign):
+def hungry_get_sync_in_multi_proxy(url, verify, proxies, header,openstream):
+    proxies["none"] = 'none'
+    executor = None
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(proxies)) as executor:
+            # 为各个任务分配ThreadPoolExecutor
+            futures = [executor.submit(get_response_sync, url, verify, header, type, proxy,openstream) for type, proxy in
+                       proxies.items()]
+            # 使用wait等待第一个非None结果
+            done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
+            # 使用as_completed以非阻塞的方式返回第一个非None结果
+            for future in done:
+                result = future.result()
+                if result is not None:
+                    return result
+    except TypeError:
+        return None
+    finally:
+        executor.shutdown(wait=False)
+    return None
+
+
+def get_response_sync(url, verify, header, httpType, httpUrl,openstream):
+    if 'none' == httpType:
+        try:
+            response = requests.get(url, headers=header, verify=verify,stream=openstream)
+            if response and response.status_code == 200:
+                return response
+        except Exception as e:
+            pass
+    else:
+        try:
+            response = requests.get(url, headers=header, proxies={httpType: httpUrl}, verify=verify,stream=openstream)
+            if response and response.status_code == 200:
+                return response
+        except Exception as e:
+            pass
+    return None
+
+
+# 0-不使用代理 1-使用代理(多种代理+直连并发竞争下载)
+def download_with_proxy(url, header, mode, verify, isForeign,openStream):
     if mode != 0:
         proxys = get_proxies(isForeign)
         if not proxys:
-            return requests.get(url, headers=header, verify=verify)
+            return requests.get(url, headers=header, verify=verify,stream=openStream)
+        dict = {}
         for proxy in proxys:
             if '@@username=' in proxy:
                 proxy, username, password = get_proxy_name_password(proxy)
-                dict = {}
                 if proxy.startswith('https://'):
                     dict['https'] = f'http://{username}:{password}@{proxy}'
                 else:
                     dict['http'] = f'http://{username}:{password}@{proxy}'
-                try:
-                    response = requests.get(url, headers=header, proxies=dict, verify=verify)
-                    if response and response.status_code == 200:
-                        return response
-                except Exception as e:
-                    pass
             else:
-                dict = {}
                 if proxy.startswith('https://'):
                     dict['https'] = proxy
                 else:
                     dict['http'] = proxy
-                try:
-                    response = requests.get(url, headers=header, proxies=dict, verify=verify)
-                    if response and response.status_code == 200:
-                        return response
-                except Exception as e:
-                    pass
-        return requests.get(url, headers=header, verify=verify)
+        response = hungry_get_sync_in_multi_proxy(url, verify, dict, header,openStream)
+        if response:
+            return response
+        return None
     else:
-        return requests.get(url, headers=header, verify=verify)
+        return requests.get(url, headers=header, verify=verify,stream=openStream)
 
 
 def get_m3u8_link(id):
     url = f"https://hklive.tv/{id}"
 
     headers = {
+        "Upgrade-Insecure-Requests": "1",
         "Referer": f"https://hklive.tv/{id}",
         "User-Agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
     }
-    response = download_with_proxy(url, headers, 1, True, True)
+    response = download_with_proxy(url, headers, 1, True, True,False)
     if response and response.status_code == 200:
-        content = response.content.decode("utf-8")  # 解码为字符串
+        content = response.content.decode()  # 解码为字符串
         # 使用正则表达式提取file对应的字符串
         pattern = r'file:\s*"(.*?)"'
         match = re.search(pattern, content)
@@ -7241,11 +7275,11 @@ def get_m3u8_link(id):
 def check_ts_update_m3u8_hk():
     now = int(time.time())
     try:
-        old = int(old_m3u8_data_hk['lastnumber'].split('.')[0]) / 1000
+        old = int(old_m3u8_data_hk['lastnumber'])
     except:
         old = 0
     num = now - old
-    if num > 0 or num <= -60:
+    if num > 0:
         old_m3u8_data_hk['end'] = '1'
 
 
@@ -7253,17 +7287,24 @@ def get_ts_data(id, number):
     url = f"https://hklive.tv/dtmb/{id}/{number}.ts"
 
     headers = {
+        "Accept": "*/*",
+        "Accept-Encoding": "gzip, deflate, br",
         "Referer": f"https://hklive.tv/{id}",
-        "User-Agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
+        "Sec-Ch-Ua": "\"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"114\", \"Microsoft Edge\";v=\"114\"",
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": "\"Windows\"",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67"
     }
-    response = download_with_proxy(url, headers, 1, True, True)
-    if response and response.status_code == 200:
-        # bytes_data = b''
-        # for chunk in response.iter_content(chunk_size=(1024 * 64)):
-        #     if chunk:
-        #         bytes_data += chunk
-        check_ts_update_m3u8_hk()
-        return response.content
+    response = download_with_proxy(url, headers, 1, True, True,True)
+    if response:
+        bytes_data = b''
+        for chunk in response.iter_content(chunk_size=(1024 * 32)):
+            if chunk:
+                bytes_data += chunk
+        return bytes_data
     else:
         return None
 
@@ -7272,33 +7313,46 @@ def get_m3u8_raw_content(url, id):
     if not url:
         return None
     headers = {
+        "Accept": "*/*",
         "Referer": f"https://hkdtmb.com/{id}",
         "User-Agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
     }
-    response = download_with_proxy(url, headers, 1, True, True)
+    response = download_with_proxy(url, headers, 1, True, True,False)
     if response and response.status_code == 200:
-        content = response.content.decode('utf-8')
-        new_m3u8_data = ''
+        content = response.content
+        new_m3u8_data = []
         ip = init_IP()
-        #fakeurl = f"http://127.0.0.1:5000/normal/"
-        fakeurl = f"http://{ip}:{port_live}/normal/"
-        lastnumber = ''
+        fakeurl = f"http://127.0.0.1:5000/normal/"
+        # fakeurl = f"http://{ip}:{port_live}/normal/"
+        now = int(time.time())
         for line in content.splitlines():
             if line.startswith(
-                    ('#EXTM3U', '#EXT-X-VERSION:', '#EXT-X-MEDIA-SEQUENCE', '#EXT-X-TARGETDURATION', '#EXTINF')):
-                new_m3u8_data += line
-                new_m3u8_data += '\n'
+                    (b'#EXTM3U', b'#EXT-X-VERSION:', b'#EXT-X-MEDIA-SEQUENCE', b'#EXT-X-TARGETDURATION', b'#EXTINF')):
+                new_m3u8_data.append(line)
             else:
-                # new_m3u8_data += f'https://hklive.tv/dtmb/{line}\n'
-                new_m3u8_data += f'{fakeurl}hkdtmb,{id},{line}\n'
-                lastnumber = line
-        old_m3u8_data_hk['data'] = new_m3u8_data.encode()
-        old_m3u8_data_hk['lastnumber'] = lastnumber
+                try:
+                    old = int(line.split(b'.')[0]) / 1000
+                except:
+                    old = 0
+                num = now - old
+                if num <= 60:
+                    result = fakeurl.encode() + b"hkdtmb," + id.encode() + b"," + line
+                    new_m3u8_data.append(result)
+                else:
+                    if line in old_m3u8_data_hk['data'] or old_m3u8_data_hk==b'':
+                        new_m3u8_data.pop()
+                    else:
+                        result = fakeurl.encode() + b"hkdtmb," + id.encode() + b"," + line
+                        new_m3u8_data.append(result)
+        if len(new_m3u8_data) == 0 or len(new_m3u8_data) == 4:
+            return None
+        returndata = b'\n'.join(new_m3u8_data)
+        old_m3u8_data_hk['newdata'] = returndata
+        old_m3u8_data_hk['data'] = content
+        old_m3u8_data_hk['lastnumber'] = str(now)
         old_m3u8_data_hk['id'] = id
         old_m3u8_data_hk['end'] = '0'
-        if len(new_m3u8_data) == 0:
-            return None
-        return new_m3u8_data.encode()
+        return returndata
     else:
         return None
 
@@ -7309,42 +7363,49 @@ efs_lock = threading.Lock()
 hkdtmb_lock = threading.Lock()
 
 
-def jump_hk(id):
+def jump_hk(id, number):
     if '0' == old_m3u8_data_hk['id']:
         return True
     elif id == old_m3u8_data_hk['id']:
         return True
+    elif (time.time() - int(number)) < 300:
+        return True
     return False
+
+
+stupid_has_pushed_ts = {}
 
 
 # 推流普通ts文件
 @app.route('/normal/<path:path>.ts')
 def video_m3u8_normal_ts(path):
+    if path in stupid_has_pushed_ts.keys():
+        return
     type, id, number = path.split(',')
     if type == 'hkdtmb':
-        if not jump_hk(id):
-            return
+        # if not jump_hk(id,number):
+        #     return
         try:
             bytesdata = get_ts_data(id, number)
             if bytesdata:
+                stupid_has_pushed_ts[path] = ''
                 return Response(bytesdata, mimetype='video/MP2T')
         except Exception as e:
             pass
-    return
+    return video_m3u8_normal_ts(path)
 
 
-old_m3u8_data_hk = {'id': '0', 'data': b'', 'end': '0', 'lastnumber': ''}
+old_m3u8_data_hk = {'id': '0', 'data': b'', 'end': '0', 'lastnumber': '', 'newdata': b''}
 
 
 def get_m3u8_data_by_hkid(hkid):
     if hkid != old_m3u8_data_hk['id']:
         return None
-    if old_m3u8_data_hk['data'] == '':
+    if old_m3u8_data_hk['newdata'] == b'':
         return None
     if old_m3u8_data_hk['end'] == '1':
-        old_m3u8_data_hk['data'] = b''
         return None
-    return old_m3u8_data_hk['data']
+    return old_m3u8_data_hk['newdata']
 
 
 # 路由normal
@@ -7364,12 +7425,15 @@ def serve_files_normal(filename):
     elif id.startswith('hkdtmb,'):
         with hkdtmb_lock:
             hkid = id.split(',')[1]
-            check_ts_update_m3u8_hk()
+            old_m3u8_data_hk['id'] = hkid
             m3u8_data = get_m3u8_data_by_hkid(hkid)
+            check_ts_update_m3u8_hk()
             if m3u8_data:
                 return Response(m3u8_data, headers={
                     'Expect': '100-continue',
-                    'Connection': 'Keep-Alive'
+                    'Connection': 'Keep-Alive',
+                    'Cache-Control': 'no-store, no-cache, must-revalidate',
+                    'Pragma': 'no-cache',
                 })
             # 强制换id，打断ts推送
             old_m3u8_data_hk['id'] = id
@@ -7390,7 +7454,9 @@ def serve_files_normal(filename):
                 redisKeyNormalM3U[id] = m3u8_url
                 return Response(m3u8_data, headers={
                     'Expect': '100-continue',
-                    'Connection': 'Keep-Alive'
+                    'Connection': 'Keep-Alive',
+                    'Cache-Control': 'no-store, no-cache, must-revalidate',
+                    'Pragma': 'no-cache',
                 })
             else:
                 m3u8_data = get_m3u8_raw_content(url, hkid)
@@ -7408,7 +7474,9 @@ def serve_files_normal(filename):
                 redisKeyNormalM3U[id] = m3u8_url
                 return Response(m3u8_data, headers={
                     'Expect': '100-continue',
-                    'Connection': 'Keep-Alive'
+                    'Connection': 'Keep-Alive',
+                    'Cache-Control': 'no-store, no-cache, must-revalidate',
+                    'Pragma': 'no-cache',
                 })
     url = tv_dict_normal.get(id)
     if not url:

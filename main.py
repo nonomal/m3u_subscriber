@@ -244,8 +244,6 @@ def main():
     init_db()
     timer_thread1 = threading.Thread(target=clock_thread, daemon=True)
     timer_thread1.start()
-    timer_thread2 = threading.Thread(target=download_thread, daemon=True)
-    timer_thread2.start()
 
 
 ##########################################################redis key#############################################
@@ -571,14 +569,24 @@ tv_dict_normal = {}
 
 
 ##############################################################bilibili############################################
-
-
-def pingM3uSync(value, real_dict, key, mintimeout, maxTimeout):
-    res = put_async_request_queue(value, 'ping', timeout=mintimeout)
-    if not res:
-        res = put_async_request_queue(value, 'ping', timeout=maxTimeout)
-    if res:
-        real_dict[key] = value
+async def pingM3u(session, value, real_dict, key, mintimeout, maxTimeout, now_uuid, uuid_cache):
+    try:
+        if not is_same_action_uuid(now_uuid, uuid_cache):
+            return
+        async with  session.get(value, timeout=mintimeout) as response:
+            if response.status == 200:
+                real_dict[key] = value
+    except asyncio.TimeoutError:
+        try:
+            if not is_same_action_uuid(now_uuid, uuid_cache):
+                return
+            async with  session.get(value, timeout=maxTimeout) as response:
+                if response.status == 200:
+                    real_dict[key] = value
+        except Exception as e:
+            pass
+    except Exception as e:
+        pass
 
 
 ##########################################################redis数据库操作#############################################
@@ -840,9 +848,6 @@ def recycle():
     past_list_item.clear()
     CHANNEL_LOGO.clear()
     CHANNEL_GROUP.clear()
-    stupid_has_pushed_ts.clear()
-    old_m3u8_data_hk.clear()
-    old_m3u8_data_hk.update({'id': '0', 'end': '0', 'lastnumber': '', 'newdata': b''})
 
 
 def clock_thread():
@@ -985,11 +990,13 @@ def update_uuid_action(cachekey):
 
 async def asynctask(m3u_dict):
     now_uuid = update_uuid_action('checkAlive')
-    tasks = []
-    for url, value in m3u_dict.items():
-        task = asyncio.create_task(download_url(url, value, now_uuid))
-        tasks.append(task)
-    await asyncio.gather(*tasks)
+    # sem = asyncio.Semaphore(100)  # 限制TCP连接的数量为100个
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+        for url, value in m3u_dict.items():
+            task = asyncio.create_task(download_url(session, url, value, now_uuid))
+            tasks.append(task)
+        await asyncio.gather(*tasks)
 
 
 def copyAndRename(source_file):
@@ -1233,7 +1240,7 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
         response = requests.get(url)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
-        m3u_string = put_async_request_queue(url, 'content', header=bili_header)
+        m3u_string = response.content
         # 加密文件检测和解码
         checkToDecrydecrypt2(url, passwordDict, m3u_string, filenameDict, secretNameDict, uploadGitee,
                              uploadGithub, uploadWebdav)
@@ -1241,7 +1248,7 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
         response = requests.get(url, timeout=60)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
-        m3u_string = put_async_request_queue(url, 'content', header=bili_header, verify=False)
+        m3u_string = response.content
         # 加密文件检测和解码
         checkToDecrydecrypt2(url, passwordDict, m3u_string, filenameDict, secretNameDict, uploadGitee,
                              uploadGithub, uploadWebdav)
@@ -1253,7 +1260,7 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
         response = requests.get(url)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
-        m3u_string = put_async_request_queue(url, 'content', header=bili_header)
+        m3u_string = response.content
         # 加密文件检测和解码
         checkToDecrydecrypt2(url, passwordDict, m3u_string, filenameDict, secretNameDict, uploadGitee,
                              uploadGithub, uploadWebdav)
@@ -1267,14 +1274,14 @@ def fetch_url3(url, passwordDict, filenameDict):
         response = requests.get(url)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
-        m3u_string = put_async_request_queue(url, 'content', header=bili_header)
+        m3u_string = response.content
         # 加密文件检测和解码
         checkToDecrydecrypt3(url, passwordDict, m3u_string, filenameDict)
     except requests.exceptions.Timeout:
         response = requests.get(url, timeout=60)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
-        m3u_string = put_async_request_queue(url, 'content', header=bili_header, verify=False)
+        m3u_string = response.content
         # 加密文件检测和解码
         checkToDecrydecrypt3(url, passwordDict, m3u_string, filenameDict)
     except requests.exceptions.RequestException as e:
@@ -1285,7 +1292,7 @@ def fetch_url3(url, passwordDict, filenameDict):
         response = requests.get(url)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
-        m3u_string = put_async_request_queue(url, 'content', header=bili_header)
+        m3u_string = response.content
         # 加密文件检测和解码
         checkToDecrydecrypt3(url, passwordDict, m3u_string, filenameDict)
     except Exception as e:
@@ -1561,8 +1568,9 @@ def removeIfExist(username, repo_name, path, access_token, file_name):
     bakenStr = f'{username}/{repo_name}/contents/{path}/{file_name}'
     url = f'https://gitee.com/api/v5/repos/{getCorrectUrl(bakenStr)}'
     headers = {'Authorization': f'token {access_token}'}
-    file_details = put_async_request_queue(url, 'json', header=headers)
-    if file_details:
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        file_details = response.json()
         sha = file_details['sha']
         commit_message = 'Delete existing file'
         data = {
@@ -1608,13 +1616,12 @@ def uploadNewFileToGitee(username, repo_name, path, access_token, file_name):
         'content': base64.b64encode(file_content).decode('utf-8'),
     }
     # 发送POST请求
-    # response = requests.post(url, headers=headers, json=data)
-    code = put_async_request_queue(url, 'post-status', header=headers, json=data)
+    response = requests.post(url, headers=headers, json=data)
     # 处理响应结果
-    if code == 201:
+    if response.status_code == 201:
         print('File uploaded to gitee successfully!')
     else:
-        print(f'Failed to upload file to gitee. Status code: {code}')
+        print(f'Failed to upload file to gitee. Status code: {response.status_code}')
 
 
 def updateFileToGitee(file_name):
@@ -1642,8 +1649,9 @@ def removeIfExistGithub(username, repo_name, path, access_token, file_name):
     bakenStr = f'{username}/{repo_name}/contents/{path}/{file_name}'
     url = f'https://api.github.com/repos/{getCorrectUrl(bakenStr)}'
     headers = {'Authorization': f'token {access_token}'}
-    file_details = put_async_request_queue(url, 'json', header=headers)
-    if file_details:
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        file_details = response.json()
         sha = file_details['sha']
         commit_message = 'Delete existing file'
         data = {
@@ -3179,7 +3187,7 @@ def chaorongheProxies(filename):
     # 网络配置   "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini"
     try:
         response = requests.get(getProxyServerChosen(), params=params, timeout=360)
-        if response and response.status_code == 200 and response.content != '':
+        if response.status_code == 200 and response.content != '':
             # 合并加密下载的和普通的
             # 订阅成功处理逻辑
             # print(response.text)
@@ -4226,7 +4234,103 @@ def chaoronghe10():
         return "empty"
 
 
-def download_files_normal_single():
+async def download_file5_single(ids, mintimeout, maxTimeout):
+    m3u_dict = {}
+    try:
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for id in ids:
+                task = asyncio.ensure_future(grab2(session, id, m3u_dict, mintimeout, maxTimeout))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        print(f"bilibili Failed to fetch files. Error: {e}")
+    return m3u_dict
+
+
+async def download_files5():
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
+    global time_clock_update_dict
+    nowId = time_clock_update_dict.get('bilibiliId')
+    m3u_dict = await download_file5_single([nowId], mintimeout, maxTimeout)
+    return m3u_dict
+
+
+async def download_files6_single(ids, mintimeout, maxTimeout):
+    m3u_dict = {}
+    try:
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for id in ids:
+                if id == 'huya':
+                    continue
+                task = asyncio.ensure_future(grab3(session, id, m3u_dict, mintimeout, maxTimeout))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        print(f"Failed to fetch files. Error: {e}")
+    return m3u_dict
+
+
+async def download_files6():
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
+    global time_clock_update_dict
+    nowId = time_clock_update_dict.get('huyaId')
+    m3u_dict = await download_files6_single([nowId], mintimeout, maxTimeout)
+    return m3u_dict
+
+
+async def download_files7_single(ids, mintimeout, maxTimeout):
+    m3u_dict = {}
+    try:
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for id in ids:
+                if id == 'YY':
+                    continue
+                task = asyncio.ensure_future(grab4(session, id, m3u_dict, mintimeout, maxTimeout))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        print(f"Failed to fetch files. Error: {e}")
+    return m3u_dict
+
+
+async def download_files_douyin_single(ids, mintimeout, maxTimeout):
+    m3u_dict = {}
+    try:
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for id in ids:
+                if id == 'Douyin':
+                    continue
+                task = asyncio.ensure_future(grab_douyin(session, id, m3u_dict, mintimeout, maxTimeout))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        print(f"Failed to fetch files. Error: {e}")
+    return m3u_dict
+
+
+async def download_files8_single(ids, mintimeout, maxTimeout):
+    m3u_dict = {}
+    try:
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for id in ids:
+                if id == 'Twitch':
+                    continue
+                task = asyncio.ensure_future(grab5(session, id, m3u_dict, mintimeout, maxTimeout))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        print(f"twitch Failed to fetch files. Error: {e}")
+    return m3u_dict
+
+
+async def download_files_normal_single():
     global redisKeyNormal
     ids = redisKeyNormal.keys()
     mintimeout = int(getFileNameByTagName('minTimeout'))
@@ -4250,38 +4354,49 @@ def download_files_normal_single():
         elif id_arr[0] == 'ipanda':
             # channel,channel_id
             ipanda_ids[id_arr[1]] = id_arr[2]
-    for id in chongqing_ids:
-        m3u_dict[f'cq,{id}'] = ''
-    for id in migu_ids.keys():
-        arr = migu_ids.get(id)
-        m3u_dict[f'migu,{id},{arr[0]},{arr[1]}'] = ''
-    deal_qiumihui(m3u_dict, mintimeout, maxTimeout)
-    for id, value in ipanda_ids.items():
-        grab_normal_ipanda(id, m3u_dict, mintimeout, maxTimeout, 'ipanda', value)
-    grab_normal_longzhu(m3u_dict, mintimeout, maxTimeout, 'longzhu')
-    grab_normal_857(m3u_dict, mintimeout, maxTimeout, '857')
+    async with aiohttp.ClientSession() as session:
+        try:
+            for id in chongqing_ids:
+                m3u_dict[f'cq,{id}'] = ''
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f"normal Failed to fetch files. Error: {e}")
+        try:
+            for id in migu_ids.keys():
+                arr = migu_ids.get(id)
+                m3u_dict[f'migu,{id},{arr[0]},{arr[1]}'] = ''
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f"migu Failed to fetch files. Error: {e}")
+        try:
+            await deal_qiumihui(session, m3u_dict, mintimeout, maxTimeout)
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f"qiumihui Failed to fetch files. Error: {e}")
+        try:
+            tasks = []
+            for id, value in ipanda_ids.items():
+                task = asyncio.ensure_future(
+                    grab_normal_ipanda(session, id, m3u_dict, mintimeout, maxTimeout, 'ipanda', value))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f"ipanda Failed to fetch files. Error: {e}")
+        try:
+            await  grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, 'longzhu')
+        except Exception as e:
+            print(f"longzhu Failed to fetch files. Error: {e}")
+        try:
+            await  grab_normal_857(session, m3u_dict, mintimeout, maxTimeout, '857')
+        except Exception as e:
+            print(f"857 Failed to fetch files. Error: {e}")
     return m3u_dict
 
 
-def deal_qiumihui(m3u_dict, mintimeout, maxTimeout):
-    check_url = f'https://aapi.qmh01.com/api/room/page?roomType=&navId=&roomId=&word=&page=1&pageSize=30&channelId=3&platform=1'
-    data = put_async_request_queue(check_url, 'json', timeout=mintimeout)
-    if not data:
-        data = put_async_request_queue(check_url, 'json', timeout=maxTimeout)
-    if not data:
-        return
-    m3u8_dict = data['data']['list']
-    if m3u8_dict:
-        redisKeyNormal2 = {}
-        for dict_single in m3u8_dict:
-            dict = grab_normal_qiumihui(m3u_dict, mintimeout, maxTimeout, 'qiumihui', dict_single)
-            if dict:
-                redisKeyNormal2.update(dict)
-        redisKeyNormal1 = {key: value for key, value in redisKeyNormal.items() if
-                           not key.startswith('qiumihui,')}
-        redisKeyNormal.clear()
-        redisKeyNormal.update(redisKeyNormal1)
-        redisKeyNormal.update(redisKeyNormal2)
+async def deal_qiumihui(session, m3u_dict, mintimeout, maxTimeout):
+    try:
+        check_url = f'https://aapi.qmh01.com/api/room/page?roomType=&navId=&roomId=&word=&page=1&pageSize=30&channelId=3&platform=1'
+        try:
+            async with session.get(check_url, timeout=mintimeout) as response:
+                data = await response.read()
+                m3u8_dict = json.loads(data.decode('utf-8'))['data']['list']
 
         except asyncio.TimeoutError:
             async with session.get(check_url, timeout=maxTimeout) as response:
@@ -4301,6 +4416,34 @@ def deal_qiumihui(m3u_dict, mintimeout, maxTimeout):
     except (aiohttp.ClientError, asyncio.TimeoutError) as e:
         print(f"qiumihui Failed to fetch files. Error: {e}")
 
+
+async def download_files7():
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
+    global time_clock_update_dict
+    nowId = time_clock_update_dict.get('yyId')
+    m3u_dict = await download_files7_single([nowId], mintimeout, maxTimeout)
+    return m3u_dict
+
+
+async def download_files_douyin():
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
+    global time_clock_update_dict
+    nowId = time_clock_update_dict.get('douyinId')
+    m3u_dict = await download_files_douyin_single([nowId], mintimeout, maxTimeout)
+    return m3u_dict
+
+
+async def download_files8():
+    mintimeout = int(getFileNameByTagName('minTimeout'))
+    maxTimeout = int(getFileNameByTagName('maxTimeout'))
+    global time_clock_update_dict
+    nowId = time_clock_update_dict.get('twitchId')
+    m3u_dict = await download_files8_single([nowId], mintimeout, maxTimeout)
+    return m3u_dict
+
+
 # 先获取直播状态和真实房间号
 bilibili_real_url = 'https://api.live.bilibili.com/room/v1/Room/room_init'
 bili_header = {
@@ -4316,74 +4459,102 @@ cim_headers = {
 biliurl = 'https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo'
 
 
-def get_best_bilibili_url(id, mintimeout, maxTimeout):
-    param = {
-        'id': id
-    }
-    res = put_async_request_queue(bilibili_real_url, 'json', header=cim_headers, timeout=mintimeout, params=param)
-    if not res:
-        res = put_async_request_queue(bilibili_real_url, 'json', header=cim_headers, timeout=maxTimeout, params=param)
-    if '不存在' in res['msg']:
-        return None
-    live_status = res['data']['live_status']
-    if live_status != 1:
-        return None
-    real_room_id = res['data']['room_id']
-    param2 = {
-        'room_id': real_room_id,
-        'protocol': '0,1',
-        'format': '0,1,2',
-        'codec': '0,1',
-        'qn': 10000,
-        'platform': 'web',
-        'ptype': 8,
-    }
-    res = put_async_request_queue(biliurl, 'json', header=cim_headers, timeout=mintimeout, params=param2)
-    if not res:
-        res = put_async_request_queue(biliurl, 'json', header=cim_headers, timeout=maxTimeout, params=param2)
-    stream_info = res['data']['playurl_info']['playurl']['stream']
-    accept_qn = stream_info[0]['format'][0]['codec'][0]['accept_qn']
-    real_lists = []
-    real_dict = {}
-    nameArr = []
-    for data in stream_info:
-        format_name = data['format'][0]['format_name']
-        if format_name == 'ts':
-            base_url = data['format'][-1]['codec'][0]['base_url']
-            url_info = data['format'][-1]['codec'][0]['url_info']
-            for i, info in enumerate(url_info):
-                for qn in accept_qn:
-                    url_ = base_url
-                    host = info['host']
-                    extra = info['extra']
-                    if qn < 10000:
-                        qn = qn * 10
-                        url_ = re.sub('bluray/index', f'{qn}/index', base_url)
-                    elif qn > 10000:
-                        continue
-                    extra = re.sub('qn=(\d+)', f'qn={qn}', extra)
-                    if qn == 10000:
-                        namestr = f'线路{i + 1}_{qn}'
-                        nameArr.append(namestr)
-                        real_lists.append({namestr: f'{host}{url_}{extra}'})
-            break
-    if real_lists:
-        for real_ in real_lists:
-            for key, value in real_.items():
-                pingM3uSync(value, real_dict, key, mintimeout, maxTimeout)
-        if real_dict:
-            isOne = len(nameArr) == 1
-            if isOne:
-                for key, value in real_dict.items():
-                    if nameArr[0] == key:
-                        return value
-            else:
-                for i in range(len(nameArr) - 1):
+async def grab2(session, id, m3u_dict, mintimeout, maxTimeout):
+    now_uuid = time_clock_update_dict.get('bilibiliId')
+    try:
+        param = {
+            'id': id
+        }
+        try:
+            if not is_same_action_uuid(now_uuid, 'bilibililockuuid'):
+                return
+            async with  session.get(bilibili_real_url, headers=cim_headers, params=param,
+                                    timeout=mintimeout) as response:
+                res = await response.json()
+        except asyncio.TimeoutError:
+            if not is_same_action_uuid(now_uuid, 'bilibililockuuid'):
+                return
+            async with  session.get(bilibili_real_url, headers=cim_headers, params=param,
+                                    timeout=maxTimeout) as response:
+                res = await response.json()
+        if '不存在' in res['msg']:
+            return
+        live_status = res['data']['live_status']
+        if live_status != 1:
+            return
+        real_room_id = res['data']['room_id']
+        param2 = {
+            'room_id': real_room_id,
+            'protocol': '0,1',
+            'format': '0,1,2',
+            'codec': '0,1',
+            'qn': 10000,
+            'platform': 'web',
+            'ptype': 8,
+        }
+        try:
+            if not is_same_action_uuid(now_uuid, 'bilibililockuuid'):
+                return
+            async with  session.get(biliurl, headers=cim_headers, params=param2,
+                                    timeout=mintimeout) as response2:
+                res = await response2.json()
+        except asyncio.TimeoutError:
+            if not is_same_action_uuid(now_uuid, 'bilibililockuuid'):
+                return
+            async with  session.get(biliurl, headers=cim_headers, params=param2,
+                                    timeout=maxTimeout) as response2:
+                res = await response2.json()
+        stream_info = res['data']['playurl_info']['playurl']['stream']
+        accept_qn = stream_info[0]['format'][0]['codec'][0]['accept_qn']
+        real_lists = []
+        real_dict = {}
+        nameArr = []
+        for data in stream_info:
+            format_name = data['format'][0]['format_name']
+            if format_name == 'ts':
+                base_url = data['format'][-1]['codec'][0]['base_url']
+                url_info = data['format'][-1]['codec'][0]['url_info']
+                for i, info in enumerate(url_info):
+                    for qn in accept_qn:
+                        url_ = base_url
+                        host = info['host']
+                        extra = info['extra']
+                        if qn < 10000:
+                            qn = qn * 10
+                            url_ = re.sub('bluray/index', f'{qn}/index', base_url)
+                        elif qn > 10000:
+                            continue
+                        extra = re.sub('qn=(\d+)', f'qn={qn}', extra)
+                        if qn == 10000:
+                            namestr = f'线路{i + 1}_{qn}'
+                            nameArr.append(namestr)
+                            real_lists.append({namestr: f'{host}{url_}{extra}'})
+                break
+        if real_lists:
+            tasks = []
+            for real_ in real_lists:
+                for key, value in real_.items():
+                    task = asyncio.ensure_future(
+                        pingM3u(session, value, real_dict, key, mintimeout, maxTimeout, now_uuid, 'bilibililockuuid'))
+                    tasks.append(task)
+            await asyncio.gather(*tasks)
+            if real_dict:
+                isOne = len(nameArr) == 1
+                if isOne:
                     for key, value in real_dict.items():
-                        if nameArr[i] == key:
-                            return value
-            return None
-    return None
+                        if nameArr[0] == key:
+                            m3u_dict[id] = value
+                            return
+                else:
+                    for i in range(len(nameArr) - 1):
+                        for key, value in real_dict.items():
+                            if nameArr[i] == key:
+                                m3u_dict[id] = value
+                                return
+                return
+        return
+    except Exception as e:
+        print(f"bilibili An error occurred while processing {id}. Error: {e}")
 
 
 def huya_live(e):
@@ -4423,18 +4594,86 @@ headers_YY = {
 }
 
 
-def get_client_id(rid, mintimeout, maxTimeout):
-    twitch_room_url = f'https://www.twitch.tv/{rid}'
-    res = put_async_request_queue(twitch_room_url, 'text', timeout=mintimeout)
-    if not res:
-        res = put_async_request_queue(twitch_room_url, 'text', timeout=maxTimeout)
-    if not res:
-        return None
-    client_id = re.search(r'clientId="(.*?)"', res).group(1)
-    return client_id
+async def room_id_(session, id, mintimeout, maxTimeout, now_uuid):
+    url = 'https://www.yy.com/{}'.format(id)
+    try:
+        if not is_same_action_uuid(now_uuid, 'yylockuuid'):
+            return
+        async with session.get(url, headers=headers_web_YY,
+                               timeout=mintimeout) as response:
+            if response.status == 200:
+                room_id = re.findall('ssid : "(\d+)', response.text)[0]
+                return room_id
+    except asyncio.TimeoutError:
+        if not is_same_action_uuid(now_uuid, 'yylockuuid'):
+            return
+        async with session.get(url, headers=headers_web_YY,
+                               timeout=maxTimeout) as response:
+            if response.status == 200:
+                room_id = re.findall('ssid : "(\d+)', response.text)[0]
+                return room_id
 
 
-def get_sig_token(rid, mintimeout, maxTimeout):
+async def fetch_room_url(session, room_url, headers, mintimeout, maxTimeout, now_uuid):
+    try:
+        if not is_same_action_uuid(now_uuid, 'yylockuuid'):
+            return
+        async with  session.get(room_url, headers=headers,
+                                timeout=mintimeout) as response:
+            if response.status == 200:
+                return await response.text()
+            else:
+                return None
+    except asyncio.TimeoutError:
+        if not is_same_action_uuid(now_uuid, 'yylockuuid'):
+            return
+        async with  session.get(room_url, headers=headers,
+                                timeout=maxTimeout) as response:
+            if response.status == 200:
+                return await response.text()
+            else:
+                return None
+
+
+async def fetch_real_url(session, url, headers, mintimeout, maxTimeout, now_uuid):
+    try:
+        if not is_same_action_uuid(now_uuid, 'yylockuuid'):
+            return
+        async with  session.get(url, headers=headers, timeout=mintimeout) as response:
+            if response.status == 200:
+                return await response.text()
+            else:
+                return None
+    except asyncio.TimeoutError:
+        if not is_same_action_uuid(now_uuid, 'yylockuuid'):
+            return
+        async with  session.get(url, headers=headers, timeout=maxTimeout) as response:
+            if response.status == 200:
+                return await response.text()
+            else:
+                return None
+
+
+async def get_client_id(rid, session, mintimeout, maxTimeout, now_uuid):
+    try:
+        twitch_room_url = f'https://www.twitch.tv/{rid}'
+        try:
+            if not is_same_action_uuid(now_uuid, 'twitchlockuuid'):
+                return
+            async with session.get(twitch_room_url, timeout=mintimeout) as response:
+                res = await response.text()
+        except asyncio.TimeoutError:
+            if not is_same_action_uuid(now_uuid, 'twitchlockuuid'):
+                return
+            async with session.get(twitch_room_url, timeout=maxTimeout) as response:
+                res = await response.text()
+        client_id = re.search(r'clientId="(.*?)"', res).group(1)
+        return client_id
+    except requests.exceptions.ConnectionError:
+        raise Exception('ConnectionError')
+
+
+async def get_sig_token(rid, session, mintimeout, maxTimeout, now_uuid):
     data = {
         "operationName": "PlaybackAccessToken_Template",
         "query": "query PlaybackAccessToken_Template($login: String!, $isLive: Boolean!, $vodID: ID!, "
@@ -4453,51 +4692,58 @@ def get_sig_token(rid, mintimeout, maxTimeout):
     }
 
     headers = {
-        'Client-ID': get_client_id(rid, mintimeout, maxTimeout),
+        'Client-ID': await get_client_id(rid, session, mintimeout, maxTimeout, now_uuid),
         'Referer': 'https://www.twitch.tv/',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
                       'Chrome/90.0.4430.93 Safari/537.36',
     }
     posturl = 'https://gql.twitch.tv/gql'
     json_data = json.dumps(data)
-    res = put_async_request_queue(posturl, 'post-json', header=headers, data=json_data, timeout=mintimeout)
-    if not res:
-        res = put_async_request_queue(posturl, 'post-json', header=headers, data=json_data, timeout=maxTimeout)
-    if not res:
-        return None
+    try:
+        if not is_same_action_uuid(now_uuid, 'twitchlockuuid'):
+            return
+        async with session.post(posturl, headers=headers, data=json_data,
+                                timeout=mintimeout) as response:
+            res = await response.json()
+    except asyncio.TimeoutError:
+        if not is_same_action_uuid(now_uuid, 'twitchlockuuid'):
+            return
+        async with session.post(posturl, headers=headers, data=json_data,
+                                timeout=maxTimeout) as response:
+            res = await response.json()
     try:
         token, signature, _ = res['data']['streamPlaybackAccessToken'].values()
-    except:
-        return None
+    except AttributeError:
+        raise Exception("Channel does not exist")
     return signature, token
 
 
-def get_best_twitch(rid, mintimeout, maxTimeout):
+async def grab5(session, rid, m3u_dict, mintimeout, maxTimeout):
+    now_uuid = time_clock_update_dict.get('twitchId')
     try:
-        signature, token = get_sig_token(rid, mintimeout, maxTimeout)
-        if not token:
-            return None
+        signature, token = await get_sig_token(rid, session, mintimeout, maxTimeout, now_uuid)
+        params = {
+            'allow_source': 'true',
+            'dt': 2,
+            'fast_bread': 'true',
+            'player_backend': 'mediaplayer',
+            'playlist_include_framerate': 'true',
+            'reassignments_supported': 'true',
+            'sig': signature,
+            'supported_codecs': 'vp09,avc1',
+            'token': token,
+            'cdm': 'wv',
+            'player_version': '1.4.0',
+        }
+        url = f'https://usher.ttvnw.net/api/channel/hls/{rid}.m3u8?{urlencode(params)}'
+        final_url = await get_resolution(session, url, mintimeout, maxTimeout, now_uuid, 'twitchlockuuid')
+        if final_url:
+            m3u_dict[rid] = final_url
+        else:
+            m3u_dict[rid] = url
+
     except Exception as e:
-        return None
-    params = {
-        'allow_source': 'true',
-        'dt': 2,
-        'fast_bread': 'true',
-        'player_backend': 'mediaplayer',
-        'playlist_include_framerate': 'true',
-        'reassignments_supported': 'true',
-        'sig': signature,
-        'supported_codecs': 'vp09,avc1',
-        'token': token,
-        'cdm': 'wv',
-        'player_version': '1.4.0',
-    }
-    url = f'https://usher.ttvnw.net/api/channel/hls/{rid}.m3u8?{urlencode(params)}'
-    final_url = get_resolution2(url, mintimeout, maxTimeout)
-    if final_url:
-        return final_url
-    else:
-        return url
+        print(f"twitch An error occurred while processing {rid}. Error: {e}")
 
 
 async def authenticate2(port, session, mintimeout, maxTimeout):
@@ -4572,29 +4818,46 @@ async def grab_normal_migu(session, rid, m3u_dict, mintimeout, maxTimeout, sourc
         print(f"migu An error occurred while processing {rid}. Error: {e}")
 
 
-def grab_normal_ipanda(rid, m3u_dict, mintimeout, maxTimeout, source_type, value):
+async def grab_normal_ipanda(session, rid, m3u_dict, mintimeout, maxTimeout, source_type, value):
     url = f'https://vdn.live.cntv.cn/api2/liveHtml5.do?channel=pc://{rid}&channel_id={value}&video_player=1&im=0&client=flash&tsp=1687495941&vn=1537&vc=1&uid=5A9A2532F878A0DB8EFE2BC8B2B191FC&wlan='
-    data = put_async_request_queue(url, 'read', header=bili_header, timeout=mintimeout)
-    if not data:
-        data = put_async_request_queue(url, 'read', header=bili_header, timeout=maxTimeout)
-    if not data:
-        return
-        # 将bytes转换成字符串并去掉前缀和后缀
-    html5VideoDataStr = data.decode('utf-8').replace("var html5VideoData = '", '').replace(
-        "';getHtml5VideoData(html5VideoData);", '')
-    # 将字符串转换成字典
-    dict = json.loads(html5VideoDataStr)['hls_url']
-    if dict:
-        for key, url in dict.items():
-            if '.m3u8' in url:
-                m3u_dict[f'{source_type},{rid},{value}'] = url
-                break
-            elif '.fly' in url:
-                m3u_dict[f'{source_type},{rid},{value}'] = url
-                break
+    try:
+        async with session.get(url, headers=bili_header, timeout=mintimeout) as response:
+            data = await response.read()
+            # 将bytes转换成字符串并去掉前缀和后缀
+            html5VideoDataStr = data.decode('utf-8').replace("var html5VideoData = '", '').replace(
+                "';getHtml5VideoData(html5VideoData);", '')
+            # 将字符串转换成字典
+            dict = json.loads(html5VideoDataStr)['hls_url']
+            if dict:
+                for key, url in dict.items():
+                    if '.m3u8' in url:
+                        m3u_dict[f'{source_type},{rid},{value}'] = url
+                        break
+                    elif '.fly' in url:
+                        m3u_dict[f'{source_type},{rid},{value}'] = url
+                        break
+    except asyncio.TimeoutError:
+        async with session.get(url, headers=bili_header, timeout=maxTimeout) as response:
+            data = await response.read()
+            # 将bytes转换成字符串并去掉前缀和后缀
+            html5VideoDataStr = data.decode('utf-8').replace("var html5VideoData = '", '').replace(
+                "';getHtml5VideoData(html5VideoData);", '')
+            # 将字符串转换成字典
+            dict = json.loads(html5VideoDataStr)['hls_url']
+            if dict:
+                for key, url in dict.items():
+                    if '.m3u8' in url:
+                        m3u_dict[f'{source_type},{rid},{value}'] = url
+                        break
+                    elif '.fly' in url:
+                        m3u_dict[f'{source_type},{rid},{value}'] = url
+                        break
+    except Exception as e:
+        print(f"cetv An error occurred while processing {rid}. Error: {e}")
 
 
-def grab_normal_qiumihui(m3u_dict, mintimeout, maxTimeout, source_type, dict_single):
+async def grab_normal_qiumihui(session, m3u_dict, mintimeout, maxTimeout, source_type, dict_single):
+    global redisKeyNormal
     rid = dict_single['roomId']
     title = dict_single['title']
     cover = dict_single['cover']
@@ -4615,12 +4878,9 @@ def grab_normal_qiumihui(m3u_dict, mintimeout, maxTimeout, source_type, dict_sin
         print(f"qiumihui An error occurred while processing {rid}. Error: {e}")
 
 
-    m3u8 = data['data']['pushUrl']
-    m3u_dict[f'{source_type},{rid}'] = m3u8
-    return {f'{source_type},{rid}': f'{title},{cover}'}
 
 
-def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name):
+def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, mintimeout, maxTimeout):
     global redisKeyNormal
     update_dict = {}
     if dict_url:
@@ -4737,8 +4997,9 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name):
 def get_hd_url_857(id):
     room = id.split(',')[1]
     url = f'https://json.yyres.co/room/{room}/detail.json?v=1'
-    data = put_async_request_queue(url, 'text', header=bili_header)
-    if data:
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.content.decode()
         # 截取JSON字符串，去掉外部的无意义字符串和括号
         json_data = data[data.find("(") + 1:data.rfind(")")]
         # 解析JSON数据并转换为Python对象
@@ -4768,465 +5029,321 @@ def get_hd_url_migu(id):
     return m3u_dict[id]
 
 
-def download_thread():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    # 永久异步下载线程
-    loop.run_until_complete(download_session_queue())
-
-
-# 存储字典{'url'}
-ask_queu = queue.Queue(1000)
-# uuid,response/content/text
-response_dict = {}
-
-
-def put_async_request_queue(url, action, header=None, timeout=None, verify=True, stream=False, params=None, proxy=None,
-                            proxy_auth=None, data=None, threadnum=None, json=None):
-    ask_dict = {}
-    uuid = generate_only_uuid(random.randrange(0, int(time.time())))
-    ask_dict['uuid'] = uuid
-    ask_dict['url'] = url
-    ask_dict['action'] = action
-    if header:
-        ask_dict['header'] = header
-    if timeout:
-        ask_dict['timeout'] = timeout
-    if verify:
-        ask_dict['verify'] = verify
-    if stream:
-        ask_dict['stream'] = stream
-    if params:
-        ask_dict['params'] = params
-    if proxy:
-        ask_dict['proxy'] = proxy
-    if proxy_auth:
-        ask_dict['proxy_auth'] = proxy_auth
-    if stream:
-        ask_dict['stream'] = stream
-    if data:
-        ask_dict['data'] = data
-    if threadnum:
-        ask_dict['threadnum'] = threadnum
-    if json:
-        ask_dict['json'] = json
-    ask_queu.put(ask_dict)
-    start = time.time()
-    returnValue = None
-    if timeout:
-        newTimeout = timeout + 5
-    else:
-        newTimeout = 60
-    while time.time() - start < newTimeout:
-        try:
-            if uuid not in response_dict.keys():
-                continue
-            response = response_dict.get(uuid)
-            if response:
-                returnValue = response
-                break
-        except Exception as e:
-            pass
-    try:
-        del response_dict[uuid]
-    except Exception as e:
-        pass
-    return returnValue
-
-
-async def download_session_queue():
-    async with aiohttp.ClientSession() as session:
-        while True:
-            # 从任务队列中获取一个任务
-            if not ask_queu.empty():
-                try:
-                    url_dict = ask_queu.get()
-                except Exception as e:
-                    print(e)
-                    continue
-                url = url_dict['url']
-                uuid = url_dict['uuid']
-                action = url_dict['action']
-                try:
-                    header = url_dict['header']
-                except Exception as e:
-                    header = None
-                try:
-                    timeout = url_dict['timeout']
-                except Exception as e:
-                    timeout = None
-                try:
-                    verify = url_dict['verify']
-                except Exception as e:
-                    verify = None
-                try:
-                    params = url_dict['params']
-                except Exception as e:
-                    params = None
-                try:
-                    proxy = url_dict['proxy']
-                except Exception as e:
-                    proxy = None
-                try:
-                    proxy_auth = url_dict['proxy_auth']
-                except Exception as e:
-                    proxy_auth = None
-                try:
-                    stream = url_dict['stream']
-                except Exception as e:
-                    stream = None
-                try:
-                    data = url_dict['data']
-                except Exception as e:
-                    data = None
-                try:
-                    threadnum = url_dict['threadnum']
-                except Exception as e:
-                    threadnum = None
-                try:
-                    json = url_dict['json']
-                except Exception as e:
-                    json = None
-                response = None
-                try:
-                    response = await ask(session, url, action, timeout=timeout, verify=verify, params=params,
-                                         proxy=proxy, proxy_auth=proxy_auth,
-                                         header=header, stream=stream, data=data, threadnum=threadnum, json=json)
-                    response_dict[uuid] = response
-                except Exception as e:
-                    print(e)
-                    response = None
-                    pass
-                if response is None:
-                    response_dict[uuid] = None
-
-
-async def download_chunk(session, url, start, end, timeout=None, verify=None, params=None, proxy=None,
-                         proxy_auth=None,
-                         header=None, data=None):
-    headers = {'Range': f'bytes={start}-{end}'}
-    if header:
-        headers.update(header)
-    async with session.get(url, headers=headers, params=params, timeout=timeout, ssl=verify, proxy=proxy,
-                           proxy_auth=proxy_auth, data=data) as response:
-        if response.status == 206:  # Partial Content
-            chunk = await response.read()
-            return chunk
-        else:
-            return None
-
-
-async def download_file2(session, url, threadnum=4, timeout=None, verify=None, params=None, proxy=None,
-                         proxy_auth=None,
-                         header=None, data=None):
-    async with session.head(url, headers=header, params=params, timeout=timeout, ssl=verify, proxy=proxy,
-                            proxy_auth=proxy_auth, data=data) as response:
-        total_size = int(response.headers.get('Content-Length', 0))
-        if not threadnum:
-            threadnum = 4
-        chunk_size = total_size // threadnum
-        tasks = []
-        chunks = []
-
-        for i in range(threadnum):
-            start = i * chunk_size
-            end = start + chunk_size - 1 if i < threadnum - 1 else total_size - 1
-            task = asyncio.create_task(
-                download_chunk(session, url, start, end, timeout=timeout, verify=verify, params=params, proxy=proxy,
-                               proxy_auth=proxy_auth,
-                               header=header, data=data))
-            tasks.append(task)
-
-        for task in tasks:
-            chunk = await task
-            if chunk is not None:
-                chunks.append(chunk)
-
-        return b''.join(chunks)
-
-
-async def ask(session, url, action, timeout=None, verify=None, params=None, proxy=None, proxy_auth=None,
-              header=None, stream=None, data=None, threadnum=None, json=None):
-    if action == 'threaddownload':
-        content = await download_file2(session, url, threadnum=threadnum, timeout=timeout, verify=verify, params=params,
-                                       proxy=proxy, proxy_auth=proxy_auth,
-                                       header=header, data=data)
-        if content and len(content) > 0:
-            return content
-        return None
-    elif action.startswith('post-'):
-        async with  session.post(url, headers=header, params=params, timeout=timeout, ssl=verify, proxy=proxy,
-                                 proxy_auth=proxy_auth, data=data, json=json) as response:
-            if stream:
-                content = b''
-                async for chunk in response.content.iter_any():
-                    content += chunk
-                if len(content) == 0:
-                    return None
-                return content
-            else:
-                content = None
-                if action == 'post-text':
-                    content = await response.text()
-                elif action == 'post-read':
-                    content = await response.read()
-                elif action == 'post-content':
-                    content = await response.content.read()
-                elif action == 'post-json':
-                    content = await response.json()
-                elif action == 'post-ping':
-                    if response and response.status == 200:
-                        content = '1'
-                elif action == 'post-headers':
-                    if response and response.status == 200:
-                        content = await response.headers
-                elif action == 'post-status':
-                    content = response.status
-                return content
-    else:
-        async with  session.get(url, headers=header, params=params, timeout=timeout, ssl=verify, proxy=proxy,
-                                proxy_auth=proxy_auth, data=data) as response:
-            if stream:
-                content = b''
-                async for chunk in response.content.iter_any():
-                    content += chunk
-                if len(content) == 0:
-                    return None
-                return content
-            else:
-                content = None
-                if action == 'text':
-                    content = await response.text()
-                elif action == 'read':
-                    content = await response.read()
-                elif action == 'content':
-                    content = await response.content.read()
-                elif action == 'json':
-                    content = await response.json()
-                elif action == 'ping':
-                    if response and response.status == 200:
-                        content = '1'
-                elif action == 'headers':
-                    if response and response.status == 200:
-                        content = await response.headers
-                return content
-
-
 # youtube直播
 def get_hd_url_youtube(id):
-    mintimeout = int(getFileNameByTagName('minTimeout'))
-    maxTimeout = int(getFileNameByTagName('maxTimeout'))
-    return get_best_youtube_live(id, mintimeout, maxTimeout)
+    global time_clock_update_dict
+    # 持有锁的id
+    time_clock_update_dict['youtubeId'] = id
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    # 有效直播源,名字/id
+    m3u_dict = loop.run_until_complete(download_files4())
+    time_clock_update_dict['youtubeId'] = '0'
+    return m3u_dict[id]
 
 
 # bilibili直播
 def get_hd_url_bilibili(id):
-    mintimeout = int(getFileNameByTagName('minTimeout'))
-    maxTimeout = int(getFileNameByTagName('maxTimeout'))
-    return get_best_bilibili_url(id, mintimeout, maxTimeout)
+    global time_clock_update_dict
+    time_clock_update_dict['bilibiliId'] = id
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    # 有效直播源,名字/id
+    m3u_dict = loop.run_until_complete(download_files5())
+    time_clock_update_dict['bilibiliId'] = '0'
+    return m3u_dict[id]
 
 
 # huya直播
 def get_hd_url_huya(id):
-    mintimeout = int(getFileNameByTagName('minTimeout'))
-    maxTimeout = int(getFileNameByTagName('maxTimeout'))
-    return get_best_huya_url(id, mintimeout, maxTimeout)
+    global time_clock_update_dict
+    time_clock_update_dict['huyaId'] = id
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    # 有效直播源,名字/id
+    m3u_dict = loop.run_until_complete(download_files6())
+    time_clock_update_dict['huyaId'] = '0'
+    return m3u_dict[id]
 
 
 # yy直播
 def get_hd_url_yy(id):
-    mintimeout = int(getFileNameByTagName('minTimeout'))
-    maxTimeout = int(getFileNameByTagName('maxTimeout'))
-    return get_best_yy_url(id, mintimeout, maxTimeout)
+    global time_clock_update_dict
+    time_clock_update_dict['yyId'] = id
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    # 有效直播源,名字/id
+    m3u_dict = loop.run_until_complete(download_files7())
+    time_clock_update_dict['yyId'] = '0'
+    return m3u_dict[id]
 
 
 # douyin直播
 def get_hd_url_douyin(id):
-    mintimeout = int(getFileNameByTagName('minTimeout'))
-    maxTimeout = int(getFileNameByTagName('maxTimeout'))
-    return get_best_douyin(id, mintimeout, maxTimeout)
+    global time_clock_update_dict
+    time_clock_update_dict['douyinId'] = id
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    # 有效直播源,名字/id
+    m3u_dict = loop.run_until_complete(download_files_douyin())
+    time_clock_update_dict['douyinId'] = '0'
+    return m3u_dict[id]
 
 
 # twitch直播
 def get_hd_url_twitch(id):
-    mintimeout = int(getFileNameByTagName('minTimeout'))
-    maxTimeout = int(getFileNameByTagName('maxTimeout'))
-    return get_best_twitch(id, mintimeout, maxTimeout)
+    global time_clock_update_dict
+    time_clock_update_dict['twitchId'] = id
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    # 有效直播源,名字/id
+    m3u_dict = loop.run_until_complete(download_files8())
+    time_clock_update_dict['twitchId'] = '0'
+    return m3u_dict[id]
 
 
 # cq直播
 def get_hd_url_cq(id):
+    global time_clock_update_dict
+    time_clock_update_dict['cqId'] = id
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     # 有效直播源,名字/id
-    return download_files_normal_single_cq(id)
+    m3u_dict = loop.run_until_complete(download_files_normal_single_cq())
+    return m3u_dict[id]
 
 
-def grab_normal_857(m3u_dict, mintimeout, maxTimeout, source_type):
+async def grab_normal_857(session, m3u_dict, mintimeout, maxTimeout, source_type):
     global redisKeyNormal
     timestr = str(int(time.time()) * 1000)
     m3u8_url = f'https://json.yyres.co/all_live_rooms.json?v={timestr}'
     update_dict = {}
-
-    data = put_async_request_queue(m3u8_url, 'read', timeout=mintimeout)
-    if not data:
-        data = put_async_request_queue(m3u8_url, 'read', timeout=maxTimeout)
-    if not data:
-        return
     try:
-        data = data.decode('utf-8')
-        # 截取JSON字符串，去掉外部的无意义字符串和括号
-        json_data = data[data.find("(") + 1:data.rfind(")")]
-        # 解析JSON数据并转换为Python对象
-        python_data = json.loads(json_data)
-        # 访问JSON对象的属性
-        pages = python_data["data"]
-        for page, pageListDict in pages.items():
+        async with session.get(m3u8_url, timeout=mintimeout) as response:
+            data = await response.read()
             try:
-                for pageDict in pageListDict:
+                data = data.decode('utf-8')
+                # 截取JSON字符串，去掉外部的无意义字符串和括号
+                json_data = data[data.find("(") + 1:data.rfind(")")]
+                # 解析JSON数据并转换为Python对象
+                python_data = json.loads(json_data)
+                # 访问JSON对象的属性
+                pages = python_data["data"]
+                for page, pageListDict in pages.items():
                     try:
-                        title = pageDict['title']
-                        logo = pageDict['cover']
-                        rid = pageDict['roomNum']
-                        m3u_dict[f'{source_type},{rid}'] = ''
-                        update_dict[f'{source_type},{rid}'] = f'{title},{logo}'
+                        for pageDict in pageListDict:
+                            try:
+                                title = pageDict['title']
+                                logo = pageDict['cover']
+                                rid = pageDict['roomNum']
+                                m3u_dict[f'{source_type},{rid}'] = ''
+                                update_dict[f'{source_type},{rid}'] = f'{title},{logo}'
+                            except:
+                                pass
                     except:
                         pass
-            except:
+                if len(update_dict) > 0:
+                    redisKeyNormal.update(update_dict)
+            except Exception as e:
                 pass
-        if len(update_dict) > 0:
-            redisKeyNormal.update(update_dict)
+    except asyncio.TimeoutError:
+        async with session.get(m3u8_url, timeout=maxTimeout) as response:
+            data = await response.read()
+            try:
+                data = data.decode('utf-8')
+                # 截取JSON字符串，去掉外部的无意义字符串和括号
+                json_data = data[data.find("(") + 1:data.rfind(")")]
+                # 解析JSON数据并转换为Python对象
+                python_data = json.loads(json_data)
+                # 访问JSON对象的属性
+                pages = python_data["data"]
+                for page, pageListDict in pages.items():
+                    try:
+                        for pageDict in pageListDict:
+                            try:
+                                title = pageDict['title']
+                                logo = pageDict['cover']
+                                rid = pageDict['roomNum']
+                                m3u_dict[f'{source_type},{rid}'] = ''
+                                update_dict[f'{source_type},{rid}'] = f'{title},{logo}'
+                            except:
+                                pass
+                    except:
+                        pass
+                if len(update_dict) > 0:
+                    redisKeyNormal.update(update_dict)
+            except Exception as e:
+                pass
     except Exception as e:
-        pass
+        print(f"857live An error occurred while processing {rid}. Error: {e}")
 
 
-def grab_normal_longzhu(m3u_dict, mintimeout, maxTimeout, source_type):
+async def grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, source_type):
     global redisKeyNormal
     m3u8_url = f'https://api.ansongqiubo.com/v3/list/streams/total?pcatId=1&pageIndex=0&dataLength=5000'
-    data = put_async_request_queue(m3u8_url, 'read', header=bili_header, timeout=mintimeout)
-    if not data:
-        data = put_async_request_queue(m3u8_url, 'read', header=bili_header, timeout=maxTimeout)
-    if not data:
-        return
     try:
-        dict_urls = json.loads(data.decode('utf-8'))['data']['list']
-        redisKeyNormal1 = {key: value for key, value in redisKeyNormal.items() if
-                           not key.startswith('longzhu,')}
-        redisKeyNormal.clear()
-        redisKeyNormal.update(redisKeyNormal1)
-        for dict_item in dict_urls:
-            item = dict_item['item']
-            pic = item['cover']
-            name = item['title']
-            live_dict = dict_item['live']
-            rid = live_dict['roomId']
+        async with session.get(m3u8_url, headers=bili_header, timeout=mintimeout) as response:
+            data = await response.read()
             try:
-                source = live_dict['source'][0]
-            except:
-                source = live_dict['source']
-            update_longzhu(source, m3u_dict, rid, source_type, pic, name)
+                dict_urls = json.loads(data.decode('utf-8'))['data']['list']
+                redisKeyNormal1 = {key: value for key, value in redisKeyNormal.items() if
+                                   not key.startswith('longzhu,')}
+                redisKeyNormal.clear()
+                redisKeyNormal.update(redisKeyNormal1)
+                for dict_item in dict_urls:
+                    item = dict_item['item']
+                    pic = item['cover']
+                    name = item['title']
+                    live_dict = dict_item['live']
+                    rid = live_dict['roomId']
+                    try:
+                        source = live_dict['source'][0]
+                    except:
+                        source = live_dict['source']
+                    update_longzhu(source, m3u_dict, rid, source_type, pic, name, session, mintimeout, maxTimeout)
+            except Exception as e:
+                pass
+    except asyncio.TimeoutError:
+        async with session.get(m3u8_url, headers=bili_header, timeout=maxTimeout) as response:
+            data = await response.read()
+            try:
+                dict_urls = json.loads(data.decode('utf-8'))['data']['list']
+                redisKeyNormal1 = {key: value for key, value in redisKeyNormal.items() if
+                                   not key.startswith('longzhu,')}
+                redisKeyNormal.clear()
+                redisKeyNormal.update(redisKeyNormal1)
+                for dict_item in dict_urls:
+                    item = dict_item['item']
+                    pic = item['cover']
+                    name = item['title']
+                    live_dict = dict_item['live']
+                    rid = live_dict['roomId']
+                    try:
+                        source = live_dict['source'][0]
+                    except:
+                        source = live_dict['source']
+                    update_longzhu(source, m3u_dict, rid, source_type, pic, name, session, mintimeout, maxTimeout)
+            except Exception as e:
+                pass
     except Exception as e:
-        pass
+        print(f"longzhu An error occurred while processing {rid}. Error: {e}")
 
 
-def grab_normal_chongqin(rid, mintimeout, maxTimeout):
-    cityId = '5A'
-    playId = rid
-    relativeId = playId
-    type = '1'
-    appId = "kdds-chongqingdemo"
-    url = 'http://portal.centre.bo.cbnbn.cn/others/common/playUrlNoAuth?cityId=5A&playId=' + playId + '&relativeId=' + relativeId + '&type=1'
-    timestamps = round(time.time() * 1000)
-    sign = hashlib.md5(
-        f"aIErXY1rYjSpjQs7pq2Gp5P8k2W7P^Y@appId{appId}cityId{cityId}playId{playId}relativeId{relativeId}timestamps{timestamps}type{type}".encode(
-            'utf-8')).hexdigest()
-    headers = {
-        "appId": appId,
-        "sign": sign,
-        "timestamps": str(timestamps),
-        "Content-Type": "application/json;charset=utf-8"
-    }
-    data = put_async_request_queue(url, 'json', header=headers, timeout=mintimeout)
-    if not data:
-        data = put_async_request_queue(url, 'json', header=headers, timeout=maxTimeout)
-    if not data:
-        return None
-    codes = data['data']['result']['protocol'][0]['transcode'][0]['url']
-    if codes is None:
-        return None
-    return codes
+async def grab_normal_chongqin(session, rid, m3u_dict, mintimeout, maxTimeout, source_type):
+    try:
+        cityId = '5A'
+        playId = rid
+        relativeId = playId
+        type = '1'
+        appId = "kdds-chongqingdemo"
+        url = 'http://portal.centre.bo.cbnbn.cn/others/common/playUrlNoAuth?cityId=5A&playId=' + playId + '&relativeId=' + relativeId + '&type=1'
+        timestamps = round(time.time() * 1000)
+        sign = hashlib.md5(
+            f"aIErXY1rYjSpjQs7pq2Gp5P8k2W7P^Y@appId{appId}cityId{cityId}playId{playId}relativeId{relativeId}timestamps{timestamps}type{type}".encode(
+                'utf-8')).hexdigest()
+        headers = {
+            "appId": appId,
+            "sign": sign,
+            "timestamps": str(timestamps),
+            "Content-Type": "application/json;charset=utf-8"
+        }
+        try:
+            async with session.get(url, headers=headers, timeout=mintimeout) as response:
+                data = await response.json()
+                codes = data['data']['result']['protocol'][0]['transcode'][0]['url']
+        except asyncio.TimeoutError:
+            async with session.get(url, headers=headers, timeout=maxTimeout) as response:
+                data = await response.json()
+                codes = data['data']['result']['protocol'][0]['transcode'][0]['url']
+        if codes is None:
+            return
+        m3u_dict[f'{source_type},{rid}'] = codes
+    except Exception as e:
+        print(f"chongqing An error occurred while processing {rid}. Error: {e}")
 
 
-def get_best_yy_url(id, mintimeout, maxTimeout):
-    headers_YY['referer'] = f'https://wap.yy.com/mobileweb/{id}'
-    real_lists = []
-    real_dict = {}
-    arr = []
-    room_url = f'https://interface.yy.com/hls/new/get/{id}/{id}/1200?source=wapyy&callback='
-    res_text = put_async_request_queue(room_url, 'text', header=headers_YY, timeout=mintimeout)
-    if not res_text:
-        res_text = put_async_request_queue(room_url, 'text', header=headers_YY, timeout=maxTimeout)
-    if not res_text:
-        url = 'https://www.yy.com/{}'.format(id)
-        data = put_async_request_queue(url, 'text', header=headers_web_YY, timeout=mintimeout)
-        if not data:
-            data = put_async_request_queue(url, 'text', header=headers_web_YY, timeout=maxTimeout)
-        if data:
-            room_id = re.findall('ssid : "(\d+)', data)[0]
-        else:
-            return None
-        room_url = f'https://interface.yy.com/hls/new/get/{room_id}/{room_id}/1200?source=wapyy&callback='
-        res_text = put_async_request_queue(room_url, 'text', header=headers_YY, timeout=mintimeout)
+async def grab4(session, id, m3u_dict, mintimeout, maxTimeout):
+    now_uuid = time_clock_update_dict.get('yyId')
+    try:
+        headers_YY['referer'] = f'https://wap.yy.com/mobileweb/{id}'
+        real_lists = []
+        real_dict = {}
+        arr = []
+        room_url = f'https://interface.yy.com/hls/new/get/{id}/{id}/1200?source=wapyy&callback='
+        res_text = await fetch_room_url(session, room_url, headers_YY, mintimeout, maxTimeout, now_uuid)
         if not res_text:
-            res_text = put_async_request_queue(room_url, 'text', header=headers_YY, timeout=maxTimeout)
-    if not res_text:
-        return None
-    data = json.loads(res_text[1:-1])
-    if data.get('hls', 0):
-        xa = data['audio']
-        xv = data['video']
-        xv = re.sub(r'_0_\d+_0', '_0_0_0', xv)
-        url = f'https://interface.yy.com/hls/get/stream/15013/{xv}/15013/{xa}?source=h5player&type=m3u8'
-        res_json = put_async_request_queue(url, 'json', header=headers_YY, timeout=mintimeout)
-        if not res_json:
-            res_json = put_async_request_queue(url, 'json', header=headers_YY, timeout=maxTimeout)
-        if not res_json:
-            return None
-        # 取画质最高的
-        if res_json and res_json.get('hls', 0):
-            real_url = res_json['hls']
-            real_lists.append({'hls': real_url})
-            arr.append(f'hls')
-    if real_lists:
-        for real_ in real_lists:
-            for key, value in real_.items():
-                pingM3uSync(value, real_dict, key, mintimeout, maxTimeout)
-        if real_dict:
-            isOne = len(arr) == 1
-            if isOne:
-                for key, value in real_dict.items():
-                    if arr[0] == key:
-                        # 有效直播源,名字/id
-                        return value
-            else:
-                for i in range(len(arr) - 1):
-                    for key, value in real_dict.items():
-                        if arr[i] == key:
-                            return value
-            return None
-    return None
+            try:
+                room_id = await room_id_(session, id, mintimeout, maxTimeout, now_uuid)
+            except Exception as e:
+                return
+            room_url = f'https://interface.yy.com/hls/new/get/{room_id}/{room_id}/1200?source=wapyy&callback='
+            res_text = await fetch_room_url(session, room_url, headers_YY, mintimeout, maxTimeout, now_uuid)
+        if res_text:
+            data = json.loads(res_text[1:-1])
+            if data.get('hls', 0):
+                xa = data['audio']
+                xv = data['video']
+                xv = re.sub(r'_0_\d+_0', '_0_0_0', xv)
+                url = f'https://interface.yy.com/hls/get/stream/15013/{xv}/15013/{xa}?source=h5player&type=m3u8'
+                res_json = await  fetch_real_url(session, url, headers_YY, mintimeout, maxTimeout, now_uuid)
+                if not res_json:
+                    return
+                res_json = json.loads(res_json)
+                # 取画质最高的
+                if res_json and res_json.get('hls', 0):
+                    real_url = res_json['hls']
+                    real_lists.append({'hls': real_url})
+                    arr.append(f'hls')
+            if real_lists:
+                tasks = []
+                for real_ in real_lists:
+                    for key, value in real_.items():
+                        task = asyncio.ensure_future(
+                            pingM3u(session, value, real_dict, key, mintimeout, maxTimeout, now_uuid, 'yylockuuid'))
+                        tasks.append(task)
+                await asyncio.gather(*tasks)
+                if real_dict:
+                    isOne = len(arr) == 1
+                    if isOne:
+                        for key, value in real_dict.items():
+                            if arr[0] == key:
+                                # 有效直播源,名字/id
+                                m3u_dict[id] = value
+                                return
+                    else:
+                        for i in range(len(arr) - 1):
+                            for key, value in real_dict.items():
+                                if arr[i] == key:
+                                    m3u_dict[id] = value
+                                    return
+                    return
+            return
+    except Exception as e:
+        print(f"YY An error occurred while processing {id}. Error: {e}")
 
 
-def get_room_id_douyin2(url, mintimeout, maxTimeout):
+async def get_room_id_douyin(url, session, mintimeout, maxTimeout, now_uuid):
     headers = {
         'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
     }
     url = re.search(r'(https.*)', url).group(1)
-    response = put_async_request_queue(url, 'headers', header=headers, timeout=mintimeout)
-    if not response:
-        response = put_async_request_queue(url, 'headers', header=headers, timeout=maxTimeout)
-    if not response:
-        return None
-    url = response['location']
-    room_id = re.search(r'\d{19}', url).group(0)
+
+    try:
+        if not is_same_action_uuid(now_uuid, 'douyinlockuuid'):
+            return
+        async with  session.get(url, headers=headers, timeout=mintimeout) as response:
+            if response.status == 200:
+                url = response.headers['location']
+                room_id = re.search(r'\d{19}', url).group(0)
+    except asyncio.TimeoutError:
+        if not is_same_action_uuid(now_uuid, 'douyinlockuuid'):
+            return
+        async with  session.get(url, headers=headers, timeout=maxTimeout) as response:
+            if response.status == 200:
+                url = response.headers['location']
+                room_id = re.search(r'\d{19}', url).group(0)
+            else:
+                return None
 
     headers.update({
         'cookie': '_tea_utm_cache_1128={%22utm_source%22:%22copy%22%2C%22utm_medium%22:%22android%22%2C%22utm_campaign%22:%22client_share%22}',
@@ -5239,189 +5356,197 @@ def get_room_id_douyin2(url, mintimeout, maxTimeout):
         ('app_id', '1128'),
         ('X-Bogus', '1'),
     )
-    response = put_async_request_queue('https://webcast.amemv.com/webcast/room/reflow/info/?', 'json', header=headers,
-                                       params=params, timeout=mintimeout)
-    if not response:
-        response = put_async_request_queue('https://webcast.amemv.com/webcast/room/reflow/info/?', 'json',
-                                           header=headers, params=params, timeout=maxTimeout)
-    if not response:
-        return None
-    json_data = response
-    return json_data['data']['room']['owner']['web_rid']
-
-
-def get_best_douyin(id, mintimeout, maxTimeout):
-    if 'v.douyin.com' in id:
-        rid = get_room_id_douyin2(id, mintimeout, maxTimeout)
-        if not rid:
-            return None
-    else:
-        rid = id
-    url = 'https://live.douyin.com/{}'.format(rid)
-    headers = {
-        "cookie": "__ac_nonce=0;",
-        "referer": "https://live.douyin.com/",
-        "upgrade-insecure-requests": "1",
-        "user-agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
-    }
-    result = put_async_request_queue(url, 'text', header=headers, timeout=mintimeout)
-    if not result:
-        result = put_async_request_queue(url, 'text', header=headers, timeout=maxTimeout)
-    if not result:
-        return None
-    text = urllib.parse.unquote(
-        re.findall('<script id="RENDER_DATA" type="application/json">(.*?)</script>', result)[0])
-    if not text:
-        return None
-    json_ = json.loads(text)
-
-    douyin_list = []
-    try:
-        flv_pull_url = json_['app']['initialState']['roomStore']['roomInfo']['room']['stream_url']['flv_pull_url']
-        douyin_list.append(flv_pull_url)
-    except:
-        pass
 
     try:
-        hls_pull_url_map = json_['app']['initialState']['roomStore']['roomInfo']['room']['stream_url'][
-            'hls_pull_url_map']
-        douyin_list.append(hls_pull_url_map)
-    except:
-        pass
-    if len(douyin_list) == 0:
-        return
-    real_lists = []
-    real_dict = {}
-    arr = []
-
-    for real_ in douyin_list:
-        for name_ in real_:
-            if '.flv' in real_[name_]:
-                real_lists.append({f'flv_{name_}': real_[name_]})
-                arr.append(f'flv_{name_}')
-            elif '.m3u8' in real_[name_]:
-                real_lists.append({f'm3u8_{name_}': real_[name_]})
-                arr.append(f'm3u8_{name_}')
-    if real_lists:
-        for real_ in real_lists:
-            for key, value in real_.items():
-                pingM3uSync(value, real_dict, key, mintimeout, maxTimeout)
-        if real_dict:
-            for key, value in real_dict.items():
-                if 'FULL_HD' in key:
-                    return value
-            isOne = len(arr) == 1
-            if isOne:
-                for key, value in real_dict.items():
-                    if arr[0] == key:
-                        # 有效直播源,名字/id
-                        return value
+        if not is_same_action_uuid(now_uuid, 'douyinlockuuid'):
+            return
+        async with session.get('https://webcast.amemv.com/webcast/room/reflow/info/?', headers=headers,
+                               params=params, timeout=mintimeout) as response:
+            if response.status == 200:
+                json_data = await response.json()
+                return json_data['data']['room']['owner']['web_rid']
+    except asyncio.TimeoutError:
+        if not is_same_action_uuid(now_uuid, 'douyinlockuuid'):
+            return
+        async with session.get('https://webcast.amemv.com/webcast/room/reflow/info/?', headers=headers,
+                               params=params, timeout=maxTimeout) as response:
+            if response.status == 200:
+                json_data = await response.json()
+                return json_data['data']['room']['owner']['web_rid']
             else:
-                for i in range(len(arr) - 1):
-                    for key, value in real_dict.items():
-                        if arr[i] == key:
-                            return value
-            return None
-    return None
+                return None
 
 
-def get_best_huya_url(id, mintimeout, maxTimeout):
-    param = {
-        'id': id
-    }
-    real_lists = []
-    real_dict = {}
-    arr = []
-    huya_room_url = 'https://m.huya.com/{}'.format(id)
-    res = put_async_request_queue(huya_room_url, 'text', header=cim_headers_huya, timeout=mintimeout, params=param)
-    if not res:
-        res = put_async_request_queue(huya_room_url, 'text', header=cim_headers_huya, timeout=maxTimeout, params=param)
-    if not res:
-        return None
-    liveLineUrl = re.findall(r'"liveLineUrl":"([\s\S]*?)",', res)[0]
-    liveline = base64.b64decode(liveLineUrl).decode('utf-8')
-    if liveline:
-        if 'replay' in liveline:
-            real_lists.append({'直播录像': f'https://{liveline}'})
+async def grab_douyin(session, id, m3u_dict, mintimeout, maxTimeout):
+    now_uuid = time_clock_update_dict.get('douyinId')
+    try:
+        if 'v.douyin.com' in id:
+            rid = await get_room_id_douyin(id, session, mintimeout, maxTimeout, now_uuid)
+            if not rid:
+                return
         else:
-            liveline = huya_live(liveline)
-            real_url = ("https:" + liveline).replace("hls", "flv").replace("m3u8", "flv").replace(
-                '&ctype=tars_mobile', '')
-            rate = [10000, 8000, 4000]
-            # rate = [10000, 8000, 4000, 2000, 500]
-            arr.append(f'flv_10000')
-            arr.append(f'flv_8000')
-            arr.append(f'flv_4000')
-            # arr.append(f'flv_2000')
-            # arr.append(f'flv_500')
-            for ratio in range(len(rate) - 1, -1, -1):
-                ratio = rate[ratio]
-                if ratio != 10000:
-                    real_url_flv = real_url.replace('.flv?', f'.flv?ratio={ratio}&')
-                    name = f'flv_{ratio}'
-                    real_lists.append({name: real_url_flv})
+            rid = id
+        url = 'https://live.douyin.com/{}'.format(rid)
+        headers = {
+            "cookie": "__ac_nonce=0;",
+            "referer": "https://live.douyin.com/",
+            "upgrade-insecure-requests": "1",
+            "user-agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
+        }
+        try:
+            if not is_same_action_uuid(now_uuid, 'douyinlockuuid'):
+                return
+            async with  session.get(url, headers=headers,
+                                    timeout=mintimeout) as response:
+                if response.status == 200:
+                    result = await response.text()
+        except asyncio.TimeoutError:
+            if not is_same_action_uuid(now_uuid, 'douyinlockuuid'):
+                return
+            async with session.get(url, headers=headers,
+                                   timeout=maxTimeout) as response:
+                if response.status == 200:
+                    result = await response.text()
                 else:
-                    name = f'flv_{ratio}'
-                    real_lists.append({name: real_url})
+                    return None
+        text = urllib.parse.unquote(
+            re.findall('<script id="RENDER_DATA" type="application/json">(.*?)</script>', result)[0])
+        if not text:
+            return
+        json_ = json.loads(text)
+
+        douyin_list = []
+        try:
+            flv_pull_url = json_['app']['initialState']['roomStore']['roomInfo']['room']['stream_url']['flv_pull_url']
+            douyin_list.append(flv_pull_url)
+        except:
+            pass
+
+        try:
+            hls_pull_url_map = json_['app']['initialState']['roomStore']['roomInfo']['room']['stream_url'][
+                'hls_pull_url_map']
+            douyin_list.append(hls_pull_url_map)
+        except:
+            pass
+        if len(douyin_list) == 0:
+            return
+        real_lists = []
+        real_dict = {}
+        arr = []
+
+        for real_ in douyin_list:
+            for name_ in real_:
+                if '.flv' in real_[name_]:
+                    real_lists.append({f'flv_{name_}': real_[name_]})
+                    arr.append(f'flv_{name_}')
+                elif '.m3u8' in real_[name_]:
+                    real_lists.append({f'm3u8_{name_}': real_[name_]})
+                    arr.append(f'm3u8_{name_}')
         if real_lists:
+            tasks = []
             for real_ in real_lists:
                 for key, value in real_.items():
-                    pingM3uSync(value, real_dict, key, mintimeout, maxTimeout)
+                    task = asyncio.ensure_future(
+                        pingM3u(session, value, real_dict, key, mintimeout, maxTimeout, now_uuid, 'douyinlockuuid'))
+                    tasks.append(task)
+            await asyncio.gather(*tasks)
             if real_dict:
+                for key, value in real_dict.items():
+                    if 'FULL_HD' in key:
+                        m3u_dict[id] = value
+                        return
                 isOne = len(arr) == 1
                 if isOne:
                     for key, value in real_dict.items():
                         if arr[0] == key:
                             # 有效直播源,名字/id
-                            return value
+                            m3u_dict[id] = value
+                            return
                 else:
                     for i in range(len(arr) - 1):
                         for key, value in real_dict.items():
                             if arr[i] == key:
-                                return value
-                return None
-        return None
+                                m3u_dict[id] = value
+                                return
+                return
+        return
+    except Exception as e:
+        print(f"douyin An error occurred while processing {id}. Error: {e}")
 
 
-def get_proxy_name_password(proxy):
-    proxy, nameAndPass = proxy.split('@@username=')
-    name, password = nameAndPass.split('@@password=')
-    return proxy, name, password
-
-
-# 0-不使用代理 1-使用代理
-def get_response_async(url, action, useProxy=True, header=None, timeout=None, isForeign=True):
-    if not useProxy:
+async def grab3(session, id, m3u_dict, mintimeout, maxTimeout):
+    now_uuid = time_clock_update_dict.get('huyaId')
+    try:
+        param = {
+            'id': id
+        }
+        real_lists = []
+        real_dict = {}
+        arr = []
+        huya_room_url = 'https://m.huya.com/{}'.format(id)
         try:
-            return put_async_request_queue(url, action, header=header, timeout=timeout)
-        except Exception as e:
-            pass
-    else:
-        proxys = get_proxies(isForeign)
-        if not proxys:
-            try:
-                return put_async_request_queue(url, action, header=header, timeout=timeout)
-            except Exception as e:
-                pass
-        for proxy in proxys:
-            if '@@username=' in proxy:
-                proxy, username, password = get_proxy_name_password(proxy)
-                proxy_auth = aiohttp.BasicAuth(username, password)
-                try:
-                    return put_async_request_queue(url, action, header=header, timeout=timeout, proxy=proxy,
-                                                   proxy_auth=proxy_auth)
-                except Exception as e:
-                    pass
+            if not is_same_action_uuid(now_uuid, 'huyalockuuid'):
+                return
+            async with session.get(huya_room_url, headers=cim_headers_huya, params=param,
+                                   timeout=mintimeout) as response:
+                res = await response.text()
+        except asyncio.TimeoutError:
+            if not is_same_action_uuid(now_uuid, 'huyalockuuid'):
+                return
+            async with session.get(huya_room_url, headers=cim_headers_huya, params=param,
+                                   timeout=maxTimeout) as response:
+                res = await response.text()
+        liveLineUrl = re.findall(r'"liveLineUrl":"([\s\S]*?)",', res)[0]
+        liveline = base64.b64decode(liveLineUrl).decode('utf-8')
+        if liveline:
+            if 'replay' in liveline:
+                real_lists.append({'直播录像': f'https://{liveline}'})
             else:
-                try:
-                    return put_async_request_queue(url, action, header=header, timeout=timeout, proxy=proxy)
-                except Exception as e:
-                    pass
-        try:
-            return put_async_request_queue(url, action, header=header, timeout=timeout)
-        except Exception as e:
-            return None
-    return None
+                liveline = huya_live(liveline)
+                real_url = ("https:" + liveline).replace("hls", "flv").replace("m3u8", "flv").replace(
+                    '&ctype=tars_mobile', '')
+                rate = [10000, 8000, 4000]
+                # rate = [10000, 8000, 4000, 2000, 500]
+                arr.append(f'flv_10000')
+                arr.append(f'flv_8000')
+                arr.append(f'flv_4000')
+                # arr.append(f'flv_2000')
+                # arr.append(f'flv_500')
+                for ratio in range(len(rate) - 1, -1, -1):
+                    ratio = rate[ratio]
+                    if ratio != 10000:
+                        real_url_flv = real_url.replace('.flv?', f'.flv?ratio={ratio}&')
+                        name = f'flv_{ratio}'
+                        real_lists.append({name: real_url_flv})
+                    else:
+                        name = f'flv_{ratio}'
+                        real_lists.append({name: real_url})
+            if real_lists:
+                tasks = []
+                for real_ in real_lists:
+                    for key, value in real_.items():
+                        task = asyncio.ensure_future(
+                            pingM3u(session, value, real_dict, key, mintimeout, maxTimeout, now_uuid, 'huyalockuuid'))
+                        tasks.append(task)
+                await asyncio.gather(*tasks)
+                if real_dict:
+                    isOne = len(arr) == 1
+                    if isOne:
+                        for key, value in real_dict.items():
+                            if arr[0] == key:
+                                # 有效直播源,名字/id
+                                m3u_dict[id] = value
+                                return
+                    else:
+                        for i in range(len(arr) - 1):
+                            for key, value in real_dict.items():
+                                if arr[i] == key:
+                                    m3u_dict[id] = value
+                                    return
+                    return
+            return
+    except Exception as e:
+        print(f"huya An error occurred while processing {id}. Error: {e}")
 
 
 async def download_files4():
@@ -5461,7 +5586,8 @@ async def get_resolution(session, liveurl, mintimeout, maxTimeout, now_uuid, uui
     return url
 
 
-def get_best_youtube_live(id, mintimeout, maxTimeout):
+async def grab(session, id, m3u_dict, mintimeout, maxTimeout):
+    now_uuid = time_clock_update_dict.get('youtubeId')
     youtubeUrl = 'https://www.youtube.com/watch?v='
     try:
         url = youtubeUrl + id
@@ -5500,11 +5626,9 @@ def get_best_youtube_live(id, mintimeout, maxTimeout):
         if highest_quality_link:
             m3u_dict[id] = highest_quality_link
         else:
-            tuner += 5
-    if highest_quality_link:
-        return highest_quality_link
-    else:
-        return link[start: end]
+            m3u_dict[id] = link[start: end]
+    except Exception as e:
+        print(f"youtube An error occurred while processing {id}. Error: {e}")
 
 
 def chaoronghe25():
@@ -5519,7 +5643,7 @@ def chaoronghe25():
             return "empty"
         ip = init_IP()
         redisKeyBililiM3uFake = {}
-        # fakeurl = f'http://127.0.0.1:5000/bilibili/'
+        # fakeurl = f'http://127.0.0.1:22771/bilibili/'
         fakeurl = f"http://{ip}:{port_live}/bilibili/"
         for id, url in m3u_dict.items():
             try:
@@ -5548,7 +5672,7 @@ def chaoronghe26():
             return "empty"
         ip = init_IP()
         redisKeyHuyaM3uFake = {}
-        # fakeurl = 'http://127.0.0.1:5000/huya/'
+        # fakeurl = 'http://127.0.0.1:22771/huya/'
         fakeurl = f"http://{ip}:{port_live}/huya/"
         for id, url in m3u_dict.items():
             try:
@@ -5607,7 +5731,7 @@ def chaoronghe29():
         ip = init_IP()
         redisKeyDOUYINM3uFake = {}
         fakeurl = f"http://{ip}:{port_live}/DOUYIN/"
-        # fakeurl = f"http://127.0.0.1:5000/DOUYIN/"
+        # fakeurl = f"http://127.0.0.1:22771/DOUYIN/"
         for id, url in m3u_dict.items():
             try:
                 name = redisKeyDOUYIN[id]
@@ -5652,8 +5776,8 @@ def chaoronghe30():
             pass
         safe_del_alist_m3u8()
         ip = init_IP()
-        fakeurl = f"http://127.0.0.1:5000/alist/"
-        # fakeurl = f"http://{ip}:{port_live}/alist/"
+        # fakeurl = f"http://127.0.0.1:5000/alist/"
+        fakeurl = f"http://{ip}:{port_live}/alist/"
         pathxxx = f"{secret_path}alist.m3u"
         thread2 = threading.Thread(target=check_alist_file,
                                    args=(redisKeyAlist, fakeurl, pathxxx))
@@ -5684,30 +5808,30 @@ async def sluty_alist_hunter(alist_url_dict, fakeurl, pathxxx):
     api_part = 'api/fs/list'
     # 可以解析出alist网站隐藏的基础路径
     api_me_base_path = 'api/me'
-    for site, password in alist_url_dict.items():
-        # 需要迭代访问的路径
-        future_path_set = set()
-        site, startPath = get_site_and_path(site)
-        if not site.endswith('/'):
-            site += '/'
-        base_path_url = site + api_me_base_path
-        json_data = put_async_request_queue(base_path_url, 'json')
-        if not json_data:
-            continue
-        base_path = json_data['data']['base_path']
-        full_url = site + api_part
-        await getPathBase(site, full_url, startPath, future_path_set, fakeurl, pathxxx,
-                          base_path, password)
+    async with aiohttp.ClientSession() as session:
+        for site, password in alist_url_dict.items():
+            # 需要迭代访问的路径
+            future_path_set = set()
+            site, startPath = get_site_and_path(site)
+            if not site.endswith('/'):
+                site += '/'
+            base_path_url = site + api_me_base_path
+            async with  session.get(base_path_url) as response:
+                json_data = await response.json()
+                base_path = json_data['data']['base_path']
+            full_url = site + api_part
+            await getPathBase(site, full_url, startPath, future_path_set, session, fakeurl, pathxxx,
+                              base_path, password)
 
-        async def process_path(pathbase):
-            await getPathBase(site, full_url, pathbase, future_path_set, fakeurl,
-                              pathxxx, base_path, password
-                              )
+            async def process_path(pathbase):
+                await getPathBase(site, full_url, pathbase, future_path_set, session, fakeurl,
+                                  pathxxx, base_path, password
+                                  )
 
-        while len(future_path_set) > 0:
-            tasks = [process_path(pathbase) for pathbase in future_path_set]
-            future_path_set.clear()
-            await asyncio.gather(*tasks)
+            while len(future_path_set) > 0:
+                tasks = [process_path(pathbase) for pathbase in future_path_set]
+                future_path_set.clear()
+                await asyncio.gather(*tasks)
 
 
 # target_file_name  和文件夹同名的文件
@@ -5730,27 +5854,14 @@ def has_found_target(content, target_file_name):
     return None
 
 
-def get_alist_host(site):
-    if site.endswith('/'):
-        return site[-1]
-    return site
-
-
 # url-基础请求列表API地址(alist网站/alist/api/fs/list)
 # path-迭代查询路径
 # file_url_dict 已经捕获到的文件(只存储视频文件)
 # 新的路径
-async def getPathBase(site, full_url, path, future_path_set, fakeurl, pathxxx,
+async def getPathBase(site, full_url, path, future_path_set, session, fakeurl, pathxxx,
                       base_path, password):
     global redisKeyAlistM3u
     global redisKeyAlistM3uTsPath
-    headers = {
-        "User-Agent": '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67\"',
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        "Accept-Encoding": "gzip, deflate",
-        "Connection": "keep-alive",
-        "Upgrade-Insecure-Requests": "1"
-    }
     if path:
         if not path.startswith('/'):
             path = '/' + path
@@ -5760,119 +5871,120 @@ async def getPathBase(site, full_url, path, future_path_set, fakeurl, pathxxx,
     else:
         url = full_url
     try:
-        json_data = put_async_request_queue(url, 'json')
-        if not json_data:
-            return
-        content = json_data['data']['content']
-        for item in content:
-            # 名字
-            name = item['name']
-            # false-不是文件夹 true-是文件夹
-            is_dir = item['is_dir']
-            # 是文件夹，计算下一级目录，等待再次访问
-            # 签名
-            sign = item['sign']
-            if is_dir:
-                same_name_file, same_name_file_sign = has_found_target(content, name)
-                # 同级目录下找到了目标文件，不再向下检查
-                if same_name_file:
-                    if path:
-                        # 这是切片文件需要的路径，已经找到了菜单文件，不再寻找菜单目录下的内容，直接记录菜单目录，但是现在是菜单目录的父亲目录
-                        same_level_path = f'{path}/{name}'
-                        if base_path != '/':
-                            # 下载菜单文件需要的路径，此时的name其实是文件夹和菜单名字相同的
-                            future_path = f'{site}d{base_path}{path}/{same_name_file}'
-                            # 不完整ts路径，拼接上具体ts文件名就是完整的
-                            future_path_ts = f'{site}d{base_path}{path}/{name}'
+        async with  session.get(url) as response:
+            json_data = await response.json()
+            if not json_data:
+                return
+            content = json_data['data']['content']
+            for item in content:
+                # 名字
+                name = item['name']
+                # false-不是文件夹 true-是文件夹
+                is_dir = item['is_dir']
+                # 是文件夹，计算下一级目录，等待再次访问
+                # 签名
+                sign = item['sign']
+                if is_dir:
+                    same_name_file, same_name_file_sign = has_found_target(content, name)
+                    # 同级目录下找到了目标文件，不再向下检查
+                    if same_name_file:
+                        if path:
+                            # 这是切片文件需要的路径，已经找到了菜单文件，不再寻找菜单目录下的内容，直接记录菜单目录，但是现在是菜单目录的父亲目录
+                            same_level_path = f'{path}/{name}'
+                            if base_path != '/':
+                                # 下载菜单文件需要的路径，此时的name其实是文件夹和菜单名字相同的
+                                future_path = f'{site}d{base_path}{path}/{same_name_file}'
+                                # 不完整ts路径，拼接上具体ts文件名就是完整的
+                                future_path_ts = f'{site}d{base_path}{path}/{name}'
+                            else:
+                                future_path = f'{site}d{path}/{same_name_file}'
+                                future_path_ts = f'{site}d{path}/{name}'
                         else:
-                            future_path = f'{site}d{path}/{same_name_file}'
-                            future_path_ts = f'{site}d{path}/{name}'
+                            same_level_path = f'/{name}'
+                            if base_path != '/':
+                                future_path = f'{site}d{base_path}/{same_name_file}'
+                                future_path_ts = f'{site}d{base_path}/{name}'
+                            else:
+                                future_path = f'{site}d/{same_name_file}'
+                                future_path_ts = f'{site}d/{name}'
+                        encoded_url = urllib.parse.quote(future_path, safe=':/')
+                        if same_name_file_sign and same_name_file_sign != '':
+                            encoded_url = f'{encoded_url}?sign={same_name_file_sign}'
+                        uuid_name = name
+                        try:
+                            tvg_name, groupname = await get_alist_uuid_file_data(encoded_url, password,
+                                                                                 uuid_name,
+                                                                                 fakeurl, session)
+                        except Exception as e:
+                            pass
+                        if tvg_name:
+                            if groupname and groupname != '':
+                                groupname = groupname
+                            else:
+                                groupname = 'alist'
+                            link = f'#EXTINF:-1 group-title={groupname}  tvg-name="{tvg_name}",{tvg_name}\n'
+                            # uuid(视频序号),uuid下子目录url，结合这个可以逆推与之同一个目录的加密ts文件的url，主要检查是否有签名,由于数量巨大不予以存储
+                            uuid_same_level_path_url = f'{full_url}?path={same_level_path}'
+                            redisKeyAlistM3u[uuid_name] = uuid_same_level_path_url
+                            redis_add_map(REDIS_KEY_Alist_M3U, {uuid_name: uuid_same_level_path_url})
+                            redisKeyAlistM3uTsPath[uuid_name] = future_path_ts
+                            redis_add_map(REDIS_KEY_Alist_M3U_TS_PATH, {uuid_name: future_path_ts})
+                            # 虚假IP+端口+唯一uuid(文件夹名字)
+                            fake_m3u8 = f'{fakeurl}{uuid_name}.m3u8'
+                            async with aiofiles.open(pathxxx, 'a', encoding='utf-8') as f:  # 异步的方式写入内容
+                                await f.write(f'{link}{fake_m3u8}\n')
                     else:
-                        same_level_path = f'/{name}'
-                        if base_path != '/':
-                            future_path = f'{site}d{base_path}/{same_name_file}'
-                            future_path_ts = f'{site}d{base_path}/{name}'
+                        # 设置接下来要检测的路径，但是如果在这一层路径找到想要的东西就pass
+                        if path:
+                            future_path_set.add(f'{path}/{name}')
                         else:
-                            future_path = f'{site}d/{same_name_file}'
-                            future_path_ts = f'{site}d/{name}'
-                    encoded_url = urllib.parse.quote(future_path, safe=':/')
-                    if same_name_file_sign and same_name_file_sign != '':
-                        encoded_url = f'{encoded_url}?sign={same_name_file_sign}'
-                    uuid_name = name
-                    try:
-                        tvg_name, groupname = get_alist_uuid_file_data(encoded_url, password,
-                                                                       uuid_name,
-                                                                       fakeurl, headers)
-                    except Exception as e:
-                        pass
-                    if tvg_name:
-                        if groupname and groupname != '':
-                            groupname = groupname
-                        else:
-                            groupname = 'alist'
-                        link = f'#EXTINF:-1 group-title={groupname}  tvg-name="{tvg_name}",{tvg_name}\n'
-                        # uuid(视频序号),uuid下子目录url，结合这个可以逆推与之同一个目录的加密ts文件的url，主要检查是否有签名,由于数量巨大不予以存储
-                        uuid_same_level_path_url = f'{full_url}?path={same_level_path}'
-                        redisKeyAlistM3u[uuid_name] = uuid_same_level_path_url
-                        redis_add_map(REDIS_KEY_Alist_M3U, {uuid_name: uuid_same_level_path_url})
-                        redisKeyAlistM3uTsPath[uuid_name] = future_path_ts
-                        redis_add_map(REDIS_KEY_Alist_M3U_TS_PATH, {uuid_name: future_path_ts})
-                        # 虚假IP+端口+唯一uuid(文件夹名字)
-                        fake_m3u8 = f'{fakeurl}{uuid_name}.m3u8'
-                        async with aiofiles.open(pathxxx, 'a', encoding='utf-8') as f:  # 异步的方式写入内容
-                            await f.write(f'{link}{fake_m3u8}\n')
+                            future_path_set.add(f'/{name}')
                 else:
-                    # 设置接下来要检测的路径，但是如果在这一层路径找到想要的东西就pass
-                    if path:
-                        future_path_set.add(f'{path}/{name}')
-                    else:
-                        future_path_set.add(f'/{name}')
-            else:
-                # 假定是加密m3u8文件
-                if url.endswith(name):
-                    if path:
-                        same_level_path = f'{path}'
-                        if base_path != '/':
-                            future_path = f'{site}d{base_path}{path}/{name}'
-                            # 不完整ts路径，拼接上具体ts文件名就是完整的
-                            future_path_ts = f'{site}d{base_path}{path}'
+                    # 假定是加密m3u8文件
+                    if url.endswith(name):
+                        if path:
+                            same_level_path = f'{path}'
+                            if base_path != '/':
+                                future_path = f'{site}d{base_path}{path}/{name}'
+                                # 不完整ts路径，拼接上具体ts文件名就是完整的
+                                future_path_ts = f'{site}d{base_path}{path}'
+                            else:
+                                future_path = f'{site}d{path}/{name}'
+                                future_path_ts = f'{site}d{path}'
                         else:
-                            future_path = f'{site}d{path}/{name}'
-                            future_path_ts = f'{site}d{path}'
-                    else:
-                        same_level_path = f'/'
-                        if base_path != '/':
-                            future_path = f'{site}d{base_path}/{name}'
-                            future_path_ts = f'{site}d{base_path}'
-                        else:
-                            future_path = f'{site}d/{name}'
-                            future_path_ts = f'{site}d'
-                    encoded_url = urllib.parse.quote(future_path, safe=':/')
-                    if sign and sign != '':
-                        encoded_url = f'{encoded_url}?sign={sign}'
-                    uuid_name = name
-                    try:
-                        tvg_name, groupname = get_alist_uuid_file_data(encoded_url, password,
-                                                                       uuid_name,
-                                                                       fakeurl, headers)
-                    except Exception as e:
-                        pass
-                    if tvg_name:
-                        if groupname and groupname != '':
-                            groupname = groupname
-                        else:
-                            groupname = 'alist'
-                        link = f'#EXTINF:-1 group-title={groupname}  tvg-name="{tvg_name}",{tvg_name}\n'
-                        # uuid(视频序号),uuid下子目录url，结合这个可以逆推与之同一个目录的加密ts文件的url，主要检查是否有签名,由于数量巨大不予以存储
-                        uuid_same_level_path_url = f'{full_url}?path={same_level_path}'
-                        redisKeyAlistM3u[uuid_name] = uuid_same_level_path_url
-                        redis_add_map(REDIS_KEY_Alist_M3U, {uuid_name: uuid_same_level_path_url})
-                        redisKeyAlistM3uTsPath[uuid_name] = future_path_ts
-                        redis_add_map(REDIS_KEY_Alist_M3U_TS_PATH, {uuid_name: future_path_ts})
-                        # 虚假IP+端口+唯一uuid(文件夹名字)
-                        fake_m3u8 = f'{fakeurl}{uuid_name}.m3u8'
-                        async with aiofiles.open(pathxxx, 'a', encoding='utf-8') as f:  # 异步的方式写入内容
-                            await f.write(f'{link}{fake_m3u8}\n')
+                            same_level_path = f'/'
+                            if base_path != '/':
+                                future_path = f'{site}d{base_path}/{name}'
+                                future_path_ts = f'{site}d{base_path}'
+                            else:
+                                future_path = f'{site}d/{name}'
+                                future_path_ts = f'{site}d'
+                        encoded_url = urllib.parse.quote(future_path, safe=':/')
+                        if sign and sign != '':
+                            encoded_url = f'{encoded_url}?sign={sign}'
+                        uuid_name = name
+                        try:
+                            tvg_name, groupname = await get_alist_uuid_file_data(encoded_url, password,
+                                                                                 uuid_name,
+                                                                                 fakeurl, session)
+                        except Exception as e:
+                            pass
+                        if tvg_name:
+                            if groupname and groupname != '':
+                                groupname = groupname
+                            else:
+                                groupname = 'alist'
+                            link = f'#EXTINF:-1 group-title={groupname}  tvg-name="{tvg_name}",{tvg_name}\n'
+                            # uuid(视频序号),uuid下子目录url，结合这个可以逆推与之同一个目录的加密ts文件的url，主要检查是否有签名,由于数量巨大不予以存储
+                            uuid_same_level_path_url = f'{full_url}?path={same_level_path}'
+                            redisKeyAlistM3u[uuid_name] = uuid_same_level_path_url
+                            redis_add_map(REDIS_KEY_Alist_M3U, {uuid_name: uuid_same_level_path_url})
+                            redisKeyAlistM3uTsPath[uuid_name] = future_path_ts
+                            redis_add_map(REDIS_KEY_Alist_M3U_TS_PATH, {uuid_name: future_path_ts})
+                            # 虚假IP+端口+唯一uuid(文件夹名字)
+                            fake_m3u8 = f'{fakeurl}{uuid_name}.m3u8'
+                            async with aiofiles.open(pathxxx, 'a', encoding='utf-8') as f:  # 异步的方式写入内容
+                                await f.write(f'{link}{fake_m3u8}\n')
     except Exception as e:
         pass
 
@@ -5906,18 +6018,19 @@ def get_new_content_by_uuid(mintimeout, maxTimeout, same_level_path, uuid, heade
         content_list = get_content_by_uuid(uuid)
         if content_list:
             return content_list
-        json_data = put_async_request_queue(same_level_path, 'json', header=headers, timeout=mintimeout,
-                                            threadnum=3)
-        if not json_data:
-            json_data = put_async_request_queue(same_level_path, 'json', header=headers, timeout=maxTimeout,
-                                                threadnum=3)
-        if not json_data:
-            return None
-        content = json_data['data']['content']
-        past_list_item.clear()
-        past_list_item = content.copy()
-        past_alist_ts_uuid['uuid'] = uuid
-        return content
+        try:
+            response = requests.get(same_level_path, headers=headers, timeout=mintimeout, verify=False)
+        except requests.exceptions.Timeout:
+            # 处理请求超时异常
+            response = requests.get(same_level_path, headers=headers, timeout=maxTimeout, verify=False)
+        if response.status_code == 200:
+            json_data = response.json()
+            content = json_data['data']['content']
+            past_list_item.clear()
+            past_list_item = content.copy()
+            past_alist_ts_uuid['uuid'] = uuid
+            return content
+        return None
 
 
 # 获取加密ts文件的真实下载url   uuid_ts-加密ts文件名字
@@ -5948,40 +6061,40 @@ def get_true_alist_ts_url(ts_uuid_secret_name):
             continue
         # 签名
         sign = item['sign']
-        break
     future_path_ts = f'{redisKeyAlistM3uTsPath.get(uuid)}/{ts_uuid_secret_name}'
     encoded_url = urllib.parse.quote(future_path_ts, safe=':/')
     if sign and sign != '':
         encoded_url = f'{encoded_url}?sign={sign}'
     else:
         encoded_url = f'{encoded_url}?sign='''
-    content = put_async_request_queue(encoded_url, 'read', header=headers, timeout=mintimeout)
-    if not content:
-        content = put_async_request_queue(encoded_url, 'read', header=headers, timeout=maxTimeout)
-    if not content:
+    try:
+        content = download_file(encoded_url, headers, mintimeout, 1024 * 64)
+    except requests.exceptions.Timeout:
+        content = download_file(encoded_url, headers, mintimeout, 1024 * 64)
+        # 处理请求超时异常
+    except requests.exceptions.HTTPError as e:
         # 签名异常，重新刷新content数据
-        # if e.response.status_code == 401:
-        content_list = get_new_content_by_uuid(mintimeout, maxTimeout, same_level_path, uuid, headers)
-        for item in content_list:
-            # 名字
-            name = item['name']
-            if ts_uuid_secret_name != name:
-                continue
-            # 签名
-            sign = item['sign']
-        future_path_ts = f'{redisKeyAlistM3uTsPath.get(uuid)}/{ts_uuid_secret_name}'
-        encoded_url = urllib.parse.quote(future_path_ts, safe=':/')
-        if sign and sign != '':
-            encoded_url = f'{encoded_url}?sign={sign}'
-        else:
-            encoded_url = f'{encoded_url}?sign='''
-        content = put_async_request_queue(encoded_url, 'threaddownload', header=headers, timeout=mintimeout,
-                                          threadnum=3)
-        if not content:
-            content = put_async_request_queue(encoded_url, 'threaddownload', header=headers, timeout=maxTimeout,
-                                              threadnum=3)
-        if not content:
-            return None
+        if e.response.status_code == 401:
+            content_list = get_new_content_by_uuid(mintimeout, maxTimeout, same_level_path, uuid, headers)
+            for item in content_list:
+                # 名字
+                name = item['name']
+                if ts_uuid_secret_name != name:
+                    continue
+                # 签名
+                sign = item['sign']
+            future_path_ts = f'{redisKeyAlistM3uTsPath.get(uuid)}/{ts_uuid_secret_name}'
+            encoded_url = urllib.parse.quote(future_path_ts, safe=':/')
+            if sign and sign != '':
+                encoded_url = f'{encoded_url}?sign={sign}'
+            else:
+                encoded_url = f'{encoded_url}?sign='''
+            try:
+                content = download_file(encoded_url, headers, mintimeout, 1024 * 64)
+            except requests.exceptions.Timeout:
+                content = download_file(encoded_url, headers, mintimeout, 1024 * 64)
+            except Exception as e:
+                return None
     if content:
         password = get_password(same_level_path)
         if not password:
@@ -6002,26 +6115,19 @@ def download_file(url, headers, timeout, size):
 
 
 # 下载解密全部特殊加密直播文件
-def get_alist_uuid_file_data(secret_uuid_m3u8_file_url, password, uuid_name, fakeurl, headers):
-    # user_agent = '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"'
-    # headers = {'User-Agent': user_agent}
+async def get_alist_uuid_file_data(secret_uuid_m3u8_file_url, password, uuid_name, fakeurl, session):
+    user_agent = '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"'
+    headers = {'User-Agent': user_agent}
     count = 0
-    content = None
     while count < 3:
         try:
-            content = put_async_request_queue(secret_uuid_m3u8_file_url, 'read', header=headers, timeout=10)
-            # content = await get_response_async(secret_uuid_m3u8_file_url, 1, headers, 30, session, 2, False)
-            # async with  session.get(secret_uuid_m3u8_file_url, headers=headers,
-            #                         timeout=30) as response:
-            #     content = await response.read()
+            async with  session.get(secret_uuid_m3u8_file_url, headers=headers,
+                                    timeout=30) as response:
+                content = await response.read()
         except asyncio.TimeoutError:
-            content = put_async_request_queue(secret_uuid_m3u8_file_url, 'read', header=headers, timeout=30)
-            # content = await get_response_async(secret_uuid_m3u8_file_url, 1, headers, 60, session, 2, False)
-            # async with  session.get(secret_uuid_m3u8_file_url, headers=headers,
-            #                         timeout=60) as response:
-            #     content = await response.read()
-        except Exception as e:
-            pass
+            async with  session.get(secret_uuid_m3u8_file_url, headers=headers,
+                                    timeout=60) as response:
+                content = await response.read()
         if content and len(content) > 0:
             break
         count += 1
@@ -6079,7 +6185,7 @@ def chaoronghe28():
             return "empty"
         ip = init_IP()
         redisKeyTWITCHM3uFake = {}
-        # fakeurl = f"http://127.0.0.1:5000/TWITCH/"
+        # fakeurl = f"http://127.0.0.1:22771/TWITCH/"
         fakeurl = f"http://{ip}:{port_live}/TWITCH/"
         for id, url in m3u_dict.items():
             try:
@@ -6104,39 +6210,54 @@ def map_remove_keys(map, keys):
 
 
 def update_by_type_normal(type):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     if type == 'qiumihui,':
         # 有效直播源,名字/id
-        m3u_dict = download_files_normal_single_qiumihui()
+        m3u_dict = loop.run_until_complete(download_files_normal_single_qiumihui())
     elif type == 'longzhu,':
         # 有效直播源,名字/id
-        m3u_dict = download_files_normal_single_longzhu()
+        m3u_dict = loop.run_until_complete(download_files_normal_single_longzhu())
     elif type == '857,':
         # 有效直播源,名字/id
-        m3u_dict = download_files_normal_single_857()
+        m3u_dict = loop.run_until_complete(download_files_normal_single_857())
     return m3u_dict
 
 
-def download_files_normal_single_qiumihui():
+async def download_files_normal_single_qiumihui():
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
     m3u_dict = {}
-    deal_qiumihui(m3u_dict, mintimeout, maxTimeout)
+    async with aiohttp.ClientSession() as session:
+        try:
+            await deal_qiumihui(session, m3u_dict, mintimeout, maxTimeout)
+
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f"qiumihui Failed to fetch files. Error: {e}")
     return m3u_dict
 
 
-def download_files_normal_single_longzhu():
+async def download_files_normal_single_longzhu():
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
     m3u_dict = {}
-    grab_normal_longzhu(m3u_dict, mintimeout, maxTimeout, 'longzhu')
+    async with aiohttp.ClientSession() as session:
+        try:
+            await  grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, 'longzhu')
+        except Exception as e:
+            print(f"longzhu Failed to fetch files. Error: {e}")
     return m3u_dict
 
 
-def download_files_normal_single_857():
+async def download_files_normal_single_857():
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
     m3u_dict = {}
-    grab_normal_857(m3u_dict, mintimeout, maxTimeout, '857')
+    async with aiohttp.ClientSession() as session:
+        try:
+            await  grab_normal_857(session, m3u_dict, mintimeout, maxTimeout, '857')
+        except Exception as e:
+            print(f"857 Failed to fetch files. Error: {e}")
     return m3u_dict
 
 
@@ -6155,11 +6276,20 @@ async def download_files_normal_single_migu():
     return m3u_dict
 
 
-def download_files_normal_single_cq(id):
+async def download_files_normal_single_cq():
+    global redisKeyNormal
     mintimeout = int(getFileNameByTagName('minTimeout'))
     maxTimeout = int(getFileNameByTagName('maxTimeout'))
-    source_type, rid = id.split(',')
-    return grab_normal_chongqin(rid, mintimeout, maxTimeout)
+    m3u_dict = {}
+    global time_clock_update_dict
+    nowId = time_clock_update_dict.get('cqId')
+    source_type, rid = nowId.split(',')
+    async with aiohttp.ClientSession() as session:
+        try:
+            await grab_normal_chongqin(session, rid, m3u_dict, mintimeout, maxTimeout, 'cq')
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f"normal Failed to fetch files. Error: {e}")
+    return m3u_dict
 
 
 def chaoronghe31_single(type):
@@ -6304,8 +6434,10 @@ def chaoronghe31_single(type):
 
 def chaoronghe31():
     try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         # 有效直播源,名字/id
-        m3u_dict = download_files_normal_single()
+        m3u_dict = loop.run_until_complete(download_files_normal_single())
         length = len(m3u_dict)
         if length == 0:
             return "empty"
@@ -6407,7 +6539,7 @@ def chaoronghe24():
             return "empty"
         ip = init_IP()
         redisKeyYoutubeM3uFake = {}
-        # fakeurl = 'http://127.0.0.1:5000/youtube/'
+        # fakeurl = 'http://127.0.0.1:22771/youtube/'
         fakeurl = f"http://{ip}:{port_live}/youtube/"
         for id, url in m3u_dict.items():
             try:
@@ -6871,20 +7003,9 @@ def get_m3u8_link(id):
         return None
 
 
-def check_ts_update_m3u8_hk():
-    now = int(time.time())
-    try:
-        old = int(old_m3u8_data_hk['lastnumber'])
-    except:
-        old = 0
-    num = now - old
-    if num > 0:
-        old_m3u8_data_hk['end'] = '1'
-
-
 def get_ts_data(id, number):
     url = f"https://hklive.tv/dtmb/{id}/{number}.ts"
-    #        "Accept-Encoding": "gzip, deflate,br",
+
     headers = {
         'Accept': '*/*',
         'If-Modified-Since': time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime()),
@@ -6923,7 +7044,7 @@ def get_m3u8_raw_content(url, id):
         content = response.content
         new_m3u8_data = []
         ip = init_IP()
-        # fakeurl = f"http://127.0.0.1:5000/normal/"
+        #fakeurl = f"http://127.0.0.1:5000/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
         for line in content.splitlines():
             if line.startswith(
@@ -6944,21 +7065,17 @@ migu_lock = threading.Lock()
 cq_lock = threading.Lock()
 efs_lock = threading.Lock()
 
-stupid_has_pushed_ts = {}
 
 # 推流普通ts文件
 @app.route('/normal/<path:path>.ts')
 def video_m3u8_normal_ts(path):
-    # if path in stupid_has_pushed_ts.keys():
-    #     return
     type, id, number = path.split(',')
     if type == 'hkdtmb':
         try:
             bytesdata = get_ts_data(id, number)
             if bytesdata:
-                stupid_has_pushed_ts[path] = ''
                 return Response(bytesdata, mimetype='video/MP2T')
-        except Exception as e:
+        except:
             pass
     return video_m3u8_normal_ts(path)
 
@@ -7009,15 +7126,13 @@ def serve_files_normal(filename):
                     url = tv_dict_normal.get(id)
                     if not url:
                         url = get_hd_url_migu(id)
-                        if url:
-                            redisKeyNormalM3U[id] = url
-                            reset_clock('migu')
+                        redisKeyNormalM3U[id] = url
+                        reset_clock('migu')
             elif id.startswith('cq,'):
                 with cq_lock:
                     url = tv_dict_normal.get(id)
                     if not url:
                         url = get_hd_url_cq(id)
-                    if url:
                         redisKeyNormalM3U[id] = url
                         reset_clock('cq')
         tv_dict_normal.clear()
@@ -7028,19 +7143,17 @@ def serve_files_normal(filename):
                 with migu_lock:
                     if is_update_clock_live('migu') and time_clock_update_dict['miguId'] == id:
                         url = get_hd_url_migu(id)
-                        if url:
-                            redisKeyNormalM3U[id] = url
-                            tv_dict_normal[id] = url
-                            update_clock('migu')
+                        redisKeyNormalM3U[id] = url
+                        tv_dict_normal[id] = url
+                        update_clock('migu')
         elif id.startswith('cq,'):
             if is_update_clock_live('cq') and time_clock_update_dict['cqId'] == id:
                 with cq_lock:
                     if is_update_clock_live('cq') and time_clock_update_dict['cqId'] == id:
                         url = get_hd_url_cq(id)
-                        if url:
-                            redisKeyNormalM3U[id] = url
-                            tv_dict_normal[id] = url
-                            update_clock('cq')
+                        redisKeyNormalM3U[id] = url
+                        tv_dict_normal[id] = url
+                        update_clock('cq')
 
     @after_this_request
     def add_header(response):

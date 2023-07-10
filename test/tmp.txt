@@ -1,3 +1,1 @@
-now_uuid = time_clock_update_dict.get('youtubelockuuid')
-            if not is_same_action_uuid(now_uuid, 'youtubelockuuid'):
-                return
+content = put_async_request_queue(url, 'text', header=bili_header, timeout=mintimeout)

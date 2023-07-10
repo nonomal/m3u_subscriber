@@ -1422,15 +1422,6 @@
             </button>
         </div>
         <div style="display: flex;width: 100%;">
-            youtube/bilibili/huya/yy/twitch直播源刷新周期(秒)
-        </div>
-        <div style="width:100%">
-            <input type="text" id="spM3uClock" class="stubboninput" placeholder="3600"/>
-            <button onclick="changeFileName('spM3uClock', 'spM3uClock', spM3uClock)"
-                    class="grid-item button stubbonsave">修改
-            </button>
-        </div>
-        <div style="display: flex;width: 100%;">
             自动简易dns订阅文件生成周期(秒)
         </div>
         <div style="width:100%">
@@ -2505,7 +2496,6 @@
     const normalM3uClock = document.getElementById('normalM3uClock');
     const normalSubscriberClock = document.getElementById('normalSubscriberClock');
     const proxySubscriberClock = document.getElementById('proxySubscriberClock');
-    const spM3uClock = document.getElementById('spM3uClock');
     const autoDnsSwitchClock = document.getElementById('autoDnsSwitchClock');
     const syncClock = document.getElementById('syncClock');
     const reliveAlistTsTime = document.getElementById('reliveAlistTsTime');
@@ -4369,7 +4359,6 @@
             getFileName('normalM3uClock', 'normalM3uClock', normalM3uClock)
             getFileName('normalSubscriberClock', 'normalSubscriberClock', normalSubscriberClock)
             getFileName('proxySubscriberClock', 'proxySubscriberClock', proxySubscriberClock)
-            getFileName('spM3uClock', 'spM3uClock', spM3uClock)
             getFileName('autoDnsSwitchClock', 'autoDnsSwitchClock', autoDnsSwitchClock)
             getFileName('syncClock', 'syncClock', syncClock)
             getFileName('reliveAlistTsTime', 'reliveAlistTsTime', reliveAlistTsTime)

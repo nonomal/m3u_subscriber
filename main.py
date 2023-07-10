@@ -20,6 +20,7 @@ import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from functools import wraps
 
+import chardet
 import m3u8
 import aiohttp
 import aiofiles
@@ -336,8 +337,6 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'whiteListDnsmasq': 'whiteListDnsmasq', 'whiteListDnsmasqSecret': 'whiteListDnsmasqSecret',
                   'whiteListDomian': 'whiteListDomian',
                   'whiteListDomianSecret': 'whiteListDomianSecret',
-                  'openclashFallbackFilterDomain': 'openclashFallbackFilterDomain',
-                  'openclashFallbackFilterDomainSecret': 'openclashFallbackFilterDomainSecret',
                   'blackListDomain': 'blackListDomain',
                   'blackListDomainSecret': 'blackListDomainSecret', 'ipv4': 'ipv4', 'ipv4Secret': 'ipv4Secret',
                   'ipv6': 'ipv6',
@@ -347,7 +346,7 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
                   'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
                   'usernameSys': 'admin', 'passwordSys': 'password', 'normalM3uClock': '7200',
-                  'normalSubscriberClock': '10800', 'proxys': 'http://127.0.0.1:7890||http://127.0.0.1:5336',
+                  'normalSubscriberClock': '10800',
                   'failTs': 'https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4',
                   'proxySubscriberClock': '3600', 'autoDnsSwitchClock': '600', 'syncClock': '10',
                   'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国', 'foreignTopDomain':
@@ -614,8 +613,6 @@ def redis_add(key, value):
         except Exception as e:
             count += 1
             time.sleep(1)
-    # file_path = os.path.join(DB_PATH, f'{key}.txt')
-    # add_single_local(file_path, value)
 
 
 # redis查询
@@ -975,15 +972,6 @@ async def download_url(session, url, value, now_uuid):
                 async with aiofiles.open(path, 'a', encoding='utf-8') as f:  # 异步的方式写入内容
                     await f.write(f'{value}{url}\n')
                 await checkWriteHealthM3u(url)
-    except aiohttp.ClientSSLError as ssl_err:
-        if not is_same_action_uuid(now_uuid, 'checkAlive'):
-            return
-        async with session.get(url, ssl=False) as resp:  # 使用asyncio.Semaphore限制TCP连接的数量
-            if resp.status == 200:
-                path = f"{secret_path}{getFileNameByTagName('aliveM3u')}.m3u"
-                async with aiofiles.open(path, 'a', encoding='utf-8') as f:  # 异步的方式写入内容
-                    await f.write(f'{value}{url}\n')
-                await checkWriteHealthM3u(url)
     except Exception as e:
         print(f"Error occurred while downloading {url}: {e}")
 
@@ -1152,52 +1140,6 @@ def checkToDecrydecrypt2(url, redis_dict, m3u_string, filenameDict, secretNameDi
         thread_write_bytes_to_file(filenameDict[url], m3u_string.encode('utf-8'))
 
 
-def fetch_url(url, redis_dict):
-    try:
-        response = requests.get(url, timeout=5, verify=False)
-        response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
-        # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
-        m3u_string = response.content
-        # 加密文件检测和解码
-        m3u_string = checkToDecrydecrypt(url, redis_dict, m3u_string)
-        # 转换成字符串格式返回
-        m3u_string = checkbytes(m3u_string)
-        m3u_string += "\n"
-        # print(f"success to fetch URL: {url}")
-        return m3u_string
-    except requests.exceptions.Timeout:
-        response = requests.get(url, timeout=30, verify=False)
-        response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
-        # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
-        m3u_string = response.content
-        # 加密文件检测和解码
-        m3u_string = checkToDecrydecrypt(url, redis_dict, m3u_string)
-        # 转换成字符串格式返回
-        m3u_string = checkbytes(m3u_string)
-        m3u_string += "\n"
-        # print(f"success to fetch URL: {url}")
-        return m3u_string
-    except requests.exceptions.RequestException as e:
-        try:
-            url = url.decode('utf-8')
-        except:
-            pass
-        response = requests.get(url, timeout=15, verify=False)
-        response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
-        # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
-        m3u_string = response.content
-        # 加密文件检测和解码
-        m3u_string = checkToDecrydecrypt(url, redis_dict, m3u_string)
-        # 转换成字符串格式返回
-        m3u_string = checkbytes(m3u_string)
-        # print(f"success to fetch URL: {url}")
-        m3u_string += "\n"
-        return m3u_string
-        # print("other error: " + url, e)
-    except:
-        pass
-
-
 def write_to_file(data, file):
     with open(file, 'a', encoding='utf-8') as f:
         for k, v in data:
@@ -1229,6 +1171,8 @@ def worker2(queue, file):
 
 
 def download_files(urls, redis_dict):
+    if len(urls) == 0:
+        return ''
     with concurrent.futures.ThreadPoolExecutor() as executor:
         # 提交下载任务并获取future对象列表
         future_to_url = {executor.submit(fetch_url, url, redis_dict): url for url in urls}
@@ -1246,9 +1190,54 @@ def download_files(urls, redis_dict):
     return "".join(results)
 
 
+def fetch_url(url, redis_dict):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
+        # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
+        m3u_string = response.content
+        # 加密文件检测和解码
+        m3u_string = checkToDecrydecrypt(url, redis_dict, m3u_string)
+        # 转换成字符串格式返回
+        m3u_string = checkbytes(m3u_string)
+        m3u_string += "\n"
+        # print(f"success to fetch URL: {url}")
+        return m3u_string
+    except requests.exceptions.Timeout:
+        response = requests.get(url, timeout=60)
+        response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
+        # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
+        m3u_string = response.content
+        # 加密文件检测和解码
+        m3u_string = checkToDecrydecrypt(url, redis_dict, m3u_string)
+        # 转换成字符串格式返回
+        m3u_string = checkbytes(m3u_string)
+        m3u_string += "\n"
+        return m3u_string
+    except requests.exceptions.RequestException as e:
+        try:
+            url = url.decode('utf-8')
+        except:
+            pass
+        response = requests.get(url)
+        response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
+        # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
+        m3u_string = response.content
+        # 加密文件检测和解码
+        m3u_string = checkToDecrydecrypt(url, redis_dict, m3u_string)
+        # 转换成字符串格式返回
+        m3u_string = checkbytes(m3u_string)
+        # print(f"success to fetch URL: {url}")
+        m3u_string += "\n"
+        return m3u_string
+        # print("other error: " + url, e)
+    except:
+        pass
+
+
 def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, uploadGithub, uploadWebdav):
     try:
-        response = requests.get(url, timeout=5, verify=False)
+        response = requests.get(url)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1256,7 +1245,7 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
         checkToDecrydecrypt2(url, passwordDict, m3u_string, filenameDict, secretNameDict, uploadGitee,
                              uploadGithub, uploadWebdav)
     except requests.exceptions.Timeout:
-        response = requests.get(url, timeout=30, verify=False)
+        response = requests.get(url, timeout=60)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1268,7 +1257,7 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
             url = url.decode('utf-8')
         except:
             pass
-        response = requests.get(url, timeout=15, verify=False)
+        response = requests.get(url)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1282,14 +1271,14 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
 
 def fetch_url3(url, passwordDict, filenameDict):
     try:
-        response = requests.get(url, timeout=5, verify=False)
+        response = requests.get(url)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
         # 加密文件检测和解码
         checkToDecrydecrypt3(url, passwordDict, m3u_string, filenameDict)
     except requests.exceptions.Timeout:
-        response = requests.get(url, timeout=30, verify=False)
+        response = requests.get(url, timeout=60)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1300,7 +1289,7 @@ def fetch_url3(url, passwordDict, filenameDict):
             url = url.decode('utf-8')
         except:
             pass
-        response = requests.get(url, timeout=15, verify=False)
+        response = requests.get(url)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1314,6 +1303,8 @@ def fetch_url3(url, passwordDict, filenameDict):
 #
 def download_files2(urls, passwordDict, filenameDict, secretNameDict, uploadGitee, uploadGithub,
                     uploadWebdav):
+    if len(urls) == 0:
+        return
     with concurrent.futures.ThreadPoolExecutor() as executor:
         # 提交下载任务并获取future对象列表
         future_to_url = {
@@ -1325,6 +1316,8 @@ def download_files2(urls, passwordDict, filenameDict, secretNameDict, uploadGite
 
 
 def download_files3(urls, passwordDict, filenameDict):
+    if len(urls) == 0:
+        return
     with concurrent.futures.ThreadPoolExecutor() as executor:
         # 提交下载任务并获取future对象列表
         future_to_url = {
@@ -1410,6 +1403,8 @@ def writeBlackList():
 
 
 def updateAdguardhomeWithelistForM3us(urls):
+    if len(urls)==0:
+        return
     for url in urls:
         updateAdguardhomeWithelistForM3u(url.decode("utf-8"))
 
@@ -1438,7 +1433,7 @@ def fuck_m3u_to_txt(file_path, txt_path):
         f.write(resultContent)
 
 
-def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
+def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName=None):
     results, redis_dict = redis_get_map_keys(redisKeyLink)
     ism3u = processDataMethodName == 'process_data_abstract'
     global CHANNEL_LOGO
@@ -1474,12 +1469,13 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         redis_del_map(redisKeyData)
     if ism3u:
         if isOpenFunction('switch4'):
-            if len(my_dict) > 0:
+            if len(my_dict) > 0 and fileName:
                 distribute_data(my_dict, fileName, 10)
                 fuck_m3u_to_txt(fileName, f"{secret_path}allM3u.txt")
     else:
-        # 同步方法写出全部配置
-        distribute_data(my_dict, fileName, 10)
+        if fileName:
+           # 同步方法写出全部配置
+           distribute_data(my_dict, fileName, 10)
     if ism3u:
         if len(my_dict) > 0:
             redis_add_map(redisKeyData, my_dict)
@@ -1531,16 +1527,6 @@ def chaorongheBase(redisKeyLink, processDataMethodName, redisKeyData, fileName):
         # blackList.txt
         thread = threading.Thread(target=writeBlackList)
         thread.start()
-        # 加密openclash-fallback-filter-domain.conf
-        thread2 = threading.Thread(target=download_secert_file,
-                                   args=(
-                                       fileName,
-                                       f"{public_path}{getFileNameByTagName('openclashFallbackFilterDomainSecret')}.txt",
-                                       'blacklist',
-                                       isOpenFunction('switch14'), isOpenFunction('switch15'),
-                                       isOpenFunction('switch30'), isOpenFunction('switch31'),
-                                       isOpenFunction('switch32')))
-        thread2.start()
         return "result"
     # ipv4
     if processDataMethodName == 'process_data_abstract5':
@@ -1772,13 +1758,11 @@ def updateFileToWebDAV(file_name):
         try:
             removeIfExistWebDav(ip, username, password, path, file_name, port, agreement)
         except Exception as e:
-            # print(e)
             pass
         try:
             uploadNewFileToWebDAV(ip, username, password, path, file_name, port, agreement)
             break
         except Exception as e:
-            # print(e)
             continue
 
 
@@ -1998,23 +1982,6 @@ def initProxyModel():
     else:
         try:
             update_dict = {
-                "http://127.0.0.1:22771/url/ACL4SSR_Online.ini": "ACL4SSR_Online 默认版 分组比较全(本地离线模板)",
-                "http://127.0.0.1:22771/url/ACL4SSR_Online_AdblockPlus.ini": "ACL4SSR_Online_AdblockPlus 更多去广告(本地离线模板)",
-                "http://127.0.0.1:22771/url/ACL4SSR_Online_Full_Google.ini": "ACL4SSR_Online_Full_Google 全分组 重度用户使用 谷歌细分(本地离线模板)",
-                "http://127.0.0.1:22771/url/ACL4SSR_Online_Full.ini": "ACL4SSR_Online_Full 全分组 重度用户使用(本地离线模板)",
-                "http://127.0.0.1:22771/url/ACL4SSR_Online_Full_MultiMode.ini": "ACL4SSR_Online_Full_MultiMode.ini 全分组 多模式 重度用户使用(本地离线模板)",
-                "http://127.0.0.1:22771/url/ACL4SSR_Online_Full_Netflix.ini": "ACL4SSR_Online_Full_Netflix 全分组 重度用户使用 奈飞全量(本地离线模板)",
-                "http://127.0.0.1:22771/url/ACL4SSR_Online_Full_NoAuto.ini": "ACL4SSR_Online_Full_NoAuto.ini 全分组 无自动测速 重度用户使用(本地离线模板)",
-                "http://127.0.0.1:22771/url/ACL4SSR_Online_Mini.ini": "ACL4SSR_Online_Mini 精简版(本地离线模板)",
-                "http://127.0.0.1:22771/url/ACL4SSR_Online_Mini_AdblockPlus.ini": "ACL4SSR_Online_Mini_AdblockPlus.ini 精简版 更多去广告(本地离线模板)",
-                "http://127.0.0.1:22771/url/ACL4SSR_Online_Mini_Fallback.ini": "ACL4SSR_Online_Mini_Fallback.ini 精简版 带故障转移(本地离线模板)",
-                "http://127.0.0.1:22771/url/ACL4SSR_Online_Mini_MultiCountry.ini": "ACL4SSR_Online_Mini_MultiCountry.ini 精简版 带港美日国家(本地离线模板)",
-                "http://127.0.0.1:22771/url/ACL4SSR_Online_Mini_MultiMode.ini": "ACL4SSR_Online_Mini_MultiMode.ini 精简版 自动测速、故障转移、负载均衡(本地离线模板)",
-                "http://127.0.0.1:22771/url/ACL4SSR_Online_Mini_NoAuto.ini": "ACL4SSR_Online_Mini_NoAuto.ini 精简版 不带自动测速(本地离线模板)",
-                "http://127.0.0.1:22771/url/ACL4SSR_Online_MultiCountry.ini": "ACL4SSR_Online_MultiCountry 多国分组(本地离线模板)",
-                "http://127.0.0.1:22771/url/ACL4SSR_Online_NoAuto.ini": "ACL4SSR_Online_NoAuto 无自动测速(本地离线模板)",
-                "http://127.0.0.1:22771/url/ACL4SSR_Online_NoReject.ini": "ACL4SSR_Online_NoReject 无广告拦截规则(本地离线模板)",
-                "http://127.0.0.1:22771/url/ACL4SSR_Online_Full_AdblockPlus.ini": "ACL4SSR_Online_Full_AdblockPlus 全分组 重度用户使用 更多去广告(本地离线模板)",
                 "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online.ini": "ACL4SSR_Online 默认版 分组比较全(与Github同步)",
                 "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_AdblockPlus.ini": "ACL4SSR_Online_AdblockPlus 更多去广告(与Github同步)",
                 "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_MultiCountry.ini": "ACL4SSR_Online_MultiCountry 多国分组(与Github同步)",
@@ -2455,9 +2422,9 @@ def decode_bytes(text):
             continue
 
     # if none of the above worked, use chardet to detect the encoding
-    # result = chardet.detect(text)
-    # decoded_text = text.decode(result['encoding']).strip()
-    # return decoded_text
+    result = chardet.detect(text)
+    decoded_text = text.decode(result['encoding']).strip()
+    return decoded_text
 
 
 def pureUrl(s):
@@ -2796,7 +2763,7 @@ def getMyGroup(str):
                 if key in str:
                     return group
     except Exception as e:
-        print(e)
+        pass
     return ''
 
 
@@ -3051,270 +3018,6 @@ def formatdata_multithread(data, num_threads):
     return my_dict
 
 
-# # 节点去重复做不了，数据落库挺麻烦就不做了，节点转配置随缘，应该能命中一些简单的配置
-# def download_from_url(url):
-#     try:
-#         # 下载订阅链接内容
-#         response = requests.get(url, timeout=10)
-#         if response.status_code == 200:
-#             try:
-#                 content = base64.b64decode(response.content).decode('utf-8')
-#             except:
-#                 content = response.content.decode("utf-8")
-#         else:
-#             return None
-#         if content.startswith(
-#                 ("ss://", "ssr://", "vmess://", "vless://", "https://", "trojan://", "http://")):
-#             temp_dict = []
-#             mutil_proxie_methods(content, temp_dict)
-#             return temp_dict
-#         else:
-#             temp_dict = []
-#             multi_proxies_yaml(temp_dict, content)
-#             return temp_dict
-#     except Exception as e:
-#         print(f"下载或处理链接 {url} 出错：{e}")
-#         return None
-
-
-# 暂时不考虑自己写节点解析，重复造轮子很累，这个方法暂时不维护了，实际使用时BUG太多了
-# def download_proxies(SUBSCRIPTION_URLS):
-#     my_dict = []
-#     with concurrent.futures.ThreadPoolExecutor(max_workers=len(SUBSCRIPTION_URLS)) as executor:
-#         future_to_url = {executor.submit(download_from_url, url): url for url in SUBSCRIPTION_URLS}
-#         for future in concurrent.futures.as_completed(future_to_url):
-#             url = future_to_url[future]
-#             result = future.result()
-#             if result is not None and len(result) > 0:
-#                 my_dict.extend(result)
-#
-#     return my_dict
-
-
-# 随缘节点转换配置
-# def mutil_proxie_methods(content, my_dict):
-#     # 根据订阅链接格式处理不同类型的节点
-#     for proxy_str in content.splitlines():
-#         try:
-#             proxy_str = proxy_str.strip()
-#             if not proxy_str:
-#                 continue
-#             # 根据代理协议关键字来判断协议类型并解析代理配置
-#             if proxy_str.startswith("ss://"):
-#                 try:
-#                     method, password, server, port = base64.b64decode(proxy_str[5:]).decode().split(":")
-#                 except:
-#                     method, passwordandserver, port = base64.b64decode(proxy_str[5:]).decode().split(":")
-#                     password, server = passwordandserver.split("@")
-#                 new_dict = {
-#                     'name': proxy_str.split('#')[-1].strip(),
-#                     'server': server,
-#                     "type": "ss",
-#                     'port': port,
-#                     'cipher': method or "auto",
-#                     'password': password,
-#                 }
-#                 my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
-#                 # my_dict.append(f"- {new_dict}\n")
-#             # 严格匹配openclash中ssr节点的格式
-#             elif proxy_str.startswith("ssr://"):
-#                 decoded = base64.b64decode(proxy_str[6:]).decode("utf-8")
-#                 parts = decoded.split(":")
-#                 server, port, protocol, method, obfs, password_and_params = parts[0], parts[1], parts[2], parts[3], \
-#                     parts[
-#                         4], parts[5]
-#                 password_and_params = password_and_params.split("/?")
-#                 password, params = password_and_params[0], password_and_params[1]
-#                 params_dict = dict(re.findall(r'(\w+)=([^\&]+)', params))
-#                 group = params_dict.get("group", "")
-#                 udp = params_dict.get("udp", "true").lower() == "true"
-#                 obfs_param = params_dict.get("obfsparam", "")
-#                 protocol_param = params_dict.get("protoparam", "")
-#                 remarks_base64 = params_dict.get("remarks", "").encode('utf-8')
-#                 remarks = base64.b64decode(remarks_base64).decode('utf-8') if remarks_base64 else ""
-#                 name = f"{remarks}-[{group}]"
-#                 new_dict = {
-#                     "name": name,
-#                     "server": server,
-#                     "type": "ssr",
-#                     "port": int(port),
-#                     "udp": udp,
-#                     "password": password,
-#                     "cipher": method,
-#                     "protocol": protocol,
-#                     "protocol_param": protocol_param,
-#                     "obfs": obfs,
-#                     "obfs_param": obfs_param
-#                 }
-#                 my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
-#             # 严格匹配openclash中vmess节点的格式
-#             elif proxy_str.startswith("vmess://"):
-#                 vmess_data = base64.urlsafe_b64decode(proxy_str[8:]).decode()
-#                 vmess_json = json.loads(vmess_data)
-#                 new_dict = {
-#                     'server': vmess_json["add"] or vmess_json["address"] or vmess_json["server"] or vmess_json[
-#                         "host"] or vmess_json["remote"],
-#                     'port': vmess_json["port"] or vmess_json["server_port"],
-#                     'alterId': vmess_json["aid"] or vmess_json["alterId"] or "0",
-#                     'uuid': vmess_json["id"] or vmess_json["aid"] or vmess_json["uuid"],
-#                     'type': "vmess",
-#                     'sni': vmess_json["sni"] or vmess_json["host"] or "",
-#                     'cipher': vmess_json['cipher'] or vmess_json['method'] or vmess_json['security'] or vmess_json[
-#                         'encryption'] or "auto",
-#                     'name': vmess_json["ps"] or vmess_json["name"] or vmess_json["remarks"] or "unkown",
-#                     'protocol': vmess_json["v"] or "2",
-#                     'network': vmess_json["net"] or vmess_json["network"] or "ws",
-#                     'ws-path': vmess_json["ws-path"] or vmess_json["path"] or "",
-#                     'tls': vmess_json["tls"] or vmess_json["security"] or False,
-#                     'skip-cert-verify': vmess_json["skip-cert-verify"] or vmess_json["insecure"] or True,
-#                     'udp': vmess_json["udp"] or True,
-#                     'ws-opts': vmess_json["ws-opts"] or vmess_json["ws-headers"] or "",
-#                 }
-#                 my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
-#             elif proxy_str.startswith("vless://"):
-#                 vless_data = base64.urlsafe_b64decode(proxy_str[8:]).decode()
-#                 vless_json = json.loads(vless_data)
-#                 new_dict = {
-#                     'name': vless_json.get('ps', ''),
-#                     'server': vless_json['add'],
-#                     'server_port': vless_json['port'],
-#                     'protocol': vless_json['net'],
-#                     'cipher': vless_json['type'],
-#                     'password': vless_json['id'],
-#                     'plugin': '',
-#                     'plugin_opts': {}
-#                 }
-#                 my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
-#             elif proxy_str.startswith("https://"):
-#                 https_parts = proxy_str.split(":")
-#                 server, port = https_parts[1], https_parts[2].split("/")[0]
-#                 new_dict = {
-#                     'remarks': proxy_str.split('#')[-1].strip(),
-#                     'server': server,
-#                     'server_port': port,
-#                     'protocol': 'http',
-#                     'cipher': 'GET',
-#                     'password': '',
-#                     'plugin': '',
-#                     'plugin_opts': {},
-#                 }
-#                 my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
-#             elif proxy_str.startswith("trojan://"):
-#                 # 解析链接中的各个部分
-#                 parsed_link = urlparse(proxy_str)
-#                 password = parsed_link.username  # 密码
-#                 server = parsed_link.hostname  # 服务器地址
-#                 port = parsed_link.port  # 端口号（如果未指定则为 None）
-#                 remarks = unquote(parsed_link.fragment)  # 备注信息（需进行 URL 解码）
-#                 new_dict = {
-#                     "name": remarks,
-#                     "server": server,
-#                     "type": "trojan",
-#                     "port": port or 443,
-#                     "password": password,
-#                     "udp": True,
-#                     "skip-cert-verify": True,
-#                 }
-#                 my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
-#             else:
-#                 print(f"无法解析代理链接：{proxy_str}")
-#         except:
-#             pass
-
-
-# def str_constructor(loader, node):
-#     return loader.construct_scalar(node)
-#
-
-# def dict_constructor(loader, node):
-#     data = {}
-#     yield data
-#     if isinstance(node, yaml.MappingNode):
-#         for key_node, value_node in node.value:
-#             key = loader.construct_object(key_node)
-#             # 如果遇到 `!<str>` 标签，使用自定义的 `str_constructor` 处理
-#             if key == "password":
-#                 value = loader.construct_scalar(value_node)
-#                 data[key] = str_constructor(loader, value_node)
-#             else:
-#                 value = loader.construct_object(value_node)
-#                 data[key] = value
-
-
-#
-#
-# def multi_proxies_yaml(my_dict, yaml_data):
-#     try:
-#         data = yaml.load(yaml_data, Loader=yaml.FullLoader)
-#     except:
-#         # 特殊标签
-#         yaml.add_constructor("!<str>", str_constructor)
-#         yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, dict_constructor)
-#         # 加载 YAML 数据
-#         data = yaml.load(yaml_data, Loader=yaml.FullLoader)
-#     if data:
-#         # 标准clash代理，提取proxies部分的字典，直接复制不做任何改变
-#         if 'proxies' in data:
-#             proxies = data['proxies']
-#             for proxy in proxies:
-#                 my_dict.append("- " + json.dumps(proxy, ensure_ascii=False))
-#                 # my_dict.append(f"- {proxy}\n")
-#         else:
-#             # 直接全部是代理配置字典，随缘提取
-#             proxy_list = json.loads(yaml_data)
-#             for proxy in proxy_list:
-#                 try:
-#                     new_dict = {}
-#                     for key, value in proxy.items():
-#                         if key == "name" or key == "remarks":
-#                             new_dict["name"] = value
-#                         elif key == "server" or key == "host" or key == "add" or key == "address":
-#                             new_dict["server"] = value
-#                         elif key == "port" or key == "server_port":
-#                             new_dict["port"] = value
-#                         elif key == "password":
-#                             new_dict["password"] = value
-#                         elif key == "type":
-#                             new_dict["type"] = value
-#                         elif key == "id" or key == "uuid":
-#                             new_dict["uuid"] = value
-#                         elif key == "cipher" or key == "method" or key == "security":
-#                             new_dict["cipher"] = value
-#                         elif key == "alterId" or key == "aid":
-#                             new_dict["alterId"] = value
-#                         elif key == "network" or key == "net":
-#                             new_dict["network"] = value
-#                         elif key == "flow":
-#                             new_dict["flow"] = value
-#                         else:
-#                             new_dict[key] = value
-#                     if 'type' not in new_dict:
-#                         new_dict["type"] = get_proxy_type(proxy)
-#                     if 'name' not in new_dict:
-#                         new_dict["name"] = "unkown"
-#                     my_dict.append("- " + json.dumps(new_dict, ensure_ascii=False))
-#                 except:
-#                     pass
-#
-
-#
-#
-# def get_proxy_type(node):
-#     # 判断节点类型，返回代理类型字符串
-#     if "method" in node and "server_port" in node:
-#         if "protocol" in node and "obfs" in node:
-#             return "ssr"
-#         return "ss"
-#     elif "addr" in node:
-#         if "password" in node:
-#             return "trijan"
-#         if "aid" in node:
-#             return "vmess"
-#         return "vless"
-#     else:
-#         raise ValueError("Unknown proxy type")
-
-
 def getProxyButton():
     dict = redis_get_map(REDIS_KEY_PROXIES_TYPE)
     if not dict:
@@ -3425,6 +3128,8 @@ nameArr = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 'a', 's', 'd', 'f',
 
 
 def download_files_for_encryp_proxy(urls, redis_dict):
+    if len(urls) == 0:
+        return {}
     ip = init_IP()
     # 新生成的本地url
     proxy_dict = {}
@@ -3491,9 +3196,6 @@ def chaorongheProxies(filename):
             with open(filename, 'w'):
                 pass
             write_content_to_file(response.content, filename, 10)
-            # # 下载 Clash 配置文件
-            # with open(filename, 'wb') as f:
-            #     f.write(response.content)
             thread = threading.Thread(target=download_secert_file,
                                       args=(
                                           filename, f"{public_path}{getFileNameByTagName('proxyConfigSecret')}.txt",
@@ -4204,7 +3906,6 @@ def stupidThinkForChina(domain_name):
         # 二级域名
         domain_second = sub_domains[-2]
     except Exception as e:
-        print(e)
         pass
     try:
         # 尽可能争取存储到二级域名，但是要避免垃圾域名和测试域名
@@ -4235,7 +3936,6 @@ def stupidThink(domain_name):
         # 二级域名
         domain_second = sub_domains[-2]
     except Exception as e:
-        print(e)
         pass
     try:
         # 尽可能争取存储到二级域名，但是要避免垃圾域名和测试域名
@@ -4265,8 +3965,6 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'whiteListDnsmasq': 'whiteListDnsmasq', 'whiteListDnsmasqSecret': 'whiteListDnsmasqSecret',
                           'whiteListDomian': 'whiteListDomian',
                           'whiteListDomianSecret': 'whiteListDomianSecret',
-                          'openclashFallbackFilterDomain': 'openclashFallbackFilterDomain',
-                          'openclashFallbackFilterDomainSecret': 'openclashFallbackFilterDomainSecret',
                           'blackListDomain': 'blackListDomain',
                           'blackListDomainSecret': 'blackListDomainSecret', 'ipv4': 'ipv4', 'ipv4Secret': 'ipv4Secret',
                           'ipv6': 'ipv6',
@@ -4277,7 +3975,7 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'simpleblacklistProxyRule': 'simpleblacklistProxyRule', 'simpleDnsmasq': 'simpleDnsmasq',
                           'simplewhitelistProxyRule': 'simplewhitelistProxyRule', 'minTimeout': '5', 'maxTimeout': '30',
                           'usernameSys': 'admin', 'passwordSys': 'password', 'normalM3uClock': '7200',
-                          'normalSubscriberClock': '10800', 'proxys': 'http://127.0.0.1:7890||http://127.0.0.1:5336',
+                          'normalSubscriberClock': '10800',
                           'failTs': 'https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4',
                           'proxySubscriberClock': '3600', 'autoDnsSwitchClock': '600',
                           'syncClock': '10', 'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国',
@@ -4453,19 +4151,6 @@ def getMaxRank():
         num = max(num, int(value))
     return str(num + 1)
 
-
-# def checkAndUpdateM3uRank(group):
-#     if group == '':
-#         return
-#     global m3u_whitlist_rank
-#     global m3u_whitlist
-#     # 新分组，默认加到最后
-#     if group not in m3u_whitlist.values():
-#         if group not in m3u_whitlist_rank:
-#             rank = getMaxRank()
-#             m3u_whitlist_rank[group] = rank
-#             redis_add_map(REDIS_KEY_M3U_WHITELIST_RANK, {group, rank})
-#     getRankWhiteList()
 
 
 def chaoronghe6():
@@ -4718,6 +4403,10 @@ async def deal_qiumihui(session, m3u_dict, mintimeout, maxTimeout):
                 data = await response.read()
                 m3u8_dict = json.loads(data.decode('utf-8'))['data']['list']
         if m3u8_dict:
+            redisKeyNormal1 = {key: value for key, value in redisKeyNormal.items() if
+                               not key.startswith('qiumihui,')}
+            redisKeyNormal.clear()
+            redisKeyNormal.update(redisKeyNormal1)
             tasks = []
             for dict_single in m3u8_dict:
                 task = asyncio.ensure_future(
@@ -5172,10 +4861,6 @@ async def grab_normal_qiumihui(session, m3u_dict, mintimeout, maxTimeout, source
     rid = dict_single['roomId']
     title = dict_single['title']
     cover = dict_single['cover']
-    redisKeyNormal1 = {key: value for key, value in redisKeyNormal.items() if
-                       not key.startswith('qiumihui,')}
-    redisKeyNormal.clear()
-    redisKeyNormal.update(redisKeyNormal1)
     m3u8_url = f'https://aapi.qmh01.com/api/room/detail?roomId={rid}&channelId=3&platform=1'
     try:
         async with session.get(m3u8_url, headers=bili_header, timeout=mintimeout) as response:
@@ -5193,23 +4878,6 @@ async def grab_normal_qiumihui(session, m3u_dict, mintimeout, maxTimeout, source
         print(f"qiumihui An error occurred while processing {rid}. Error: {e}")
 
 
-async def pingM3u2(session, value, real_dict, key, mintimeout, maxTimeout):
-    try:
-        async with  session.get(value, timeout=mintimeout) as response:
-            if response.status == 200:
-                real_dict[key] = value
-                return value
-    except asyncio.TimeoutError:
-        try:
-            async with  session.get(value, timeout=maxTimeout) as response:
-                if response.status == 200:
-                    real_dict[key] = value
-                    return value
-                return None
-        except Exception as e:
-            return None
-    except Exception as e:
-        return None
 
 
 def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, mintimeout, maxTimeout):
@@ -5221,19 +4889,16 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, min
             data_dict = dict_url['ud']
             try:
                 url = data_dict['m3u8']
-                # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
             except:
                 pass
             if url is None or url == '':
                 try:
                     url = data_dict['rtmp']
-                    # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
             if url is None or url == '':
                 try:
                     url = data_dict['fly']
-                    # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
         if url is None or url == '':
@@ -5241,19 +4906,16 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, min
                 data_dict = dict_url['hd']
                 try:
                     url = data_dict['m3u8']
-                    # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
                 if url is None or url == '':
                     try:
                         url = data_dict['rtmp']
-                        # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
                 if url is None or url == '':
                     try:
                         url = data_dict['fly']
-                        # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
         if url is None or url == '':
@@ -5261,19 +4923,16 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, min
                 data_dict = dict_url['playStreamInfo']
                 try:
                     url = data_dict['m3u8']
-                    # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
                 if url is None or url == '':
                     try:
                         url = data_dict['rtmp']
-                        # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
                 if url is None or url == '':
                     try:
                         url = data_dict['fly']
-                        # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
         if url is None or url == '':
@@ -5281,19 +4940,16 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, min
                 data_dict = dict_url['sd']
                 try:
                     url = data_dict['m3u8']
-                    # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
                 if url is None or url == '':
                     try:
                         url = data_dict['rtmp']
-                        # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
                 if url is None or url == '':
                     try:
                         url = data_dict['fly']
-                        # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
         if url is None or url == '':
@@ -5301,19 +4957,16 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, min
                 data_dict = dict_url['ld']
                 try:
                     url = data_dict['m3u8']
-                    # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
                 if url is None or url == '':
                     try:
                         url = data_dict['rtmp']
-                        # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
                 if url is None or url == '':
                     try:
                         url = data_dict['fly']
-                        # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
         if url is None or url == '':
@@ -5321,19 +4974,16 @@ def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, min
                 data_dict = dict_url['stream']
                 try:
                     url = data_dict['m3u8']
-                    # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                 except:
                     pass
                 if url is None or url == '':
                     try:
                         url = data_dict['rtmp']
-                        # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
                 if url is None or url == '':
                     try:
                         url = data_dict['fly']
-                        # url = await pingM3u2(session, url, m3u_dict, f'{source_type},{rid}', mintimeout, maxTimeout)
                     except:
                         pass
         if url is not None and url != '':
@@ -5915,12 +5565,12 @@ async def get_resolution(session, liveurl, mintimeout, maxTimeout, now_uuid, uui
     try:
         if not is_same_action_uuid(now_uuid, uuid_cache):
             return
-        async with session.get(liveurl, headers=bili_header, timeout=mintimeout) as response:
+        async with session.get(liveurl, headers=bili_header, timeout=mintimeout*2) as response:
             playlist_text = await response.text()
     except asyncio.TimeoutError:
         if not is_same_action_uuid(now_uuid, uuid_cache):
             return
-        async with session.get(liveurl, headers=bili_header, timeout=maxTimeout) as response:
+        async with session.get(liveurl, headers=bili_header, timeout=maxTimeout*2) as response:
             playlist_text = await response.text()
     playlist = m3u8.loads(playlist_text)
     playlists = playlist.playlists
@@ -5944,17 +5594,17 @@ async def grab(session, id, m3u_dict, mintimeout, maxTimeout):
         try:
             if not is_same_action_uuid(now_uuid, 'youtubelockuuid'):
                 return
-            async with session.get(url, headers=bili_header, timeout=mintimeout) as response:
+            async with session.get(url, headers=bili_header, timeout=mintimeout*2) as response:
                 content = await response.text()
                 if '.m3u8' not in content:
-                    async with session.get(url, headers=bili_header, timeout=maxTimeout) as response2:
+                    async with session.get(url, headers=bili_header, timeout=maxTimeout*2) as response2:
                         content = await response2.text()
                         if '.m3u8' not in content:
                             return
         except asyncio.TimeoutError:
             if not is_same_action_uuid(now_uuid, 'youtubelockuuid'):
                 return
-            async with session.get(url, headers=bili_header, timeout=maxTimeout) as response:
+            async with session.get(url, headers=bili_header, timeout=maxTimeout*2) as response:
                 content = await response.text()
                 if '.m3u8' not in content:
                     return
@@ -6959,8 +6609,7 @@ def chaoronghe4():
 def chaoronghe3():
     try:
         return chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract7',
-                              REDIS_KEY_BLACKLIST_OPENCLASH_FALLBACK_FILTER_DOMAIN_DATA,
-                              f"{secret_path}{getFileNameByTagName('openclashFallbackFilterDomain')}.conf")
+                              REDIS_KEY_BLACKLIST_OPENCLASH_FALLBACK_FILTER_DOMAIN_DATA)
         # return chaorongheBase(REDIS_KEY_BLACKLIST_LINK, 'process_data_abstract2',
         #                       REDIS_KEY_BLACKLIST_DATA, "/C.txt")
     except:
@@ -7064,7 +6713,8 @@ def get_live_url(tv_dict, id, liveType):
                             url = tv_dict[id]['url']
                             return url
                     url = get_hd_url_youtube(id)
-                    tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
+                    if url:
+                       tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
             elif liveType == 'bilibili':
                 with bilibili_lock:
                     url_json = tv_dict.get(id)
@@ -7074,7 +6724,8 @@ def get_live_url(tv_dict, id, liveType):
                             url = tv_dict[id]['url']
                             return url
                     url = get_hd_url_bilibili(id)
-                    tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
+                    if url:
+                       tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
             elif liveType == 'huya':
                 with huya_lock:
                     url_json = tv_dict.get(id)
@@ -7084,7 +6735,8 @@ def get_live_url(tv_dict, id, liveType):
                             url = tv_dict[id]['url']
                             return url
                     url = get_hd_url_huya(id)
-                    tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
+                    if url:
+                       tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
             elif liveType == 'yy':
                 with yy_lock:
                     url_json = tv_dict.get(id)
@@ -7094,7 +6746,8 @@ def get_live_url(tv_dict, id, liveType):
                             url = tv_dict[id]['url']
                             return url
                     url = get_hd_url_yy(id)
-                    tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
+                    if url:
+                       tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
             elif liveType == 'twitch':
                 with twitch_lock:
                     url_json = tv_dict.get(id)
@@ -7104,7 +6757,8 @@ def get_live_url(tv_dict, id, liveType):
                             url = tv_dict[id]['url']
                             return url
                     url = get_hd_url_twitch(id)
-                    tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
+                    if url:
+                       tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
             elif liveType == 'douyin':
                 with douyin_lock:
                     url_json = tv_dict.get(id)
@@ -7114,7 +6768,8 @@ def get_live_url(tv_dict, id, liveType):
                             url = tv_dict[id]['url']
                             return url
                     url = get_hd_url_douyin(id)
-                    tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
+                    if url:
+                       tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
         except:
             pass
     else:
@@ -7130,7 +6785,8 @@ def get_live_url(tv_dict, id, liveType):
                                 url = tv_dict[id]['url']
                                 return url
                         url = get_hd_url_youtube(id)
-                        tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
+                        if url:
+                           tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
                 elif liveType == 'bilibili':
                     with bilibili_lock:
                         url_json = tv_dict.get(id)
@@ -7140,7 +6796,8 @@ def get_live_url(tv_dict, id, liveType):
                                 url = tv_dict[id]['url']
                                 return url
                         url = get_hd_url_bilibili(id)
-                        tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
+                        if url:
+                           tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
                 elif liveType == 'huya':
                     with huya_lock:
                         url_json = tv_dict.get(id)
@@ -7150,7 +6807,8 @@ def get_live_url(tv_dict, id, liveType):
                                 url = tv_dict[id]['url']
                                 return url
                         url = get_hd_url_huya(id)
-                        tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
+                        if url:
+                           tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
                 elif liveType == 'yy':
                     with yy_lock:
                         url_json = tv_dict.get(id)
@@ -7160,7 +6818,8 @@ def get_live_url(tv_dict, id, liveType):
                                 url = tv_dict[id]['url']
                                 return url
                         url = get_hd_url_yy(id)
-                        tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
+                        if url:
+                           tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
                 elif liveType == 'twitch':
                     with twitch_lock:
                         url_json = tv_dict.get(id)
@@ -7170,7 +6829,8 @@ def get_live_url(tv_dict, id, liveType):
                                 url = tv_dict[id]['url']
                                 return url
                         url = get_hd_url_twitch(id)
-                        tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
+                        if url:
+                           tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
                 elif liveType == 'douyin':
                     with douyin_lock:
                         url_json = tv_dict.get(id)
@@ -7180,7 +6840,8 @@ def get_live_url(tv_dict, id, liveType):
                                 url = tv_dict[id]['url']
                                 return url
                         url = get_hd_url_douyin(id)
-                        tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
+                        if url:
+                           tv_dict[id] = {'url': url, 'updatetime': str(time.time())}
             except:
                 pass
         else:
@@ -7310,50 +6971,26 @@ def reset_clock(key):
     time_clock_update_dict[key] = '0'
 
 
-def get_proxies():
-    try:
-        strData = getFileNameByTagName('proxys')
-        arr = strData.split('||')
-        if len(arr) == 0:
-            return None
-        return arr
-    except:
-        return None
-
-
-# 0-不使用代理 1-使用代理
-def download_with_proxy(url, header, mode):
-    if mode != 0:
-        proxys = get_proxies()
-        if not proxys:
-            return requests.get(url, headers=header)
-        for proxy in proxys:
-            dict = {}
-            if proxy.startswith('https://'):
-                dict['https'] = proxy
-            else:
-                dict['http'] = proxy
-            try:
-                response = requests.get(url, headers=header, proxies=dict)
-                if response.status_code == 200:
-                    return response
-            except:
-                pass
-        return requests.get(url, headers=header)
-    else:
-        return requests.get(url, headers=header)
-
-
 def get_m3u8_link(id):
     url = f"https://hklive.tv/{id}"
 
     headers = {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'Cache-Control': 'max-age=0',
         "Referer": f"https://hklive.tv/{id}",
-        "User-Agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
+        'Sec-Ch-Ua': '"Not.A/Brand";v="8", "Chromium";v="114", "Microsoft Edge";v="114"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"Windows"',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'same-origin',
+        'Sec-Fetch-User': '?1',
+        'Upgrade-Insecure-Requests': '1',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'
     }
-    response = download_with_proxy(url, headers, 1)
+    response = requests.get(url, headers=headers,timeout=60)
     if response and response.status_code == 200:
-        content = response.content.decode("utf-8")  # 解码为字符串
+        content = response.text  # 解码为字符串
         # 使用正则表达式提取file对应的字符串
         pattern = r'file:\s*"(.*?)"'
         match = re.search(pattern, content)
@@ -7370,17 +7007,18 @@ def get_ts_data(id, number):
     url = f"https://hklive.tv/dtmb/{id}/{number}.ts"
 
     headers = {
+        'Accept': '*/*',
+        'If-Modified-Since': time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime()),
         "Referer": f"https://hklive.tv/{id}",
-        "User-Agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
-    }
-    response = download_with_proxy(url, headers, 1)
+        'Sec-Ch-Ua': '"Not.A/Brand";v="8", "Chromium";v="114", "Microsoft Edge";v="114"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"Windows"',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-origin',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'}
+    response = requests.get(url, headers=headers, timeout=60)
     if response and response.status_code == 200:
-        # bytes_data = b''
-        # for chunk in response.iter_content(chunk_size=(1024 * 64)):
-        #     if chunk:
-        #         bytes_data += chunk
-        if old_m3u8_data_hk['lastnumber'].startswith(number):
-            old_m3u8_data_hk['end'] = '1'
         return response.content
     else:
         return None
@@ -7390,31 +7028,35 @@ def get_m3u8_raw_content(url, id):
     if not url:
         return None
     headers = {
-        "Referer": f"https://hkdtmb.com/{id}",
-        "User-Agent": "Mozilla/5.0(WindowsNT10.0;WOW64)AppleWebKit/537.36(KHTML,likeGecko)Chrome/86.0.4240.198Safari/537.36",
+        'Accept': '*/*',
+        'If-Modified-Since': time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime()),
+        "Referer": f"https://hklive.tv/{id}",
+        'Sec-Ch-Ua': '"Not.A/Brand";v="8", "Chromium";v="114", "Microsoft Edge";v="114"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"Windows"',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-origin',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'
     }
-    response = download_with_proxy(url, headers, 1)
-    if response and  response.status_code == 200:
-        content = response.content.decode('utf-8')
-        new_m3u8_data = ''
+    response = requests.get(url, headers=headers, timeout=60)
+    if response and response.status_code == 200:
+        content = response.content
+        new_m3u8_data = []
         ip = init_IP()
         #fakeurl = f"http://127.0.0.1:5000/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
-        lastnumber = ''
         for line in content.splitlines():
             if line.startswith(
-                    ('#EXTM3U', '#EXT-X-VERSION:', '#EXT-X-MEDIA-SEQUENCE', '#EXT-X-TARGETDURATION', '#EXTINF')):
-                new_m3u8_data += line
-                new_m3u8_data += '\n'
+                    (b'#EXTM3U', b'#EXT-X', b'#EXTINF')):
+                new_m3u8_data.append(line)
             else:
-                # new_m3u8_data += f'https://hklive.tv/dtmb/{line}\n'
-                new_m3u8_data += f'{fakeurl}hkdtmb,{id},{line}\n'
-                lastnumber = line
-        old_m3u8_data_hk['data'] = new_m3u8_data.encode()
-        old_m3u8_data_hk['lastnumber'] = lastnumber
-        old_m3u8_data_hk['id'] = id
-        old_m3u8_data_hk['end'] = '0'
-        return new_m3u8_data.encode()
+                try:
+                    num = int(line.split(b'.')[0]) / 1000
+                except:
+                    return None
+                new_m3u8_data.append(f'{fakeurl}hkdtmb,{id},{line.decode()}'.encode())
+        return b'\n'.join(new_m3u8_data)
     else:
         return None
 
@@ -7422,15 +7064,6 @@ def get_m3u8_raw_content(url, id):
 migu_lock = threading.Lock()
 cq_lock = threading.Lock()
 efs_lock = threading.Lock()
-hkdtmb_lock = threading.Lock()
-
-
-def jump_hk(id):
-    if '0' == old_m3u8_data_hk['id']:
-        return True
-    elif id == old_m3u8_data_hk['id']:
-        return True
-    return False
 
 
 # 推流普通ts文件
@@ -7438,28 +7071,13 @@ def jump_hk(id):
 def video_m3u8_normal_ts(path):
     type, id, number = path.split(',')
     if type == 'hkdtmb':
-        if not jump_hk(id):
-            return
         try:
             bytesdata = get_ts_data(id, number)
             if bytesdata:
                 return Response(bytesdata, mimetype='video/MP2T')
         except:
             pass
-    return
-
-
-old_m3u8_data_hk = {'id': '0', 'data': b'', 'end': '0', 'lastnumber': ''}
-
-
-def get_m3u8_data_by_hkid(hkid):
-    if hkid != old_m3u8_data_hk['id']:
-        return None
-    if old_m3u8_data_hk['data'] == '':
-        return None
-    if old_m3u8_data_hk['end'] == '1':
-        return None
-    return old_m3u8_data_hk['data']
+    return video_m3u8_normal_ts(path)
 
 
 # 路由normal
@@ -7477,53 +7095,22 @@ def serve_files_normal(filename):
         chaoronghe31_single('857,')
         return redirect(getFileNameByTagName('failTs'))
     elif id.startswith('hkdtmb,'):
-        with hkdtmb_lock:
-            hkid = id.split(',')[1]
-            m3u8_data = get_m3u8_data_by_hkid(hkid)
-            if m3u8_data:
-                return Response(m3u8_data, headers={
-                   'Expect': '100-continue',
-                   'Connection': 'Keep-Alive'
-                   })
-            # 强制换id，打断ts推送
-            old_m3u8_data_hk['id'] = id
-            url = tv_dict_normal.get(id)
-            if not url:
-                url = redisKeyNormalM3U.get(id)
-                m3u8_url = url
-                if not url:
-                    m3u8_url = get_m3u8_link(hkid)
-                if not m3u8_url:
-                    return redirect(getFileNameByTagName('failTs'))
-                m3u8_data = get_m3u8_raw_content(m3u8_url, hkid)
-                if not m3u8_data:
-                    return redirect(getFileNameByTagName('failTs'))
-                tv_dict_normal.clear()
-                tv_dict_normal[id] = m3u8_url
-                # 特殊的，这个url可能失效
-                redisKeyNormalM3U[id] = m3u8_url
-                return Response(m3u8_data, headers={
-                   'Expect': '100-continue',
-                   'Connection': 'Keep-Alive'
-                   })
-            else:
-                m3u8_data = get_m3u8_raw_content(url, hkid)
-                m3u8_url = url
-                if not m3u8_data:
-                    m3u8_url = get_m3u8_link(hkid)
-                    if not m3u8_url:
-                        return redirect(getFileNameByTagName('failTs'))
-                    m3u8_data = get_m3u8_raw_content(m3u8_url, hkid)
-                if not m3u8_data:
-                    return redirect(getFileNameByTagName('failTs'))
-                tv_dict_normal.clear()
-                tv_dict_normal[id] = m3u8_url
-                # 特殊的，这个url可能失效
-                redisKeyNormalM3U[id] = m3u8_url
-                return Response(m3u8_data, headers={
-                   'Expect': '100-continue',
-                   'Connection': 'Keep-Alive'
-                   })
+        hkid = id.split(',')[1]
+        url = redisKeyNormalM3U.get(id)
+        m3u8_url = url
+        if not url:
+            m3u8_url = get_m3u8_link(hkid)
+        if not m3u8_url:
+            return redirect(getFileNameByTagName('failTs'))
+        m3u8_data = get_m3u8_raw_content(m3u8_url, hkid)
+        if not m3u8_data:
+            return redirect(getFileNameByTagName('failTs'))
+        # 特殊的，这个url可能失效
+        redisKeyNormalM3U[id] = m3u8_url
+        return Response(m3u8_data, headers={
+            'Expect': '100-continue',
+            'Connection': 'Keep-Alive'
+        })
     url = tv_dict_normal.get(id)
     if not url:
         url = redisKeyNormalM3U.get(id)
@@ -8857,7 +8444,7 @@ def video_m3u8_alist(path):
     with open(m3u8_path, "rb") as f:
         m3u8_data = f.read()
     if m3u8_data:
-        return Response(m3u8_data, headers=headers_default)
+        return Response(m3u8_data, headers={'Content-Type': 'application/vnd.apple.mpegurl'})
     else:
         return "Video not found", 404
 

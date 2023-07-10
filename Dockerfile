@@ -3,9 +3,6 @@ FROM ubuntu:latest
 # 创建目录
 RUN mkdir -p /app/ini /app/img /app/secret /app/m3u8 /app/templates /app/db
 COPY ./*.py /app/
-COPY ./ini/*.ini /app/ini/
-COPY ./list/*.list /app/secret/
-COPY ./list/*.yml /app/secret/
 COPY ./bitcoin.png /app/img/
 # 将前端文件复制到容器中的 /usr/share/nginx/html 目录
 COPY index.html /app/templates

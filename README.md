@@ -33,6 +33,8 @@ docker run   -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p
 
 # 28-权鉴账号密码:admin\password
 
+登陆面板:容器所在机器ip:22771
+
 4-仅供个人使用，请勿商用，代码已经全部开源，后果自负
 
 7-各位朋友有兴趣打赏一下叫花子吧,您的赞助可以更大地激励我维护该项目:

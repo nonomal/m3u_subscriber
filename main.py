@@ -7209,9 +7209,21 @@ def get_m3u8_link(id):
     url = f"https://hklive.tv/{id}"
 
     headers = {
+        "Authority": "hklive.tv",
+        "Method": "GET",
+        "Path": f"/{id}",
+        "Scheme": "https",
+        "Cache-Control": "max-age=0",
+        "Sec-Ch-Ua": '"Not.A/Brand";v="8", "Chromium";v="114", "Microsoft Edge";v="114"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"Windows"',
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
         "Referer": f"https://hklive.tv/{id}",
-        'Upgrade-Insecure-Requests': '1',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'
     }
     response = requests.get(url, headers=headers, timeout=60)
@@ -7243,14 +7255,21 @@ def async_to_sync(funtionName, id, number):
     if funtionName == 'get_ts_data2':
         # 有效直播源,名字/id
         bytesdata = loop.run_until_complete(get_ts_data2(id, number))
+        if not bytesdata:
+            auto_verify['find'] = 0
+            bytesdata = get_ts_data(id, number)
         return bytesdata
     if funtionName == 'get_m3u8_raw_content2':
         # 有效直播源,名字/id
         bytesdata = loop.run_until_complete(get_m3u8_raw_content2(id, number))
+        if not bytesdata:
+            bytesdata = get_m3u8_raw_content(id, number)
         return bytesdata
     if funtionName == 'get_m3u8_link2':
         # 有效直播源,名字/id
         bytesdata = loop.run_until_complete(get_m3u8_link2(id))
+        if not bytesdata:
+            bytesdata = get_m3u8_link(id)
         return bytesdata
 
 
@@ -7258,9 +7277,21 @@ async def get_m3u8_link2(id):
     url = f"https://hklive.tv/{id}"
 
     headers = {
+        "Authority": "hklive.tv",
+        "Method": "GET",
+        "Path": f"/{id}",
+        "Scheme": "https",
+        "Cache-Control": "max-age=0",
+        "Sec-Ch-Ua": '"Not.A/Brand";v="8", "Chromium";v="114", "Microsoft Edge";v="114"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"Windows"',
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
         "Referer": f"https://hklive.tv/{id}",
-        'Upgrade-Insecure-Requests': '1',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'
     }
     async with aiohttp.ClientSession() as session:
@@ -7278,15 +7309,26 @@ async def get_m3u8_link2(id):
             else:
                 return None
 
+
 async def get_m3u8_raw_content2(url, id):
     if not url:
         return None
+    path = url.split('https://hklive.tv')[1].split('?')[0]
     headers = {
+        "Authority": "hklive.tv",
         'Accept': '*/*',
         'If-Modified-Since': time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime()),
         "Referer": f"https://hklive.tv/{id}",
+        "Sec-Ch-Ua": '"Not.A/Brand";v="8", "Chromium";v="114", "Microsoft Edge";v="114"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"Windows"',
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin",
+        "Path": path,
         'User-Agent': '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67\"'
     }
+    # url = f"https://hklive.tv/dtmb/{id}/"
     async with aiohttp.ClientSession() as session:
         async with session.get(url, headers=headers) as response:
             if response.status == 200:
@@ -7305,33 +7347,88 @@ async def get_m3u8_raw_content2(url, id):
                         except:
                             return None
                         new_m3u8_data.append(f'{fakeurl}hkdtmb,{id},{line.decode()}'.encode())
+                        # new_m3u8_data.append(f'{url}{line.decode()}'.encode())
                 return b'\n'.join(new_m3u8_data)
             else:
                 return None
 
+
+auto_verify = {'find': 0}
+auto_lock=threading.Lock()
 
 async def get_ts_data2(id, number):
     url = f"https://hklive.tv/dtmb/{id}/{number}.ts"
 
     headers = {
         'Accept': '*/*',
+        'Authority': 'hklive.tv',
         'If-Modified-Since': time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime()),
         "Referer": f"https://hklive.tv/{id}",
-        'User-Agent': '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67\"'}
+        "Sec-Ch-Ua": '"Not.A/Brand";v="8", "Chromium";v="114", "Microsoft Edge";v="114"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"Windows"',
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin",
+        "Method": "GET",
+        "Path": url.split('https://hklive.tv')[1],
+        "Scheme": "https",
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'}
 
     response = requests.head(url, headers=headers)
     if response.status_code == 200:
         file_size = int(response.headers.get('Content-Length', 0))
-        chunk_size = 1024 * 512  # 1MB
+        size2 = auto_verify['find']
+        if size2 == 0:
+            size2 = 60
+        chunk_size = 1024 * size2  # 1MB
+        if size2 == 0:
+            with auto_lock:
+                if size2 == 0:
+                    data = None
+                    arr = [32, 64, 128, 256, 512, 1024]
+                    for i in arr:
+                        chunk_size = 1024 * i  # 1MB
+                        startTime = time.time()
+                        async with aiohttp.ClientSession() as session:
+                            # content=await download_file2(session, url, threadnum=5)
+                            tasks = []
+                            for start_byte in range(0, file_size, chunk_size):
+                                end_byte = min(start_byte + chunk_size - 1, file_size - 1)
+                                tasks.append(download_chunk(session, url, headers, start_byte, end_byte))
 
-        async with aiohttp.ClientSession() as session:
-            tasks = []
-            for start_byte in range(0, file_size, chunk_size):
-                end_byte = min(start_byte + chunk_size - 1, file_size - 1)
-                tasks.append(download_chunk(session, url, headers, start_byte, end_byte))
+                            chunks = await asyncio.gather(*tasks)
+                            data = b''.join(chunks)
+                    if data:
+                        entime = time.time()
+                        auto_verify[i] = entime - startTime
+                    min2 = auto_verify[32]
+                    for key, value in auto_verify.items():
+                        if value < min2:
+                            min2 = value
+                    auto_verify['find'] = min2
+                    return data
+                else:
+                    async with aiohttp.ClientSession() as session:
+                        # content=await download_file2(session, url, threadnum=5)
+                        tasks = []
+                        for start_byte in range(0, file_size, chunk_size):
+                            end_byte = min(start_byte + chunk_size - 1, file_size - 1)
+                            tasks.append(download_chunk(session, url, headers, start_byte, end_byte))
 
-            chunks = await asyncio.gather(*tasks)
-            return b''.join(chunks)
+                        chunks = await asyncio.gather(*tasks)
+                        return b''.join(chunks)
+        else:
+            async with aiohttp.ClientSession() as session:
+                # content=await download_file2(session, url, threadnum=5)
+                tasks = []
+                for start_byte in range(0, file_size, chunk_size):
+                    end_byte = min(start_byte + chunk_size - 1, file_size - 1)
+                    tasks.append(download_chunk(session, url, headers, start_byte, end_byte))
+
+                chunks = await asyncio.gather(*tasks)
+                return b''.join(chunks)
+            # return content
 
     return None
 
@@ -7341,11 +7438,21 @@ def get_ts_data(id, number):
 
     headers = {
         'Accept': '*/*',
+        'Authority': 'hklive.tv',
         'If-Modified-Since': time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime()),
         "Referer": f"https://hklive.tv/{id}",
-        'User-Agent': '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67\"'}
+        "Sec-Ch-Ua": '"Not.A/Brand";v="8", "Chromium";v="114", "Microsoft Edge";v="114"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"Windows"',
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin",
+        "Method": "GET",
+        "Path": url.split('https://hklive.tv')[1],
+        "Scheme": "https",
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'}
 
-    response = requests.get(url, headers=headers, timeout=600)
+    response = requests.get(url, headers=headers)
     if response and response.status_code == 200:
         return response.content
     else:
@@ -7355,10 +7462,20 @@ def get_ts_data(id, number):
 def get_m3u8_raw_content(url, id):
     if not url:
         return None
+    path = url.split('https://hklive.tv')[1].split('?')[0]
     headers = {
         'Accept': '*/*',
+        'Authority': 'hklive.tv',
         'If-Modified-Since': time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime()),
         "Referer": f"https://hklive.tv/{id}",
+        "Sec-Ch-Ua": '"Not.A/Brand";v="8", "Chromium";v="114", "Microsoft Edge";v="114"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"Windows"',
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin",
+        "Path": path,
+        "Method": "GET",
         'User-Agent': '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67\"'
     }
     response = requests.get(url, headers=headers, timeout=60)
@@ -7366,6 +7483,7 @@ def get_m3u8_raw_content(url, id):
         content = response.content
         new_m3u8_data = []
         ip = init_IP()
+        url = f"https://hklive.tv/dtmb/{id}/"
         fakeurl = f"http://127.0.0.1:5000/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
         for line in content.splitlines():
@@ -7377,6 +7495,7 @@ def get_m3u8_raw_content(url, id):
                     num = int(line.split(b'.')[0]) / 1000
                 except:
                     return None
+                # new_m3u8_data.append(f'{url}{line.decode()}'.encode())
                 new_m3u8_data.append(f'{fakeurl}hkdtmb,{id},{line.decode()}'.encode())
         return b'\n'.join(new_m3u8_data)
     else:
@@ -7386,21 +7505,28 @@ def get_m3u8_raw_content(url, id):
 migu_lock = threading.Lock()
 cq_lock = threading.Lock()
 efs_lock = threading.Lock()
+hk_locl = threading.Lock()
+ts_lock = threading.Lock()
 
 
 # 推流普通ts文件
 @app.route('/normal/<path:path>.ts')
 def video_m3u8_normal_ts(path):
+    # with ts_lock:
     type, id, number = path.split(',')
     if type == 'hkdtmb':
-        try:
-            bytesdata = async_to_sync('get_ts_data2', id, number)
-            # bytesdata = get_ts_data(id, number)
-            if bytesdata:
-                return Response(bytesdata, mimetype='video/MP2T')
-        except Exception as e:
-            pass
-    return video_m3u8_normal_ts(path)
+        now = time.time()
+        while time.time() - now < 360:
+            try:
+                bytesdata = async_to_sync('get_ts_data2', id, number)
+                if bytesdata:
+                    return Response(bytesdata, mimetype='video/MP2T')
+            except Exception as e:
+                pass
+    return
+
+
+m3u_dict_hk = {}
 
 
 # 路由normal
@@ -7418,24 +7544,26 @@ def serve_files_normal(filename):
         chaoronghe31_single('857,')
         return redirect(getFileNameByTagName('failTs'))
     elif id.startswith('hkdtmb,'):
+        # with hk_locl:
+        if id not in tv_dict_normal:
+            tv_dict_normal[id] = ''
+            auto_verify['find'] = 0
         hkid = id.split(',')[1]
         url = redisKeyNormalM3U.get(id)
         m3u8_url = url
-        if not url:
-            # m3u8_url = get_m3u8_link(hkid)
+        if url is None:
             m3u8_url = async_to_sync('get_m3u8_link2', hkid, hkid)
-        if not m3u8_url:
+        if m3u8_url is None:
             return redirect(getFileNameByTagName('failTs'))
-        # m3u8_data = get_m3u8_raw_content(m3u8_url, hkid)
-        m3u8_data = async_to_sync('get_m3u8_raw_content2', m3u8_url, hkid)
-        if not m3u8_data:
-            return serve_files_normal(filename)
+        try:
+            m3u8_data = async_to_sync('get_m3u8_raw_content2', m3u8_url, hkid)
+        except:
+            m3u8_data = None
+        if m3u8_data is None:
+            return
         # 特殊的，这个url可能失效
         redisKeyNormalM3U[id] = m3u8_url
-        return Response(m3u8_data, headers={
-            'Expect': '100-continue',
-            'Connection': 'Keep-Alive'
-        })
+        return Response(m3u8_data)
     url = tv_dict_normal.get(id)
     if not url:
         url = redisKeyNormalM3U.get(id)

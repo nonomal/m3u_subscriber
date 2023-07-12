@@ -1,6 +1,7 @@
 import abc
 import asyncio
 import base64
+import io
 import random
 import secrets
 import string
@@ -5768,8 +5769,8 @@ def chaoronghe30():
             pass
         safe_del_alist_m3u8()
         ip = init_IP()
-        # fakeurl = f"http://127.0.0.1:5000/alist/"
         fakeurl = f"http://{ip}:{port_live}/alist/"
+        # fakeurl = f"http://127.0.0.1:5000/alist/"
         pathxxx = f"{secret_path}alist.m3u"
         thread2 = threading.Thread(target=check_alist_file,
                                    args=(redisKeyAlist, fakeurl, pathxxx))
@@ -5802,6 +5803,7 @@ async def sluty_alist_hunter(alist_url_dict, fakeurl, pathxxx):
     api_me_base_path = 'api/me'
     async with aiohttp.ClientSession() as session:
         for site, password in alist_url_dict.items():
+            all_filename_groupname = {}
             # 需要迭代访问的路径
             future_path_set = set()
             site, startPath = get_site_and_path(site)
@@ -5813,11 +5815,11 @@ async def sluty_alist_hunter(alist_url_dict, fakeurl, pathxxx):
                 base_path = json_data['data']['base_path']
             full_url = site + api_part
             await getPathBase(site, full_url, startPath, future_path_set, session, fakeurl, pathxxx,
-                              base_path, password)
+                              base_path, password, all_filename_groupname)
 
             async def process_path(pathbase):
                 await getPathBase(site, full_url, pathbase, future_path_set, session, fakeurl,
-                                  pathxxx, base_path, password
+                                  pathxxx, base_path, password, all_filename_groupname
                                   )
 
             while len(future_path_set) > 0:
@@ -5846,12 +5848,21 @@ def has_found_target(content, target_file_name):
     return None
 
 
+def check_alist_fie_repeat(uuid_name, all_filename_groupname):
+    for name in all_filename_groupname.keys():
+        if name.startswith(uuid_name):
+            return True
+        if uuid_name.startswith(name):
+            return True
+    return False
+
+
 # url-基础请求列表API地址(alist网站/alist/api/fs/list)
 # path-迭代查询路径
 # file_url_dict 已经捕获到的文件(只存储视频文件)
 # 新的路径
 async def getPathBase(site, full_url, path, future_path_set, session, fakeurl, pathxxx,
-                      base_path, password):
+                      base_path, password, all_filename_groupname):
     global redisKeyAlistM3u
     global redisKeyAlistM3uTsPath
     if path:
@@ -5868,6 +5879,46 @@ async def getPathBase(site, full_url, path, future_path_set, session, fakeurl, p
             if not json_data:
                 return
             content = json_data['data']['content']
+            for item in content:
+                # 名字
+                name = item['name']
+                # 是文件夹，计算下一级目录，等待再次访问
+                # 签名
+                sign = item['sign']
+                if name.endswith('.zip'):
+                    if base_path != '/':
+                        # 下载菜单文件需要的路径，此时的name其实是文件夹和菜单名字相同的
+                        future_path = f'{site}d{base_path}{path}/{name}'
+                    else:
+                        future_path = f'{site}d{path}/{name}'
+                    encoded_url = urllib.parse.quote(future_path, safe=':/')
+                    if sign and sign != '':
+                        encoded_url = f'{encoded_url}?sign={sign}'
+                        filename_groupname = await get_zip_data(encoded_url, password, fakeurl, session)
+                        if filename_groupname:
+                            all_filename_groupname.update(filename_groupname)
+                            for filename in filename_groupname.keys():
+                                dict = filename_groupname[filename]
+                                groupname = dict['groupname']
+                                uuid_name = dict['uuid_name']
+                                ts_uuid = dict['ts_uuid']
+                                same_level_path = f'{path}/{ts_uuid}'
+                                link = f'#EXTINF:-1 group-title={groupname}  tvg-name="{filename}",{filename}\n'
+                                # uuid(视频序号),uuid下子目录url，结合这个可以逆推与之同一个目录的加密ts文件的url，主要检查是否有签名,由于数量巨大不予以存储
+                                if base_path != '/':
+                                    # 不完整ts路径，拼接上具体ts文件名就是完整的
+                                    future_path_ts = f'{site}d{base_path}{path}/{ts_uuid}'
+                                else:
+                                    future_path_ts = f'{site}d{path}/{ts_uuid}'
+                                uuid_same_level_path_url = f'{full_url}?path={same_level_path}'
+                                redisKeyAlistM3u[ts_uuid] = uuid_same_level_path_url
+                                redis_add_map(REDIS_KEY_Alist_M3U, {ts_uuid: uuid_same_level_path_url})
+                                redisKeyAlistM3uTsPath[ts_uuid] = future_path_ts
+                                redis_add_map(REDIS_KEY_Alist_M3U_TS_PATH, {ts_uuid: future_path_ts})
+                                # 虚假IP+端口+唯一uuid(文件夹名字)
+                                fake_m3u8 = f'{fakeurl}{uuid_name}.m3u8'
+                                async with aiofiles.open(pathxxx, 'a', encoding='utf-8') as f:  # 异步的方式写入内容
+                                    await f.write(f'{link}{fake_m3u8}\n')
             for item in content:
                 # 名字
                 name = item['name']
@@ -5904,9 +5955,10 @@ async def getPathBase(site, full_url, path, future_path_set, session, fakeurl, p
                             encoded_url = f'{encoded_url}?sign={same_name_file_sign}'
                         uuid_name = name
                         try:
-                            tvg_name, groupname = await get_alist_uuid_file_data(encoded_url, password,
-                                                                                 uuid_name,
-                                                                                 fakeurl, session)
+                            if check_alist_fie_repeat(uuid_name, all_filename_groupname):
+                                tvg_name, groupname = await get_alist_uuid_file_data(encoded_url, password,
+                                                                                     uuid_name,
+                                                                                     fakeurl, session)
                         except Exception as e:
                             pass
                         if tvg_name:
@@ -5956,9 +6008,10 @@ async def getPathBase(site, full_url, path, future_path_set, session, fakeurl, p
                             encoded_url = f'{encoded_url}?sign={sign}'
                         uuid_name = name
                         try:
-                            tvg_name, groupname = await get_alist_uuid_file_data(encoded_url, password,
-                                                                                 uuid_name,
-                                                                                 fakeurl, session)
+                            if check_alist_fie_repeat(uuid_name, all_filename_groupname):
+                                tvg_name, groupname = await get_alist_uuid_file_data(encoded_url, password,
+                                                                                     uuid_name,
+                                                                                     fakeurl, session)
                         except Exception as e:
                             pass
                         if tvg_name:
@@ -6106,6 +6159,79 @@ def download_file(url, headers, timeout, size):
     return bytes_data
 
 
+async def get_zip_data(zip_url, password, fakeurl, session):
+    filename_groupname = {}
+    user_agent = '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"'
+    headers = {'User-Agent': user_agent}
+    count = 0
+    while count < 20:
+        try:
+            async with  session.get(zip_url, headers=headers,
+                                    timeout=30) as response:
+                content = await response.read()
+        except asyncio.TimeoutError:
+            async with  session.get(zip_url, headers=headers,
+                                    timeout=60) as response:
+                content = await response.read()
+        if content and len(content) > 0:
+            break
+        count += 1
+    if content:
+        with zipfile.ZipFile(io.BytesIO(content), 'r') as zip_ref:
+            zip_ref.extractall(SLICES_ALIST_M3U8)
+            extracted_files = zip_ref.namelist()
+        # 输出解压缩后的文件名
+        for file_name in extracted_files:
+            secret_file_path = os.path.join(SLICES_ALIST_M3U8, file_name)
+            count = 0
+            while count < 3:
+                try:
+                    async with aiofiles.open(secret_file_path, 'rb') as f:
+                        bytes = await f.read()  # 异步读取文件内容
+                        if bytes:
+                            break
+                except:
+                    count += 1
+            if bytes:
+                try:
+                    # 已经解密的高度加密的m3u8文件(只有uuid，没有格式)，bytes
+                    blankContent_alist_uuid_m3u8 = decrypt(password, bytes)
+                except Exception as e:
+                    blankContent_alist_uuid_m3u8 = None
+                if blankContent_alist_uuid_m3u8:
+                    bytes_array = blankContent_alist_uuid_m3u8.splitlines()
+                    fix_m3u8_data = b''
+                    encode_uuid = file_name.encode()
+                    fakeurl_encode = fakeurl.encode()
+                    filename = ''
+                    groupname = ''
+                    ts_uuid = ''
+                    for line in bytes_array:
+                        preline = line.split(b'_')[0]
+                        if not preline.startswith(encode_uuid) and not encode_uuid.startswith(preline):
+                            if line.startswith(b"#my_video_true_name_is="):
+                                filename = line.split(b"#my_video_true_name_is=")[1].decode()
+                            elif line.startswith(b"#my_video_group_name_is="):
+                                groupname = line.split(b"#my_video_group_name_is=")[1].decode()
+                            else:
+                                fix_m3u8_data += line
+                                fix_m3u8_data += b'\n'
+                        else:
+                            if preline == b'':
+                                continue
+                            ts_uuid = preline.decode()
+                            fix_m3u8_data += fakeurl_encode
+                            fix_m3u8_data += line
+                            fix_m3u8_data += b'.ts\n'
+                    if len(fix_m3u8_data) > 0:
+                        # 把解密的m3u8文件落地保存，这样子就不需要定时器拉取m3u8列表文件
+                        thread_write_bytes_to_file(f"{SLICES_ALIST_M3U8}/{ts_uuid}.m3u8", fix_m3u8_data)
+                        filename_groupname[filename] = {'groupname': groupname, 'uuid_name': ts_uuid,
+                                                        'ts_uuid': ts_uuid}
+                        os.remove(secret_file_path)
+    return filename_groupname
+
+
 # 下载解密全部特殊加密直播文件
 async def get_alist_uuid_file_data(secret_uuid_m3u8_file_url, password, uuid_name, fakeurl, session):
     user_agent = '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3\"'
@@ -6154,7 +6280,7 @@ async def get_alist_uuid_file_data(secret_uuid_m3u8_file_url, password, uuid_nam
     return None
 
 
-headers_default = {'Content-Type': 'application/vnd.apple.mpegurl',
+headers_default = {'Content-type': 'application/vnd.apple.mpegurl',
                    'Expect': '100-continue',
                    'Connection': 'Keep-Alive',
                    'Cache-Control': 'no-cache'
@@ -7209,10 +7335,8 @@ def get_m3u8_link(id):
     url = f"https://hklive.tv/{id}"
 
     headers = {
-        "Authority": "hklive.tv",
-        "Method": "GET",
+        "Authority": "https://hklive.tv/",
         "Path": f"/{id}",
-        "Scheme": "https",
         "Cache-Control": "max-age=0",
         "Sec-Ch-Ua": '"Not.A/Brand";v="8", "Chromium";v="114", "Microsoft Edge";v="114"',
         "Sec-Ch-Ua-Mobile": "?0",
@@ -7226,18 +7350,21 @@ def get_m3u8_link(id):
         "Referer": f"https://hklive.tv/{id}",
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'
     }
-    response = requests.get(url, headers=headers, timeout=60)
-    if response and response.status_code == 200:
-        content = response.text  # 解码为字符串
-        # 使用正则表达式提取file对应的字符串
-        pattern = r'file:\s*"(.*?)"'
-        match = re.search(pattern, content)
-        if match:
-            file_url = match.group(1)
-            return file_url
+    try:
+        response = requests.get(url, headers=headers)
+        if response and response.status_code == 200:
+            content = response.text  # 解码为字符串
+            # 使用正则表达式提取file对应的字符串
+            pattern = r'file:\s*"(.*?)"'
+            match = re.search(pattern, content)
+            if match:
+                file_url = match.group(1)
+                return file_url
+            else:
+                return None
         else:
             return None
-    else:
+    except:
         return None
 
 
@@ -7250,34 +7377,45 @@ async def download_chunk(session, url, headers, start_byte, end_byte):
 
 
 def async_to_sync(funtionName, id, number):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    if funtionName == 'get_ts_data2':
-        # 有效直播源,名字/id
-        bytesdata = loop.run_until_complete(get_ts_data2(id, number))
-        if not bytesdata:
-            auto_verify['find'] = 0
+    # loop = asyncio.new_event_loop()
+    # asyncio.set_event_loop(loop)
+    count = 0
+    while count < 60:
+        if funtionName == 'get_ts_data2':
+            # 有效直播源,名字/id
+            # bytesdata = loop.run_until_complete(get_ts_data2(id, number))
+            # if bytesdata is None:
             bytesdata = get_ts_data(id, number)
-        return bytesdata
-    if funtionName == 'get_m3u8_raw_content2':
-        # 有效直播源,名字/id
-        bytesdata = loop.run_until_complete(get_m3u8_raw_content2(id, number))
-        if not bytesdata:
+            if bytesdata is None:
+                count = count + 1
+                continue
+            return bytesdata
+        if funtionName == 'get_m3u8_raw_content2':
+            # 有效直播源,名字/id
+            # bytesdata = loop.run_until_complete(get_m3u8_raw_content2(id, number))
+            # if bytesdata is None:
             bytesdata = get_m3u8_raw_content(id, number)
-        return bytesdata
-    if funtionName == 'get_m3u8_link2':
-        # 有效直播源,名字/id
-        bytesdata = loop.run_until_complete(get_m3u8_link2(id))
-        if not bytesdata:
+            if bytesdata is None:
+                count = count + 1
+                continue
+            return bytesdata
+        if funtionName == 'get_m3u8_link2':
+            # 有效直播源,名字/id
+            # bytesdata = loop.run_until_complete(get_m3u8_link2(id))
+            # if bytesdata is None:
             bytesdata = get_m3u8_link(id)
-        return bytesdata
+            if bytesdata is None:
+                count = count + 1
+                continue
+            return bytesdata
+
 
 
 async def get_m3u8_link2(id):
     url = f"https://hklive.tv/{id}"
 
     headers = {
-        "Authority": "hklive.tv",
+        "Authority": "https://hklive.tv/",
         "Method": "GET",
         "Path": f"/{id}",
         "Scheme": "https",
@@ -7295,7 +7433,7 @@ async def get_m3u8_link2(id):
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'
     }
     async with aiohttp.ClientSession() as session:
-        async with session.get(url, headers=headers) as response:
+        async with session.get(url,ssl=False) as response:
             if response and response.status == 200:
                 content = await response.text()  # 解码为字符串
                 # 使用正则表达式提取file对应的字符串
@@ -7315,7 +7453,7 @@ async def get_m3u8_raw_content2(url, id):
         return None
     path = url.split('https://hklive.tv')[1].split('?')[0]
     headers = {
-        "Authority": "hklive.tv",
+        "Authority": "https://hklive.tv/",
         'Accept': '*/*',
         'If-Modified-Since': time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime()),
         "Referer": f"https://hklive.tv/{id}",
@@ -7330,18 +7468,20 @@ async def get_m3u8_raw_content2(url, id):
     }
     # url = f"https://hklive.tv/dtmb/{id}/"
     async with aiohttp.ClientSession() as session:
-        async with session.get(url, headers=headers) as response:
+        async with session.get(url,ssl=False) as response:
             if response.status == 200:
                 content = await response.content.read()
                 new_m3u8_data = []
                 ip = init_IP()
                 fakeurl = f"http://127.0.0.1:5000/normal/"
-                fakeurl = f"http://{ip}:{port_live}/normal/"
+                # fakeurl = f"http://{ip}:{port_live}/normal/"
                 for line in content.splitlines():
                     if line.startswith(
                             (b'#EXTM3U', b'#EXT-X', b'#EXTINF')):
                         new_m3u8_data.append(line)
                     else:
+                        if line.startswith(b'web_error'):
+                            return None
                         try:
                             num = int(line.split(b'.')[0]) / 1000
                         except:
@@ -7353,15 +7493,12 @@ async def get_m3u8_raw_content2(url, id):
                 return None
 
 
-auto_verify = {'find': 0}
-auto_lock=threading.Lock()
-
 async def get_ts_data2(id, number):
     url = f"https://hklive.tv/dtmb/{id}/{number}.ts"
 
     headers = {
         'Accept': '*/*',
-        'Authority': 'hklive.tv',
+        'Authority': 'https://hklive.tv/',
         'If-Modified-Since': time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime()),
         "Referer": f"https://hklive.tv/{id}",
         "Sec-Ch-Ua": '"Not.A/Brand";v="8", "Chromium";v="114", "Microsoft Edge";v="114"',
@@ -7375,61 +7512,10 @@ async def get_ts_data2(id, number):
         "Scheme": "https",
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'}
 
-    response = requests.head(url, headers=headers)
-    if response.status_code == 200:
-        file_size = int(response.headers.get('Content-Length', 0))
-        size2 = auto_verify['find']
-        if size2 == 0:
-            size2 = 60
-        chunk_size = 1024 * size2  # 1MB
-        if size2 == 0:
-            with auto_lock:
-                if size2 == 0:
-                    data = None
-                    arr = [32, 64, 128, 256, 512, 1024]
-                    for i in arr:
-                        chunk_size = 1024 * i  # 1MB
-                        startTime = time.time()
-                        async with aiohttp.ClientSession() as session:
-                            # content=await download_file2(session, url, threadnum=5)
-                            tasks = []
-                            for start_byte in range(0, file_size, chunk_size):
-                                end_byte = min(start_byte + chunk_size - 1, file_size - 1)
-                                tasks.append(download_chunk(session, url, headers, start_byte, end_byte))
-
-                            chunks = await asyncio.gather(*tasks)
-                            data = b''.join(chunks)
-                    if data:
-                        entime = time.time()
-                        auto_verify[i] = entime - startTime
-                    min2 = auto_verify[32]
-                    for key, value in auto_verify.items():
-                        if value < min2:
-                            min2 = value
-                    auto_verify['find'] = min2
-                    return data
-                else:
-                    async with aiohttp.ClientSession() as session:
-                        # content=await download_file2(session, url, threadnum=5)
-                        tasks = []
-                        for start_byte in range(0, file_size, chunk_size):
-                            end_byte = min(start_byte + chunk_size - 1, file_size - 1)
-                            tasks.append(download_chunk(session, url, headers, start_byte, end_byte))
-
-                        chunks = await asyncio.gather(*tasks)
-                        return b''.join(chunks)
-        else:
-            async with aiohttp.ClientSession() as session:
-                # content=await download_file2(session, url, threadnum=5)
-                tasks = []
-                for start_byte in range(0, file_size, chunk_size):
-                    end_byte = min(start_byte + chunk_size - 1, file_size - 1)
-                    tasks.append(download_chunk(session, url, headers, start_byte, end_byte))
-
-                chunks = await asyncio.gather(*tasks)
-                return b''.join(chunks)
-            # return content
-
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, ssl=False) as response:
+            if response.status == 200:
+                return await response.read()
     return None
 
 
@@ -7438,7 +7524,7 @@ def get_ts_data(id, number):
 
     headers = {
         'Accept': '*/*',
-        'Authority': 'hklive.tv',
+        'Authority': 'https://hklive.tv/',
         'If-Modified-Since': time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime()),
         "Referer": f"https://hklive.tv/{id}",
         "Sec-Ch-Ua": '"Not.A/Brand";v="8", "Chromium";v="114", "Microsoft Edge";v="114"',
@@ -7447,15 +7533,15 @@ def get_ts_data(id, number):
         "Sec-Fetch-Dest": "empty",
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "same-origin",
-        "Method": "GET",
         "Path": url.split('https://hklive.tv')[1],
-        "Scheme": "https",
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'}
-
-    response = requests.get(url, headers=headers)
-    if response and response.status_code == 200:
-        return response.content
-    else:
+    try:
+        response = requests.get(url,headers=headers)
+        if response and response.status_code == 200:
+           return response.content
+        else:
+           return None
+    except:
         return None
 
 
@@ -7465,7 +7551,7 @@ def get_m3u8_raw_content(url, id):
     path = url.split('https://hklive.tv')[1].split('?')[0]
     headers = {
         'Accept': '*/*',
-        'Authority': 'hklive.tv',
+        'Authority': 'https://hklive.tv/',
         'If-Modified-Since': time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime()),
         "Referer": f"https://hklive.tv/{id}",
         "Sec-Ch-Ua": '"Not.A/Brand";v="8", "Chromium";v="114", "Microsoft Edge";v="114"',
@@ -7475,30 +7561,32 @@ def get_m3u8_raw_content(url, id):
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "same-origin",
         "Path": path,
-        "Method": "GET",
         'User-Agent': '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67\"'
     }
-    response = requests.get(url, headers=headers, timeout=60)
-    if response and response.status_code == 200:
-        content = response.content
-        new_m3u8_data = []
-        ip = init_IP()
-        url = f"https://hklive.tv/dtmb/{id}/"
-        fakeurl = f"http://127.0.0.1:5000/normal/"
-        fakeurl = f"http://{ip}:{port_live}/normal/"
-        for line in content.splitlines():
-            if line.startswith(
-                    (b'#EXTM3U', b'#EXT-X', b'#EXTINF')):
-                new_m3u8_data.append(line)
-            else:
-                try:
-                    num = int(line.split(b'.')[0]) / 1000
-                except:
-                    return None
-                # new_m3u8_data.append(f'{url}{line.decode()}'.encode())
-                new_m3u8_data.append(f'{fakeurl}hkdtmb,{id},{line.decode()}'.encode())
-        return b'\n'.join(new_m3u8_data)
-    else:
+    try:
+        response = requests.get(url, headers=headers)
+        if response and response.status_code == 200:
+            content = response.content
+            new_m3u8_data = []
+            ip = init_IP()
+            url = f"https://hklive.tv/dtmb/{id}/"
+            fakeurl = f"http://127.0.0.1:5000/normal/"
+            fakeurl = f"http://{ip}:{port_live}/normal/"
+            for line in content.splitlines():
+                if line.startswith(
+                        (b'#EXTM3U', b'#EXT-X', b'#EXTINF')):
+                    new_m3u8_data.append(line)
+                else:
+                    try:
+                        num = int(line.split(b'.')[0]) / 1000
+                    except:
+                        return None
+                    # new_m3u8_data.append(f'{url}{line.decode()}'.encode())
+                    new_m3u8_data.append(f'{fakeurl}hkdtmb,{id},{line.decode()}'.encode())
+            return b'\n'.join(new_m3u8_data)
+        else:
+            return None
+    except:
         return None
 
 
@@ -7515,14 +7603,12 @@ def video_m3u8_normal_ts(path):
     # with ts_lock:
     type, id, number = path.split(',')
     if type == 'hkdtmb':
-        now = time.time()
-        while time.time() - now < 360:
-            try:
-                bytesdata = async_to_sync('get_ts_data2', id, number)
-                if bytesdata:
-                    return Response(bytesdata, mimetype='video/MP2T')
-            except Exception as e:
-                pass
+        try:
+            bytesdata = async_to_sync('get_ts_data2', id, number)
+            if bytesdata:
+                return Response(bytesdata, mimetype='video/MP2T', headers={'Cache-Control': 'no-cache'})
+        except Exception as e:
+            pass
     return
 
 
@@ -7547,7 +7633,6 @@ def serve_files_normal(filename):
         # with hk_locl:
         if id not in tv_dict_normal:
             tv_dict_normal[id] = ''
-            auto_verify['find'] = 0
         hkid = id.split(',')[1]
         url = redisKeyNormalM3U.get(id)
         m3u8_url = url
@@ -7563,7 +7648,7 @@ def serve_files_normal(filename):
             return
         # 特殊的，这个url可能失效
         redisKeyNormalM3U[id] = m3u8_url
-        return Response(m3u8_data)
+        return Response(m3u8_data, headers=headers_default)
     url = tv_dict_normal.get(id)
     if not url:
         url = redisKeyNormalM3U.get(id)

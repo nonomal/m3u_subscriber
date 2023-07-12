@@ -1173,23 +1173,28 @@ def update_clock(cachekey):
 
 
 def clock_thread():
-    while True:
-        if is_update_clock('deal_black_list_simple_tmp_cache_queue'):
-            deal_black_list_simple_tmp_cache_queue()
-            update_clock('deal_black_list_simple_tmp_cache_queue')
-        if is_update_clock('deal_black_list_simple_policy_queue'):
+    # while True:
+    if is_update_clock('deal_black_list_simple_tmp_cache_queue'):
+        deal_black_list_simple_tmp_cache_queue()
+        update_clock('deal_black_list_simple_tmp_cache_queue')
+    if is_update_clock('deal_black_list_simple_policy_queue'):
+        try:
             deal_black_list_simple_policy_queue()
-            update_clock('deal_black_list_simple_policy_queue')
-        if is_update_clock('clearCache'):
-            clearCache()
-            update_clock('clearCache')
-        if is_update_clock('clearCacheFast'):
-            clearCacheFast()
-            update_clock('clearCacheFast')
-        if is_update_clock('latest_mins_update_dict'):
-            slow_remove_one_day_visited_domain()
-            update_clock('latest_mins_update_dict')
-        time.sleep(10)
+        except:
+            pass
+        update_clock('deal_black_list_simple_policy_queue')
+    if is_update_clock('clearCache'):
+        clearCache()
+        update_clock('clearCache')
+    if is_update_clock('clearCacheFast'):
+        clearCacheFast()
+        update_clock('clearCacheFast')
+    if is_update_clock('latest_mins_update_dict'):
+        slow_remove_one_day_visited_domain()
+        update_clock('latest_mins_update_dict')
+
+
+# time.sleep(10)
 
 
 # 缓存一天内已经访问的域名，减少重复域名导致频繁的重复入库行为
@@ -1262,9 +1267,15 @@ def clearCacheFast():
 def clearCache():
     global black_list_simple_policy
     num = int(getFileNameByTagName('dnsLimitRecordSecondDomain'))
-    clearAndStoreAtLeast50DataInRedis(REDIS_KEY_DNS_SIMPLE_BLACKLIST, black_list_simple_policy, num)
+    try:
+        clearAndStoreAtLeast50DataInRedis(REDIS_KEY_DNS_SIMPLE_BLACKLIST, black_list_simple_policy, num)
+    except:
+        pass
     global white_list_simple_nameserver_policy
-    clearAndStoreAtLeast50DataInRedis(REDIS_KEY_DNS_SIMPLE_WHITELIST, white_list_simple_nameserver_policy, num)
+    try:
+        clearAndStoreAtLeast50DataInRedis(REDIS_KEY_DNS_SIMPLE_WHITELIST, white_list_simple_nameserver_policy, num)
+    except:
+        pass
 
 
 # 最近查询的黑名单域名，目标是减少重复域名入库行为
@@ -1452,6 +1463,7 @@ def get_message():
 
 def init():
     while True:
+        clock_thread()
         try:
             message_dict = get_message()
             for message in message_dict.keys():
@@ -1551,7 +1563,7 @@ def init():
         except:
             pass
         finally:
-            time.sleep(1)
+            time.sleep(10)
 
 
 # 是否开启自动维护生成简易黑白名单：0-不开启，1-开启
@@ -1770,8 +1782,8 @@ def main():
     # initIPV4List()
     initSimpleWhiteList()
     initSimpleBlackList()
-    timer_thread = threading.Thread(target=clock_thread, daemon=True)
-    timer_thread.start()
+    # timer_thread = threading.Thread(target=clock_thread, daemon=True)
+    # timer_thread.start()
     timer_thread2 = threading.Thread(target=init, daemon=True)
     timer_thread2.start()
     # 中国dns端口

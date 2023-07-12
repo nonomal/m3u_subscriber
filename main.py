@@ -343,7 +343,7 @@ file_name_dict = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'aliveM3u'
                   'usernameSys': 'admin', 'passwordSys': 'password', 'normalM3uClock': '7200',
                   'normalSubscriberClock': '10800',
                   'failTs': 'https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4',
-                  'proxySubscriberClock': '3600', 'autoDnsSwitchClock': '600', 'syncClock': '10',
+                  'proxySubscriberClock': '3600', 'autoDnsSwitchClock': '600',
                   'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国', 'foreignTopDomain':
                       'xyz,club,online,site,top,win', 'dnsMode': '0', 'dnsLimitRecordSecondDomain': '15',
                   'dnsLimitRecordSecondLenDomain': '15', 'lastaliveport': '0'}
@@ -799,7 +799,7 @@ def upload_json_base(rediskey, file_content):
 
 # 上次更新时间戳
 time_clock_update_dict = {'proxySubscriberClock': '0', 'normalM3uClock': '0',
-                          'autoDnsSwitchClock': '0', 'normalSubscriberClock': '0', 'syncClock': '0', 'recycle': '0',
+                          'autoDnsSwitchClock': '0', 'normalSubscriberClock': '0',  'recycle': '0',
                           'checkAlive': '0', 'migu': '0', 'miguId': '0', 'cq': '0', 'cqId': '0', 'youtubeId': '0',
                           'bilibiliId': '0', 'huyaId': '0', 'yyId': '0', 'twitchId': '0', 'douyinId': '0',
                           'youtubelockuuid': '0', 'twitchlockuuid': '0',
@@ -885,34 +885,19 @@ def clock_thread():
                 # 执行方法-下载解密
                 chaoronghe10()
             update_clock('normalSubscriberClock')
-        if is_update_clock('syncClock'):
-            worker_github()
-            update_clock('syncClock')
-        time.sleep(60)
+        time.sleep(3600)
 
 
-def worker_github():
-    for i in range(10):
-        # 从任务队列中获取一个任务
-        if not task_queue_webdav.empty():
-            task = task_queue_webdav.get()
-            # 执行上传文件操作
-            file_name = task
-            updateFileToWebDAV(file_name)
-    for i in range(10):
-        # 从任务队列中获取一个任务
-        if not task_queue.empty():
-            task = task_queue.get()
-            # 执行上传文件操作
-            file_name = task
-            updateFileToGitee(file_name)
-    for i in range(10):
-        # 从任务队列中获取一个任务
-        if not task_queue_github.empty():
-            task = task_queue_github.get()
-            # 执行上传文件操作
-            file_name = task
-            updateFileToGithub(file_name)
+def update_git(file_name, uploadGitee, uploadGithub, uploadWebdav):
+    # 加密文件上传至gitee,
+    if uploadGitee:
+        updateFileToGitee(file_name)
+    # 加密文件上传至github,
+    if uploadGithub:
+        updateFileToGithub(file_name)
+    # 加密文件上传至webdav,
+    if uploadWebdav:
+        updateFileToWebDAV(file_name)
 
 
 def toggle_m3u(functionId, value):
@@ -1121,15 +1106,7 @@ def checkToDecrydecrypt2(url, redis_dict, m3u_string, filenameDict, secretNameDi
             secretContent = encrypt2(m3u_string, password)
             secretFileName = secretNameDict[url]
             thread_write_bytes_to_file(secretFileName, secretContent)
-            # 加密文件上传至gitee,
-            if uploadGitee and not task_queue.full():
-                task_queue.put(os.path.basename(secretFileName))
-            # 加密文件上传至github,
-            if uploadGithub and not task_queue_github.full():
-                task_queue_github.put(os.path.basename(secretFileName))
-            # 加密文件上传至webdav,
-            if uploadWebdav and not task_queue_webdav.full():
-                task_queue_webdav.put(os.path.basename(secretFileName))
+            update_git(os.path.basename(secretFileName), uploadGitee, uploadGithub, uploadWebdav)
     if isinstance(m3u_string, bytes):
         thread_write_bytes_to_file(filenameDict[url], m3u_string)
     else:
@@ -1629,7 +1606,7 @@ def updateFileToGitee(file_name):
     path = init_gitee('path', REDIS_KEY_GITEE, redisKeyGitee)
     access_token = init_gitee('accesstoken', REDIS_KEY_GITEE, redisKeyGitee)
     now = time.time()
-    while time.time() - now < 300:
+    while time.time() - now < 15:
         try:
             removeIfExist(username, repo_name, path, access_token, file_name)
         except:
@@ -1690,7 +1667,7 @@ def updateFileToGithub(file_name):
     path = init_gitee('path', REDIS_KEY_GITHUB, redisKeyGithub)
     access_token = init_gitee('accesstoken', REDIS_KEY_GITHUB, redisKeyGithub)
     now = time.time()
-    while time.time() - now < 300:
+    while time.time() - now < 15:
         try:
             removeIfExistGithub(username, repo_name, path, access_token, file_name)
         except:
@@ -1750,7 +1727,7 @@ def updateFileToWebDAV(file_name):
     path = init_gitee('path', REDIS_KEY_WEBDAV, redisKeyWebDav)
     agreement = init_gitee('agreement', REDIS_KEY_WEBDAV, redisKeyWebDav)
     now = time.time()
-    while time.time() - now < 300:
+    while time.time() - now < 15:
         try:
             removeIfExistWebDav(ip, username, password, path, file_name, port, agreement)
         except Exception as e:
@@ -1760,16 +1737,6 @@ def updateFileToWebDAV(file_name):
             break
         except Exception as e:
             continue
-
-
-# 定义线程数和任务队列,防止多线程提交数据到gitee产生竞争阻塞，最终导致数据丢失
-task_queue = queue.Queue(maxsize=100)
-
-# 定义线程数和任务队列,防止多线程提交数据到github产生竞争阻塞，最终导致数据丢失
-task_queue_github = queue.Queue(maxsize=100)
-
-# 定义线程数和任务队列,防止多线程提交数据到webdav产生竞争阻塞，最终导致数据丢失
-task_queue_webdav = queue.Queue(maxsize=100)
 
 
 def isOpenFunction(functionId):
@@ -1793,18 +1760,7 @@ def download_secert_file(fileName, secretFileName, cachekey, openJiaMi, openUplo
             thread_write_bytes_to_file(secretFileName, secretContent)
         # 开启上传
         if openUpload:
-            # 加密文件上传至gitee,
-            if uploadGitee and not task_queue.full():
-                task_queue.put(os.path.basename(secretFileName))
-            # 加密文件上传至github,
-            if uploadGithub and not task_queue_github.full():
-                task_queue_github.put(os.path.basename(secretFileName))
-            # 加密文件上传至webdav,
-            if uploadWebdav and not task_queue_webdav.full():
-                task_queue_webdav.put(os.path.basename(secretFileName))
-        # updateFileToGitee(os.path.basename(secretFileName))
-        # plaintext = decrypt(password, secretContent)
-        # thread_write_bytes_to_file("/解密文件.txt", plaintext)
+            update_git(os.path.basename(secretFileName), uploadGitee, uploadGithub, uploadWebdav)
     except FileNotFoundError:
         print(f"File not found: {fileName}")
     except:
@@ -3974,7 +3930,7 @@ file_name_dict_default = {'allM3u': 'allM3u', 'allM3uSecret': 'allM3uSecret', 'a
                           'normalSubscriberClock': '10800',
                           'failTs': 'https://raw.githubusercontent.com/paperbluster/ppap/main/update.mp4',
                           'proxySubscriberClock': '3600', 'autoDnsSwitchClock': '600',
-                          'syncClock': '10', 'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国',
+                          'reliveAlistTsTime': '600', 'recycle': '7200', 'chinaTopDomain': 'cn,中国',
                           'foreignTopDomain':
                               'xyz,club,online,site,top,win', 'dnsMode': '0', 'dnsLimitRecordSecondDomain': '15',
                           'dnsLimitRecordSecondLenDomain': '15', 'lastaliveport': '0'}
@@ -7410,7 +7366,6 @@ def async_to_sync(funtionName, id, number):
             return bytesdata
 
 
-
 async def get_m3u8_link2(id):
     url = f"https://hklive.tv/{id}"
 
@@ -7433,7 +7388,7 @@ async def get_m3u8_link2(id):
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'
     }
     async with aiohttp.ClientSession() as session:
-        async with session.get(url,ssl=False) as response:
+        async with session.get(url, ssl=False) as response:
             if response and response.status == 200:
                 content = await response.text()  # 解码为字符串
                 # 使用正则表达式提取file对应的字符串
@@ -7468,7 +7423,7 @@ async def get_m3u8_raw_content2(url, id):
     }
     # url = f"https://hklive.tv/dtmb/{id}/"
     async with aiohttp.ClientSession() as session:
-        async with session.get(url,ssl=False) as response:
+        async with session.get(url, ssl=False) as response:
             if response.status == 200:
                 content = await response.content.read()
                 new_m3u8_data = []
@@ -7536,11 +7491,11 @@ def get_ts_data(id, number):
         "Path": url.split('https://hklive.tv')[1],
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'}
     try:
-        response = requests.get(url,headers=headers)
+        response = requests.get(url, headers=headers)
         if response and response.status_code == 200:
-           return response.content
+            return response.content
         else:
-           return None
+            return None
     except:
         return None
 

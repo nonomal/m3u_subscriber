@@ -239,21 +239,26 @@ dnstimeout = {REDIS_KEY_DNS_TIMEOUT: 30}
 ######################################################ip判断###################################################
 
 # 检测域名是否在记录的简易黑名单域名策略缓存  是-true  不是-false
-def inSimpleBlackListPolicyCache(domain_name_str):
+def inSimpleBlackListPolicyCache(domain_name_str, end_search=None):
     # 在今日已经命中的规则里查找
     for vistedDomain in black_list_simple_tmp_policy.keys():
+        if end_search is not None and end_search['flag']:
+            return False
         # 缓存域名在新域名里有匹配
         if domain_name_str.endswith(vistedDomain):
-            if not black_list_simple_tmp_cache_queue.full():
-                black_list_simple_tmp_cache_queue.put(domain_name_str)
+            with black_list_simple_tmp_cache_queue_lock:
+                if not black_list_simple_tmp_cache_queue.full():
+                    black_list_simple_tmp_cache_queue.put(domain_name_str)
             # black_list_simple_tmp_cache[domain_name_str] = ""
             return True
     return False
 
 
 # 检测域名是否在记录的简易黑名单域名缓存  是-true  不是-false
-def inSimpleBlackListCache(domain_name_str):
+def inSimpleBlackListCache(domain_name_str, end_search=None):
     for recordThiteDomain in black_list_simple_tmp_cache.keys():
+        if end_search is not None and end_search['flag']:
+            return False
         # # 缓存域名在新域名里有匹配
         if domain_name_str.endswith(recordThiteDomain):
             return True
@@ -286,8 +291,12 @@ def getWeakThread(length):
 #     return quick_sort(left) + middle + quick_sort(right)
 
 # 检测域名是否在全部简易黑名单域名策略  是-true  不是-false
-def inSimpleBlackListPolicy(domain_name_str):
+def inSimpleBlackListPolicy(domain_name_str, end_search=None):
+    if end_search is not None and end_search['flag']:
+        return False
     items = findBottomDict(domain_name_str, black_list_simple_policy)
+    if end_search is not None and end_search['flag']:
+        return False
     # items = quick_sort(items)
     if items:
         if len(items) == 0:
@@ -309,7 +318,8 @@ def inSimpleBlackListPolicy(domain_name_str):
                     else:
                         end_index = min(start_index + chunk_size, length - 1)
                     black_list_chunk = items[start_index:end_index]
-                    future = executor.submit(check_domain_inSimpleBlackListPolicy, domain_name_str, black_list_chunk)
+                    future = executor.submit(check_domain_inSimpleBlackListPolicy, domain_name_str, black_list_chunk,
+                                             end_search=end_search)
                     futures.append(future)
                 # 使用wait等待第一个非None结果
                 done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
@@ -327,38 +337,51 @@ def inSimpleBlackListPolicy(domain_name_str):
         return False
 
 
-def check_domain_inSimpleBlackListPolicy(domain_name_str, black_list_chunk):
+black_list_simple_tmp_cache_queue_lock = threading.Lock()
+black_list_simple_tmp_policy_queue_lock = threading.Lock()
+
+
+def check_domain_inSimpleBlackListPolicy(domain_name_str, black_list_chunk, end_search=None):
     try:
         for key in black_list_chunk:
+            if end_search is not None and end_search['flag']:
+                return None
             # 缓存域名在新域名里有匹配
             if domain_name_str.endswith(key):
-                if not black_list_simple_tmp_cache_queue.full():
-                    black_list_simple_tmp_cache_queue.put(domain_name_str)
-                if not black_list_simple_tmp_policy_queue.full():
-                    black_list_simple_tmp_policy_queue.put(key)
+                with black_list_simple_tmp_cache_queue_lock:
+                    if not black_list_simple_tmp_cache_queue.full():
+                        black_list_simple_tmp_cache_queue.put(domain_name_str)
+                with black_list_simple_tmp_policy_queue_lock:
+                    if not black_list_simple_tmp_policy_queue.full():
+                        black_list_simple_tmp_policy_queue.put(key)
                 # black_list_simple_tmp_cache[domain_name_str] = ""
                 # black_list_simple_tmp_policy[key] = ""
                 return True
     except Exception as e:
-        pass
+        return None
 
 
 # 检测域名是否在记录的黑名单域名策略缓存  是-true  不是-false
-def inBlackListPolicyCache(domain_name_str):
+def inBlackListPolicyCache(domain_name_str, end_search=None):
     # 在今日已经命中的规则里查找
     for vistedDomain in black_list_tmp_policy.keys():
+        if end_search is not None and end_search['flag']:
+            return False
         # 缓存域名在新域名里有匹配
         if domain_name_str.endswith(vistedDomain):
-            if not black_list_tmp_cache_queue.full():
-                black_list_tmp_cache_queue.put(domain_name_str)
+            with black_list_tmp_cache_queue_lock:
+                if not black_list_tmp_cache_queue.full():
+                    black_list_tmp_cache_queue.put(domain_name_str)
             # black_list_tmp_cache[domain_name_str] = ""
             return True
     return False
 
 
 # 检测域名是否在记录的黑名单域名缓存  是-true  不是-false
-def inBlackListCache(domain_name_str):
+def inBlackListCache(domain_name_str, end_search=None):
     for recordThiteDomain in black_list_tmp_cache.keys():
+        if end_search is not None and end_search['flag']:
+            return False
         # # 缓存域名在新域名里有匹配
         if domain_name_str.endswith(recordThiteDomain):
             return True
@@ -366,8 +389,10 @@ def inBlackListCache(domain_name_str):
 
 
 # 检测域名是否在记录的简易白名单域名缓存  是-true  不是-false
-def inSimpleWhiteListCache(domain_name_str):
+def inSimpleWhiteListCache(domain_name_str, end_search=None):
     for recordThiteDomain in white_list_simple_tmp_cache.keys():
+        if end_search is not None and end_search['flag']:
+            return False
         # # 缓存域名在新域名里有匹配
         if domain_name_str.endswith(recordThiteDomain):
             return True
@@ -375,21 +400,28 @@ def inSimpleWhiteListCache(domain_name_str):
 
 
 # 检测域名是否在记录的简易白名单域名策略缓存  是-true  不是-false
-def inSimpleWhiteListPolicyCache(domain_name_str):
+def inSimpleWhiteListPolicyCache(domain_name_str, end_search=None):
     # 在今日已经命中的规则里查找
     for vistedDomain in white_list_simple_tmp_policy.keys():
+        if end_search is not None and end_search['flag']:
+            return False
         # 缓存域名在新域名里有匹配
         if domain_name_str.endswith(vistedDomain):
-            if not white_list_simple_tmp_cache_queue.full():
-                white_list_simple_tmp_cache_queue.put(domain_name_str)
+            with white_list_simple_tmp_cache_queue_lock:
+                if not white_list_simple_tmp_cache_queue.full():
+                    white_list_simple_tmp_cache_queue.put(domain_name_str)
             # white_list_simple_tmp_cache[domain_name_str] = ""
             return True
     return False
 
 
 # 检测域名是否在全部简易白名单域名策略  是-true  不是-false
-def inSimpleWhiteListPolicy(domain_name_str):
+def inSimpleWhiteListPolicy(domain_name_str, end_search=None):
+    if end_search is not None and end_search['flag']:
+        return False
     items = findBottomDict(domain_name_str, white_list_simple_nameserver_policy)
+    if end_search is not None and end_search['flag']:
+        return False
     # items = quick_sort(items)
     if items:
         if len(items) == 0:
@@ -411,7 +443,8 @@ def inSimpleWhiteListPolicy(domain_name_str):
                     else:
                         end_index = min(start_index + chunk_size, length - 1)
                     white_list_chunk = items[start_index:end_index]
-                    future = executor.submit(check_domain_inSimpleWhiteListPolicy, domain_name_str, white_list_chunk)
+                    future = executor.submit(check_domain_inSimpleWhiteListPolicy, domain_name_str, white_list_chunk,
+                                             end_search=end_search)
                     futures.append(future)
                 # 使用wait等待第一个非None结果
                 done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
@@ -429,25 +462,35 @@ def inSimpleWhiteListPolicy(domain_name_str):
         return False
 
 
-def check_domain_inSimpleWhiteListPolicy(domain_name_str, white_list_chunk):
+white_list_simple_tmp_cache_queue_lock = threading.Lock()
+white_list_simple_tmp_policy_queue_lock = threading.Lock()
+
+
+def check_domain_inSimpleWhiteListPolicy(domain_name_str, white_list_chunk, end_search=None):
     try:
         for key in white_list_chunk:
+            if end_search is not None and end_search['flag']:
+                return None
             # 新域名在全部规则里有类似域名，更新whiteDomainPolicy
             if domain_name_str.endswith(key):
-                if not white_list_simple_tmp_cache_queue.full():
-                    white_list_simple_tmp_cache_queue.put(domain_name_str)
+                with white_list_simple_tmp_cache_queue_lock:
+                    if not white_list_simple_tmp_cache_queue.full():
+                        white_list_simple_tmp_cache_queue.put(domain_name_str)
                 # white_list_simple_tmp_cache[domain_name_str] = ""
-                if not white_list_simple_tmp_policy_queue.full():
-                    white_list_simple_tmp_policy_queue.put(key)
+                with white_list_simple_tmp_policy_queue_lock:
+                    if not white_list_simple_tmp_policy_queue.full():
+                        white_list_simple_tmp_policy_queue.put(key)
                 # white_list_simple_tmp_policy[key] = ""
                 return True
     except Exception as e:
-        pass
+        return None
 
 
 # 检测域名是否在记录的白名单域名缓存  是-true  不是-false
-def inWhiteListCache(domain_name_str):
+def inWhiteListCache(domain_name_str, end_search=None):
     for recordThiteDomain in white_list_tmp_cache.keys():
+        if end_search is not None and end_search['flag']:
+            return False
         # # 缓存域名在新域名里有匹配
         if domain_name_str.endswith(recordThiteDomain):
             return True
@@ -455,21 +498,28 @@ def inWhiteListCache(domain_name_str):
 
 
 # 检测域名是否在记录的白名单域名策略缓存  是-true  不是-false
-def inWhiteListPolicyCache(domain_name_str):
+def inWhiteListPolicyCache(domain_name_str, end_search=None):
     # 在今日已经命中的规则里查找
     for vistedDomain in white_list_tmp_policy.keys():
+        if end_search is not None and end_search['flag']:
+            return False
         # 缓存域名在新域名里有匹配
         if domain_name_str.endswith(vistedDomain):
-            if not white_list_tmp_cache_queue.full():
-                white_list_tmp_cache_queue.put(domain_name_str)
+            with white_list_tmp_cache_queue_lock:
+                if not white_list_tmp_cache_queue.full():
+                    white_list_tmp_cache_queue.put(domain_name_str)
             # white_list_tmp_cache[domain_name_str] = ""
             return True
     return False
 
 
 # 检测域名是否在全部黑名单域名策略  是-true  不是-false
-def inBlackListPolicy(domain_name_str):
+def inBlackListPolicy(domain_name_str, end_search=None):
+    if end_search is not None and end_search['flag']:
+        return False
     items = findBottomDict(domain_name_str, blacklistSpData)
+    if end_search is not None and end_search['flag']:
+        return False
     # items = quick_sort(items)
     if items:
         if len(items) == 0:
@@ -491,7 +541,8 @@ def inBlackListPolicy(domain_name_str):
                     else:
                         end_index = min(start_index + chunk_size, length - 1)
                     black_list_chunk = items[start_index:end_index]
-                    future = executor.submit(check_domain_inBlackListPolicy, domain_name_str, black_list_chunk)
+                    future = executor.submit(check_domain_inBlackListPolicy, domain_name_str, black_list_chunk,
+                                             end_search=end_search)
                     futures.append(future)
                 # 使用wait等待第一个非None结果
                 done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
@@ -510,25 +561,35 @@ def inBlackListPolicy(domain_name_str):
         return False
 
 
-def check_domain_inBlackListPolicy(domain_name_str, black_list_chunk):
+black_list_tmp_cache_queue_lock = threading.Lock()
+black_list_tmp_policy_queue_lock = threading.Lock()
+
+
+def check_domain_inBlackListPolicy(domain_name_str, black_list_chunk, end_search=None):
     try:
         for key in black_list_chunk:
+            if end_search is not None and end_search['flag']:
+                return None
             # 缓存域名在新域名里有匹配
             if domain_name_str.endswith(key):
-                if not black_list_tmp_cache_queue.full():
-                    black_list_tmp_cache_queue.put(domain_name_str)
-                if not black_list_tmp_policy_queue.full():
-                    black_list_tmp_policy_queue.put(key)
-                # black_list_tmp_cache[domain_name_str] = ""
-                # black_list_tmp_policy[key] = ""
+                with black_list_tmp_cache_queue_lock:
+                    if not black_list_tmp_cache_queue.full():
+                        black_list_tmp_cache_queue.put(domain_name_str)
+                with black_list_tmp_policy_queue_lock:
+                    if not black_list_tmp_policy_queue.full():
+                        black_list_tmp_policy_queue.put(key)
                 return True
     except Exception as e:
-        pass
+        return None
 
 
 # 检测域名是否在全部白名单域名策略  是-true  不是-false
-def inWhiteListPolicy(domain_name_str):
+def inWhiteListPolicy(domain_name_str, end_search=None):
+    if end_search is not None and end_search['flag']:
+        return False
     items = findBottomDict(domain_name_str, whitelistSpData)
+    if end_search is not None and end_search['flag']:
+        return False
     # items = quick_sort(items)
     if items:
         if len(items) == 0:
@@ -550,7 +611,8 @@ def inWhiteListPolicy(domain_name_str):
                     else:
                         end_index = min(start_index + chunk_size, length - 1)
                     white_list_chunk = items[start_index:end_index]
-                    future = executor.submit(check_domain_inWhiteListPolicy, domain_name_str, white_list_chunk)
+                    future = executor.submit(check_domain_inWhiteListPolicy, domain_name_str, white_list_chunk,
+                                             end_search=end_search)
                     futures.append(future)
                 # 使用wait等待第一个非None结果
                 done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
@@ -569,20 +631,28 @@ def inWhiteListPolicy(domain_name_str):
         return False
 
 
-def check_domain_inWhiteListPolicy(domain_name_str, white_list_chunk):
+white_list_tmp_cache_queue_lock = threading.Lock()
+white_list_tmp_policy_queue_lock = threading.Lock()
+
+
+def check_domain_inWhiteListPolicy(domain_name_str, white_list_chunk, end_search=None):
     try:
         for key in white_list_chunk:
+            if end_search is not None and end_search['flag']:
+                return None
             # 新域名在全部规则里有类似域名，更新whiteDomainPolicy
             if domain_name_str.endswith(key):
-                if not white_list_tmp_cache_queue.full():
-                    white_list_tmp_cache_queue.put(domain_name_str)
-                if not white_list_tmp_policy_queue.full():
-                    white_list_tmp_policy_queue.put(key)
+                with white_list_tmp_cache_queue_lock:
+                    if not white_list_tmp_cache_queue.full():
+                        white_list_tmp_cache_queue.put(domain_name_str)
+                with white_list_tmp_policy_queue_lock:
+                    if not white_list_tmp_policy_queue.full():
+                        white_list_tmp_policy_queue.put(key)
                 # white_list_tmp_cache[domain_name_str] = ""
                 # white_list_tmp_policy[key] = ""
                 return True
     except Exception as e:
-        pass
+        return None
 
 
 def stupidThink(domain_name, limitNum):
@@ -699,17 +769,18 @@ ignore_domain = ['com.', 'cn.', 'org.', 'net.', 'edu.', 'gov.', 'mil.', 'int.', 
 
 def hungry_check_in_multi_method(domain_name_str):
     executor = None
+    end_search = {'flag': False}
     try:
         with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
             # 为各个任务分配ThreadPoolExecutor
-            futures = [executor.submit(check_by_choice, domain_name_str, i) for i in range(12)]
+            futures = [executor.submit(check_by_choice, domain_name_str, i, end_search) for i in range(12)]
             # 使用wait等待第一个非None结果
             done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
-            # 使用as_completed以非阻塞的方式返回第一个非None结果
             for future in done:
                 result = future.result()
                 if result is not None:
                     if result == find_white or result == find_black:
+                        end_search['flag'] = True
                         return result
     except TypeError:
         return find_none
@@ -724,58 +795,58 @@ find_none = 0
 
 
 # 0-没有查到 1-是白名单 -1-是黑名单
-def check_by_choice(domain_name_str, type):
+def check_by_choice(domain_name_str, type, end_search):
     if type == 0:
-        if inSimpleWhiteListCache(domain_name_str):
+        if inSimpleWhiteListCache(domain_name_str, end_search=end_search):
             return find_white
         return None
     elif type == 1:
-        if inSimpleBlackListCache(domain_name_str):
+        if inSimpleBlackListCache(domain_name_str, end_search=end_search):
             return find_black
         return None
     elif type == 2:
-        if inSimpleWhiteListPolicyCache(domain_name_str):
+        if inSimpleWhiteListPolicyCache(domain_name_str, end_search=end_search):
             return find_white
         return None
     elif type == 3:
-        if inSimpleWhiteListPolicy(domain_name_str):
+        if inSimpleWhiteListPolicy(domain_name_str, end_search=end_search):
             return find_white
         return None
     elif type == 4:
-        if inWhiteListCache(domain_name_str):
+        if inWhiteListCache(domain_name_str, end_search=end_search):
             checkAndUpdateSimpleList(False, domain_name_str)
             return find_white
         return None
     elif type == 5:
-        if inWhiteListPolicyCache(domain_name_str):
+        if inWhiteListPolicyCache(domain_name_str, end_search=end_search):
             checkAndUpdateSimpleList(False, domain_name_str)
             return find_white
         return None
     elif type == 6:
-        if inWhiteListPolicy(domain_name_str):
+        if inWhiteListPolicy(domain_name_str, end_search=end_search):
             checkAndUpdateSimpleList(False, domain_name_str)
             return find_white
         return None
     elif type == 7:
-        if inSimpleBlackListPolicyCache(domain_name_str):
+        if inSimpleBlackListPolicyCache(domain_name_str, end_search=end_search):
             return find_black
         return None
     elif type == 8:
-        if inSimpleBlackListPolicy(domain_name_str):
+        if inSimpleBlackListPolicy(domain_name_str, end_search=end_search):
             return find_black
         return None
     elif type == 9:
-        if inBlackListCache(domain_name_str):
+        if inBlackListCache(domain_name_str, end_search=end_search):
             checkAndUpdateSimpleList(True, domain_name_str)
             return find_black
         return None
     elif type == 10:
-        if inBlackListPolicyCache(domain_name_str):
+        if inBlackListPolicyCache(domain_name_str, end_search=end_search):
             checkAndUpdateSimpleList(True, domain_name_str)
             return find_black
         return None
     elif type == 11:
-        if inBlackListPolicy(domain_name_str):
+        if inBlackListPolicy(domain_name_str, end_search=end_search):
             checkAndUpdateSimpleList(True, domain_name_str)
             return find_black
         return None
@@ -1356,11 +1427,13 @@ foreign_top_domain_list = []
 REDIS_KEY_FILE_NAME = "redisKeyFileName"
 
 file_name_dict = {'chinaTopDomain': 'cn,中国', 'foreignTopDomain':
-    'xyz,club,online,site,top,win', 'dnsMode': '0', 'dnsLimitRecordSecondDomain': '15',
+    'xyz,club,online,site,top,win,google.com,www.google.com,googleapis.com', 'dnsMode': '0',
+                  'dnsLimitRecordSecondDomain': '15',
                   'dnsLimitRecordSecondLenDomain': '15'}
 
 file_name_dict_default = {'chinaTopDomain': 'cn,中国', 'foreignTopDomain':
-    'xyz,club,online,site,top,win', 'dnsMode': '0', 'dnsLimitRecordSecondDomain': '15',
+    'xyz,club,online,site,top,win,google.com,www.google.com,googleapis.com', 'dnsMode': '0',
+                          'dnsLimitRecordSecondDomain': '15',
                           'dnsLimitRecordSecondLenDomain': '15'}
 
 
@@ -1563,22 +1636,27 @@ def init():
         except:
             pass
         finally:
-            time.sleep(10)
+            time.sleep(1)
 
 
 # 是否开启自动维护生成简易黑白名单：0-不开启，1-开启
 AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST = '1'
+
+black_list_simple_policy_queue_lock = threading.Lock()
+white_list_simple_nameserver_policy_queue_lock = threading.Lock()
 
 
 def checkAndUpdateSimpleList(isBlack, domain):
     if AUTO_GENERATE_SIMPLE_WHITE_AND_BLACK_LIST == '0':
         return
     if isBlack:
-        if not black_list_simple_policy_queue.full():
-            black_list_simple_policy_queue.put(domain)
+        with black_list_simple_policy_queue_lock:
+            if not black_list_simple_policy_queue.full():
+                black_list_simple_policy_queue.put(domain)
     else:
-        if not white_list_simple_nameserver_policy_queue.full():
-            white_list_simple_nameserver_policy_queue.put(domain)
+        with white_list_simple_nameserver_policy_queue_lock:
+            if not white_list_simple_nameserver_policy_queue.full():
+                white_list_simple_nameserver_policy_queue.put(domain)
 
 
 # 线程数获取
@@ -1782,8 +1860,6 @@ def main():
     # initIPV4List()
     initSimpleWhiteList()
     initSimpleBlackList()
-    # timer_thread = threading.Thread(target=clock_thread, daemon=True)
-    # timer_thread.start()
     timer_thread2 = threading.Thread(target=init, daemon=True)
     timer_thread2.start()
     # 中国dns端口

@@ -1457,7 +1457,6 @@
                     class="grid-item button stubbonsave">修改
             </button>
         </div>
-
     </div>
     <div id="page17" style="display: none;">
         <h1>功能开关</h1>
@@ -2313,7 +2312,7 @@
                     onclick="removelinksBase('/api/removem3ulinks30')">删除全部订阅
             </button>
             <div style="display: flex;width: 100%;">
-                <div class="notice" style="display: flex;width: 80%;">订阅来源:alist直播通道父路径(测试40万个视频负载)+频道密码
+                <div class="notice" style="display: flex;width: 80%;">订阅来源:alist直播通道父路径+频道密码
                 </div>
                 <div class="notice" style="display: flex;width: 20%;">操作</div>
             </div>
@@ -2501,7 +2500,6 @@
     const syncClock = document.getElementById('syncClock');
     const reliveAlistTsTime = document.getElementById('reliveAlistTsTime');
     const failTs = document.getElementById('failTs');
-    const proxyschina = document.getElementById('proxyschina');
     const chinaTopDomain = document.getElementById('chinaTopDomain');
     const foreignTopDomain = document.getElementById('foreignTopDomain');
     const dnsMode = document.getElementById('dnsMode');
@@ -4365,7 +4363,6 @@
             getFileName('syncClock', 'syncClock', syncClock)
             getFileName('reliveAlistTsTime', 'reliveAlistTsTime', reliveAlistTsTime)
             getFileName('failTs', 'failTs', failTs)
-            getFileName('proxyschina', 'proxyschina', proxyschina)
         } else if (selectedPage === pages[16].id) {
             //生成有效M3U
             reloadFunctionOpenButton('switch')

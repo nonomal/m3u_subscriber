@@ -28,6 +28,8 @@ import aiofiles
 import requests
 import time
 from urllib.parse import urlparse, urlencode
+
+from bs4 import BeautifulSoup
 from flask import Flask, jsonify, request, send_file, render_template, send_from_directory, \
     after_this_request, redirect, Response
 
@@ -799,7 +801,7 @@ def upload_json_base(rediskey, file_content):
 
 # 上次更新时间戳
 time_clock_update_dict = {'proxySubscriberClock': '0', 'normalM3uClock': '0',
-                          'autoDnsSwitchClock': '0', 'normalSubscriberClock': '0',  'recycle': '0',
+                          'autoDnsSwitchClock': '0', 'normalSubscriberClock': '0', 'recycle': '0',
                           'checkAlive': '0', 'migu': '0', 'miguId': '0', 'cq': '0', 'cqId': '0', 'youtubeId': '0',
                           'bilibiliId': '0', 'huyaId': '0', 'yyId': '0', 'twitchId': '0', 'douyinId': '0',
                           'youtubelockuuid': '0', 'twitchlockuuid': '0',
@@ -1165,7 +1167,7 @@ def download_files(urls, redis_dict):
 
 def fetch_url(url, redis_dict):
     try:
-        response = requests.get(url)
+        response = requests.get(url,timeout=30,headers=headers_YY)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1177,7 +1179,7 @@ def fetch_url(url, redis_dict):
         # print(f"success to fetch URL: {url}")
         return m3u_string
     except requests.exceptions.Timeout:
-        response = requests.get(url, timeout=60)
+        response = requests.get(url, timeout=60,headers=headers_YY)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1192,7 +1194,7 @@ def fetch_url(url, redis_dict):
             url = url.decode('utf-8')
         except:
             pass
-        response = requests.get(url)
+        response = requests.get(url,headers=headers_YY)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1210,7 +1212,7 @@ def fetch_url(url, redis_dict):
 
 def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, uploadGithub, uploadWebdav):
     try:
-        response = requests.get(url)
+        response = requests.get(url,timeout=30,headers=headers_YY)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1218,7 +1220,7 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
         checkToDecrydecrypt2(url, passwordDict, m3u_string, filenameDict, secretNameDict, uploadGitee,
                              uploadGithub, uploadWebdav)
     except requests.exceptions.Timeout:
-        response = requests.get(url, timeout=60)
+        response = requests.get(url, timeout=60,headers=headers_YY)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1230,7 +1232,7 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
             url = url.decode('utf-8')
         except:
             pass
-        response = requests.get(url)
+        response = requests.get(url,headers=headers_YY)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1244,14 +1246,14 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
 
 def fetch_url3(url, passwordDict, filenameDict):
     try:
-        response = requests.get(url)
+        response = requests.get(url,timeout=30,headers=headers_YY)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
         # 加密文件检测和解码
         checkToDecrydecrypt3(url, passwordDict, m3u_string, filenameDict)
     except requests.exceptions.Timeout:
-        response = requests.get(url, timeout=60)
+        response = requests.get(url, timeout=60,headers=headers_YY)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1262,7 +1264,7 @@ def fetch_url3(url, passwordDict, filenameDict):
             url = url.decode('utf-8')
         except:
             pass
-        response = requests.get(url)
+        response = requests.get(url,headers=headers_YY)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -4322,6 +4324,10 @@ async def download_files_normal_single():
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             print(f"qiumihui Failed to fetch files. Error: {e}")
         try:
+            await deal_skylinewebcams(session, m3u_dict, mintimeout, maxTimeout)
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            print(f"skylinewebcams Failed to fetch files. Error: {e}")
+        try:
             tasks = []
             for id, value in ipanda_ids.items():
                 task = asyncio.ensure_future(
@@ -4339,6 +4345,50 @@ async def download_files_normal_single():
         except Exception as e:
             print(f"857 Failed to fetch files. Error: {e}")
     return m3u_dict
+
+
+async def deal_skylinewebcams(session, m3u_dict, mintimeout, maxTimeout):
+    headers = {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Cookie": "PHPSESSID=3fbcaedr3jdolljejra92ouag0",
+        "Referer": "https://www.skylinewebcams.com/",
+        "Sec-Ch-Ua": "\"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"114\", \"Microsoft Edge\";v=\"114\"",
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": "\"Windows\"",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "same-origin",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67"
+    }
+
+    url = "https://www.skylinewebcams.com/zh/webcam.html"
+    pref = 'https://www.skylinewebcams.com/'
+    try:
+        try:
+            async with session.get(url, headers=headers, timeout=mintimeout) as response:
+                data = await response.read()
+
+        except asyncio.TimeoutError:
+            async with session.get(url, headers=headers, timeout=maxTimeout) as response:
+                data = await response.read()
+        if data:
+            redisKeyNormal1 = {key: value for key, value in redisKeyNormal.items() if
+                               not key.startswith('skylinewebcams,')}
+            redisKeyNormal.clear()
+            redisKeyNormal.update(redisKeyNormal1)
+            html = data.decode()
+            soup = BeautifulSoup(html, 'html.parser')
+            for element in soup.find_all('a', class_='col-xs-12 col-sm-6 col-md-4'):
+                id = pref + element.get('href')
+                img = element.find('img').get('src')
+                name = element.find('p', class_='tcam').text + '_' + element.find('p', class_='subt').text
+                redisKeyNormal[f'skylinewebcams,{id}'] = f'{name},{img}'
+                m3u_dict[f'skylinewebcams,{id}'] = ''
+
+    except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        print(f"skylinewebcams Failed to fetch files. Error: {e}")
 
 
 async def deal_qiumihui(session, m3u_dict, mintimeout, maxTimeout):
@@ -6241,6 +6291,10 @@ headers_default = {'Content-type': 'application/vnd.apple.mpegurl',
                    'Connection': 'Keep-Alive',
                    'Cache-Control': 'no-cache'
                    }
+headers_default2 = {'Content-type': 'application/vnd.apple.mpegurl',
+                    'Expect': '100-continue',
+                    'Connection': 'Keep-Alive',
+                    }
 
 
 # headers_default = {'Content-Type': 'application/vnd.apple.mpegurl'
@@ -6447,6 +6501,11 @@ def chaoronghe31_single(type):
                         link = f'#EXTINF:-1 group-title="香港地面波"  tvg-name="{name}",{name}\n'
                     else:
                         link = f'#EXTINF:-1 group-title="香港地面波" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                elif id.startswith('skylinewebcams,'):
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="世界遗迹"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="世界遗迹" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 else:
                     if logo is None:
                         link = f'#EXTINF:-1 group-title="国内"  tvg-name="{name}",{name}\n'
@@ -6489,6 +6548,11 @@ def chaoronghe31_single(type):
                         link = f'#EXTINF:-1 group-title="国内源"  tvg-name="{name}",{name}\n'
                     else:
                         link = f'#EXTINF:-1 group-title="国内源" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                elif id.startswith('skylinewebcams,'):
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="世界遗迹"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="世界遗迹" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 if link:
                     redisKeyM3uFake[f'{fakeurl}{id}.m3u8'] = link
             except Exception as e:
@@ -6521,8 +6585,8 @@ def chaoronghe31():
         redisKeyM3uFake = {}
         redisKeyNormalM3U.clear()
         redis_del_map(REDIS_KEY_NORMAL_M3U)
-        # fakeurl = f"http://127.0.0.1:5000/normal/"
         fakeurl = f"http://{ip}:{port_live}/normal/"
+        #fakeurl = f"http://127.0.0.1:5000/normal/"
         for id, name in redisKeyNormal.items():
             if not id.startswith('hkdtmb,'):
                 continue
@@ -6573,6 +6637,11 @@ def chaoronghe31():
                         link = f'#EXTINF:-1 group-title="体育直播3"  tvg-name="{name}",{name}\n'
                     else:
                         link = f'#EXTINF:-1 group-title="体育直播3" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
+                elif id.startswith('skylinewebcams,'):
+                    if logo is None:
+                        link = f'#EXTINF:-1 group-title="世界遗迹"  tvg-name="{name}",{name}\n'
+                    else:
+                        link = f'#EXTINF:-1 group-title="世界遗迹" tvg-logo="{logo}"  tvg-name="{name}",{name}\n'
                 else:
                     if logo is None:
                         link = f'#EXTINF:-1 group-title="国内"  tvg-name="{name}",{name}\n'
@@ -7331,6 +7400,56 @@ async def download_chunk(session, url, headers, start_byte, end_byte):
             return await response.content.read()
         return b''
 
+def get_hd_m3u8_url_sky(href_url):
+    href_url=href_url.split('skylinewebcams,')[1]
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    count = 0
+    while count < 3:
+        try:
+            bytesdata = loop.run_until_complete(get_sky_url(href_url))
+            if bytesdata is None:
+                count+=1
+                continue
+            return bytesdata
+        except:
+            count += 1
+            pass
+    return None
+
+
+
+async def get_sky_url(href_url):
+    headers = {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Cache-Control": "max-age=0",
+        "Cookie": "PHPSESSID=3fbcaedr3jdolljejra92ouag0",
+        "Sec-Ch-Ua": "\"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"114\", \"Microsoft Edge\";v=\"114\"",
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": "\"Windows\"",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67"
+    }
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(href_url, headers=headers) as response:
+                if response.status == 200:
+                    cotent = await response.read()
+                    source_parameter = re.search(r"source:'([^']+)'", cotent.decode())
+
+                    if source_parameter:
+                        source = 'https://hd-auth.skylinewebcams.com/' + source_parameter.group(1).replace('livee.',
+                                                                                                           'live.')
+                        return source
+                    else:
+                        return None
+    except:
+        return None
+    return None
 
 def async_to_sync(funtionName, id, number):
     # loop = asyncio.new_event_loop()
@@ -7526,7 +7645,7 @@ def get_m3u8_raw_content(url, id):
             ip = init_IP()
             url = f"https://hklive.tv/dtmb/{id}/"
             fakeurl = f"http://127.0.0.1:5000/normal/"
-            fakeurl = f"http://{ip}:{port_live}/normal/"
+            # fakeurl = f"http://{ip}:{port_live}/normal/"
             for line in content.splitlines():
                 if line.startswith(
                         (b'#EXTM3U', b'#EXT-X', b'#EXTINF')):
@@ -7546,6 +7665,7 @@ def get_m3u8_raw_content(url, id):
 
 
 migu_lock = threading.Lock()
+skylinewebcams_lock=threading.Lock()
 cq_lock = threading.Lock()
 efs_lock = threading.Lock()
 hk_locl = threading.Lock()
@@ -7603,7 +7723,7 @@ def serve_files_normal(filename):
             return
         # 特殊的，这个url可能失效
         redisKeyNormalM3U[id] = m3u8_url
-        return Response(m3u8_data, headers=headers_default)
+        return Response(m3u8_data, headers=headers_default2)
     url = tv_dict_normal.get(id)
     if not url:
         url = redisKeyNormalM3U.get(id)
@@ -7613,6 +7733,12 @@ def serve_files_normal(filename):
                     url = tv_dict_normal.get(id)
                     if not url:
                         url = get_hd_url_857(id)
+                        redisKeyNormalM3U[id] = url
+            elif id.startswith('skylinewebcams,'):
+                with skylinewebcams_lock:
+                    url = tv_dict_normal.get(id)
+                    if not url:
+                        url = get_hd_m3u8_url_sky(id)
                         redisKeyNormalM3U[id] = url
             elif id.startswith('migu,'):
                 with migu_lock:
@@ -9448,6 +9574,6 @@ def chaoronghe_m3u():
 
 if __name__ == '__main__':
     try:
-        app.run(debug=True, host='0.0.0.0', port=22771)
+        app.run(debug=False, host='0.0.0.0', port=22771)
     finally:
         print("close")

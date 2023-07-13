@@ -1167,7 +1167,7 @@ def download_files(urls, redis_dict):
 
 def fetch_url(url, redis_dict):
     try:
-        response = requests.get(url,timeout=30,headers=headers_YY)
+        response = requests.get(url, timeout=30, headers=headers_YY)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1179,7 +1179,7 @@ def fetch_url(url, redis_dict):
         # print(f"success to fetch URL: {url}")
         return m3u_string
     except requests.exceptions.Timeout:
-        response = requests.get(url, timeout=60,headers=headers_YY)
+        response = requests.get(url, timeout=60, headers=headers_YY)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1194,7 +1194,7 @@ def fetch_url(url, redis_dict):
             url = url.decode('utf-8')
         except:
             pass
-        response = requests.get(url,headers=headers_YY)
+        response = requests.get(url, headers=headers_YY)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1212,7 +1212,7 @@ def fetch_url(url, redis_dict):
 
 def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, uploadGithub, uploadWebdav):
     try:
-        response = requests.get(url,timeout=30,headers=headers_YY)
+        response = requests.get(url, timeout=30, headers=headers_YY)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1220,7 +1220,7 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
         checkToDecrydecrypt2(url, passwordDict, m3u_string, filenameDict, secretNameDict, uploadGitee,
                              uploadGithub, uploadWebdav)
     except requests.exceptions.Timeout:
-        response = requests.get(url, timeout=60,headers=headers_YY)
+        response = requests.get(url, timeout=60, headers=headers_YY)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1232,7 +1232,7 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
             url = url.decode('utf-8')
         except:
             pass
-        response = requests.get(url,headers=headers_YY)
+        response = requests.get(url, headers=headers_YY)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1246,14 +1246,14 @@ def fetch_url2(url, passwordDict, filenameDict, secretNameDict, uploadGitee, upl
 
 def fetch_url3(url, passwordDict, filenameDict):
     try:
-        response = requests.get(url,timeout=30,headers=headers_YY)
+        response = requests.get(url, timeout=30, headers=headers_YY)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
         # 加密文件检测和解码
         checkToDecrydecrypt3(url, passwordDict, m3u_string, filenameDict)
     except requests.exceptions.Timeout:
-        response = requests.get(url, timeout=60,headers=headers_YY)
+        response = requests.get(url, timeout=60, headers=headers_YY)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -1264,7 +1264,7 @@ def fetch_url3(url, passwordDict, filenameDict):
             url = url.decode('utf-8')
         except:
             pass
-        response = requests.get(url,headers=headers_YY)
+        response = requests.get(url, headers=headers_YY)
         response.raise_for_status()  # 如果响应的状态码不是 200，则引发异常
         # 源文件是二进制的AES加密文件，那么通过response.text转换成字符串后，数据可能会被破坏，从而无法还原回原始数据
         m3u_string = response.content
@@ -6586,7 +6586,7 @@ def chaoronghe31():
         redisKeyNormalM3U.clear()
         redis_del_map(REDIS_KEY_NORMAL_M3U)
         fakeurl = f"http://{ip}:{port_live}/normal/"
-        #fakeurl = f"http://127.0.0.1:5000/normal/"
+        # fakeurl = f"http://127.0.0.1:5000/normal/"
         for id, name in redisKeyNormal.items():
             if not id.startswith('hkdtmb,'):
                 continue
@@ -7362,6 +7362,7 @@ def get_m3u8_link(id):
     headers = {
         "Authority": "https://hklive.tv/",
         "Path": f"/{id}",
+        'Accept-Encoding': 'gzip, deflate, br',
         "Cache-Control": "max-age=0",
         "Sec-Ch-Ua": '"Not.A/Brand";v="8", "Chromium";v="114", "Microsoft Edge";v="114"',
         "Sec-Ch-Ua-Mobile": "?0",
@@ -7400,8 +7401,9 @@ async def download_chunk(session, url, headers, start_byte, end_byte):
             return await response.content.read()
         return b''
 
+
 def get_hd_m3u8_url_sky(href_url):
-    href_url=href_url.split('skylinewebcams,')[1]
+    href_url = href_url.split('skylinewebcams,')[1]
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     count = 0
@@ -7409,14 +7411,13 @@ def get_hd_m3u8_url_sky(href_url):
         try:
             bytesdata = loop.run_until_complete(get_sky_url(href_url))
             if bytesdata is None:
-                count+=1
+                count += 1
                 continue
             return bytesdata
         except:
             count += 1
             pass
     return None
-
 
 
 async def get_sky_url(href_url):
@@ -7451,18 +7452,18 @@ async def get_sky_url(href_url):
         return None
     return None
 
+
 def async_to_sync(funtionName, id, number):
     # loop = asyncio.new_event_loop()
     # asyncio.set_event_loop(loop)
-    count = 0
-    while count < 60:
+    timesec = time.time()
+    while time.time()-timesec < 60:
         if funtionName == 'get_ts_data2':
             # 有效直播源,名字/id
             # bytesdata = loop.run_until_complete(get_ts_data2(id, number))
             # if bytesdata is None:
             bytesdata = get_ts_data(id, number)
             if bytesdata is None:
-                count = count + 1
                 continue
             return bytesdata
         if funtionName == 'get_m3u8_raw_content2':
@@ -7471,7 +7472,6 @@ def async_to_sync(funtionName, id, number):
             # if bytesdata is None:
             bytesdata = get_m3u8_raw_content(id, number)
             if bytesdata is None:
-                count = count + 1
                 continue
             return bytesdata
         if funtionName == 'get_m3u8_link2':
@@ -7480,7 +7480,6 @@ def async_to_sync(funtionName, id, number):
             # if bytesdata is None:
             bytesdata = get_m3u8_link(id)
             if bytesdata is None:
-                count = count + 1
                 continue
             return bytesdata
 
@@ -7595,7 +7594,7 @@ async def get_ts_data2(id, number):
 
 def get_ts_data(id, number):
     url = f"https://hklive.tv/dtmb/{id}/{number}.ts"
-
+    etag = get_etag_ts(id)
     headers = {
         'Accept': '*/*',
         'Authority': 'https://hklive.tv/',
@@ -7609,9 +7608,17 @@ def get_ts_data(id, number):
         "Sec-Fetch-Site": "same-origin",
         "Path": url.split('https://hklive.tv')[1],
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'}
+    if etag is not None:
+        headers['If-None-Match'] = etag
     try:
         response = requests.get(url, headers=headers)
         if response and response.status_code == 200:
+            try:
+                etag = response.headers.get("Etag")
+                if etag is not None and etag != '':
+                    m3u_dict_hk_ts[id] = etag
+            except:
+                pass
             return response.content
         else:
             return None
@@ -7623,6 +7630,7 @@ def get_m3u8_raw_content(url, id):
     if not url:
         return None
     path = url.split('https://hklive.tv')[1].split('?')[0]
+    etag = get_etag(id)
     headers = {
         'Accept': '*/*',
         'Authority': 'https://hklive.tv/',
@@ -7637,18 +7645,31 @@ def get_m3u8_raw_content(url, id):
         "Path": path,
         'User-Agent': '-user_agent \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67\"'
     }
+    if etag is not None:
+        headers['If-None-Match'] = etag
     try:
         response = requests.get(url, headers=headers)
         if response and response.status_code == 200:
             content = response.content
+            try:
+                etag = response.headers.get("Etag")
+                if etag is not None and etag != '':
+                    m3u_dict_hk[id] = etag
+            except:
+                pass
             new_m3u8_data = []
             ip = init_IP()
             url = f"https://hklive.tv/dtmb/{id}/"
             fakeurl = f"http://127.0.0.1:5000/normal/"
-            # fakeurl = f"http://{ip}:{port_live}/normal/"
-            for line in content.splitlines():
+            fakeurl = f"http://{ip}:{port_live}/normal/"
+            arr = content.splitlines()
+            find = False
+            for i in range(len(arr)):
+                line = arr[i]
                 if line.startswith(
                         (b'#EXTM3U', b'#EXT-X', b'#EXTINF')):
+                    if line.startswith(b'#EXTINF'):
+                        find = True
                     new_m3u8_data.append(line)
                 else:
                     try:
@@ -7656,7 +7677,19 @@ def get_m3u8_raw_content(url, id):
                     except:
                         return None
                     # new_m3u8_data.append(f'{url}{line.decode()}'.encode())
-                    new_m3u8_data.append(f'{fakeurl}hkdtmb,{id},{line.decode()}'.encode())
+                    new_m3u8_data.append(fakeurl.encode() + b'hkdtmb,' + id.encode() + b',' + line)
+                    if find:
+                        break
+            last_400_data = arr[-600:]
+            for line in last_400_data:
+                if line.startswith(b'#EXTINF'):
+                    new_m3u8_data.append(line)
+                else:
+                    try:
+                        num = int(line.split(b'.')[0]) / 1000
+                    except:
+                        return None
+                    new_m3u8_data.append(fakeurl.encode() + b'hkdtmb,' + id.encode() + b',' + line)
             return b'\n'.join(new_m3u8_data)
         else:
             return None
@@ -7665,7 +7698,7 @@ def get_m3u8_raw_content(url, id):
 
 
 migu_lock = threading.Lock()
-skylinewebcams_lock=threading.Lock()
+skylinewebcams_lock = threading.Lock()
 cq_lock = threading.Lock()
 efs_lock = threading.Lock()
 hk_locl = threading.Lock()
@@ -7687,8 +7720,26 @@ def video_m3u8_normal_ts(path):
     return
 
 
+# id,etag
 m3u_dict_hk = {}
+m3u_dict_hk_ts = {}
 
+def get_etag(id):
+    try:
+        etag = m3u_dict_hk.get(id)
+        if etag is None or etag == '':
+            return None
+        return etag
+    except:
+        return None
+def get_etag_ts(id):
+    try:
+        etag = m3u_dict_hk_ts.get(id)
+        if etag is None or etag == '':
+            return None
+        return etag
+    except:
+        return None
 
 # 路由normal
 @app.route('/normal/<path:filename>.m3u8')
@@ -7707,6 +7758,8 @@ def serve_files_normal(filename):
     elif id.startswith('hkdtmb,'):
         # with hk_locl:
         if id not in tv_dict_normal:
+            tv_dict_normal.clear()
+            m3u_dict_hk.clear()
             tv_dict_normal[id] = ''
         hkid = id.split(',')[1]
         url = redisKeyNormalM3U.get(id)

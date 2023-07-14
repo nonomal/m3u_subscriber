@@ -2,6 +2,7 @@
 ## m3u超融合
 
 ![image](https://github.com/paperbluster/m3u_subscriber/blob/main/%E5%9B%BE%E7%89%871.png?raw=true)
+![image](https://github.com/paperbluster/m3u_subscriber/blob/main/dns%E5%88%86%E6%B5%81%E7%BB%93%E7%BB%93%E6%9E%84.jpg?raw=true)
 
 ### 安装步骤:
 

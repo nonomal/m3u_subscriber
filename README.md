@@ -36,7 +36,10 @@ docker run   -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p
 
 登陆面板:容器所在机器ip:22771
 
-4-仅供个人使用，请勿商用，代码已经全部开源，后果自负
+1-仅供个人使用，请勿商用，代码已经全部开源，后果自负
+
+2-dns分流器建议挂host模式,bridge可能有很多bug
+
 
 
 

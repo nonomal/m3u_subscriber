@@ -38,7 +38,7 @@ docker run   -d --name m3usubscriber  --restart unless-stopped -p 22771:22771 -p
 
 1-仅供个人使用，请勿商用，代码已经全部开源，后果自负
 
-2-dns分流器建议挂host模式,然后指定127.0.0.1:22770作为软路由里某个adguardhome作为唯一上游dns服务器，这个adguardhome我是使用软路由自带的，直接劫持dns请求给它，然后挂了一个adguardhome容器作
+2-dns分流器建议挂host模式,然后指定127.0.0.1:22770作为软路由里某个adguardhome作为唯一上游dns服务器，这个adguardhome我是使用软路由自带的，直接劫持dns请求给它,这个adguardhome就作为最上游的dns劫持器和广告过滤器,m3u_subscriber就作为分流器。然后挂了另一个adguardhome容器作
 为dns1服务器,dns2服务器就使用软路由自带的openclash,简易dns分流实际上是默认开启自动维护个人分流记录，相当于adguardhome的记录，只不过是根据分流分开记录，可以根据对应记录看是不是有分错的数据
 
 。有分错的数据一直搞不定去dns分流器设置-》假设这部分顶级域名全部走分流DNS1,使用,分隔/假设这部分顶级域名全部走分流DNS2,使用,分隔这两个地方强制对一级、二级域名进行分流定义，这个强制分流是不依

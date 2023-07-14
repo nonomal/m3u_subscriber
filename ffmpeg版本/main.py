@@ -7398,9 +7398,9 @@ def chaoronghexxx():
                 videoType = name_type_dict[filename]
                 stop_ffmpeg_bilibili()
                 if videoType != 'mkv' or videoType != 'avi':
-                    cmd = f'ffmpeg -threads {ffmpegThread} {user_agent} -headers \"Authorization: Basic {encoded_credentials}\" -re -i "{url}" -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -r {bilibilirfps}  -f flv "{bilibiliServer}{bilibilirtsp}"'
+                    cmd = f'ffmpeg   {user_agent} -headers \"Authorization: Basic {encoded_credentials}\" -re -i "{url}" -c:v copy -c:a {audioType}  -map 0:v:0 -map 0:a:0? -r {bilibilirfps}  -f flv "{bilibiliServer}{bilibilirtsp}"'
                 else:
-                    cmd = f'ffmpeg -threads {ffmpegThread} {user_agent} -headers \"Authorization: Basic {encoded_credentials}\" -re -i "{url}" -c:v {vcodec} -c:a {audioType}  -map 0:v:0 -map 0:a:0? -map_chapters -1  -r {bilibilirfps}  -f flv "{bilibiliServer}{bilibilirtsp}"'
+                    cmd = f'ffmpeg   {user_agent} -headers \"Authorization: Basic {encoded_credentials}\" -re -i "{url}" -c:v {vcodec} -c:a {audioType}  -map 0:v:0 -map 0:a:0? -map_chapters -1  -r {bilibilirfps}  -f flv "{bilibiliServer}{bilibilirtsp}"'
                 # cmd = f'ffmpeg -threads {ffmpegThread} {user_agent}    -headers \"Authorization: Basic {encoded_credentials}\" -re -i "{url}" -vcodec {vcodec} -acodec {acodec} -b:a 192k -r {bilibilirfps} -vf "drawtext=fontsize=24:fontfile=FreeSerif.ttf:text=\'{filename}\':x=10:y=main_h-30:fontcolor=LightGrey:alpha=0.6" -f flv "{bilibiliServer}{bilibilirtsp}"'
                 ffmpeg_process2 = subprocess.Popen(cmd, stdin=subprocess.PIPE, shell=True)
                 # 记录当前记录

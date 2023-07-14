@@ -1008,7 +1008,7 @@ def check_file(m3u_dict):
         path6 = f"{secret_path}YY.m3u"
         path7 = f"{secret_path}TWITCH.m3u"
         path8 = f"{secret_path}Douyin.m3u"
-        path9 = f"{secret_path}alist.m3u"
+        # path9 = f"{secret_path}alist.m3u"
         path10 = f"{secret_path}normal.m3u"
         source = ''
         if os.path.exists(path3):
@@ -1028,9 +1028,9 @@ def check_file(m3u_dict):
         if os.path.exists(path8):
             source += '\n'
             source += copyAndRename(path8).decode()
-        if os.path.exists(path9):
-            source += '\n'
-            source += copyAndRename(path9).decode()
+        # if os.path.exists(path9):
+        #     source += '\n'
+        #     source += copyAndRename(path9).decode()
         if os.path.exists(path10):
             source += '\n'
             source += copyAndRename(path10).decode()
@@ -1053,8 +1053,8 @@ def check_file(m3u_dict):
                 source2 += copyAndRename(path7).decode()
             if os.path.exists(path8):
                 source2 += copyAndRename(path8).decode()
-            if os.path.exists(path9):
-                source2 += copyAndRename(path9).decode()
+            # if os.path.exists(path9):
+            #     source2 += copyAndRename(path9).decode()
             if os.path.exists(path10):
                 source2 += copyAndRename(path10).decode()
             with open(path2, 'wb') as fdst:

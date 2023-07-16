@@ -7457,12 +7457,14 @@ def async_to_sync(funtionName, id, number):
     # loop = asyncio.new_event_loop()
     # asyncio.set_event_loop(loop)
     timesec = time.time()
-    while time.time()-timesec < 60:
+    while time.time() - timesec < 60:
         if funtionName == 'get_ts_data2':
             # 有效直播源,名字/id
-            # bytesdata = loop.run_until_complete(get_ts_data2(id, number))
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            bytesdata = loop.run_until_complete(get_ts_data2(id, number))
             # if bytesdata is None:
-            bytesdata = get_ts_data(id, number)
+            #bytesdata = get_ts_data(id, number)
             if bytesdata is None:
                 continue
             return bytesdata
@@ -7568,7 +7570,6 @@ async def get_m3u8_raw_content2(url, id):
 
 async def get_ts_data2(id, number):
     url = f"https://hklive.tv/dtmb/{id}/{number}.ts"
-
     headers = {
         'Accept': '*/*',
         'Authority': 'https://hklive.tv/',
@@ -7580,13 +7581,10 @@ async def get_ts_data2(id, number):
         "Sec-Fetch-Dest": "empty",
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "same-origin",
-        "Method": "GET",
         "Path": url.split('https://hklive.tv')[1],
-        "Scheme": "https",
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'}
-
     async with aiohttp.ClientSession() as session:
-        async with session.get(url, ssl=False) as response:
+        async with session.get(url, headers=headers) as response:
             if response.status == 200:
                 return await response.read()
     return None
@@ -7594,7 +7592,6 @@ async def get_ts_data2(id, number):
 
 def get_ts_data(id, number):
     url = f"https://hklive.tv/dtmb/{id}/{number}.ts"
-    etag = get_etag_ts(id)
     headers = {
         'Accept': '*/*',
         'Authority': 'https://hklive.tv/',
@@ -7608,18 +7605,15 @@ def get_ts_data(id, number):
         "Sec-Fetch-Site": "same-origin",
         "Path": url.split('https://hklive.tv')[1],
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67'}
-    if etag is not None:
-        headers['If-None-Match'] = etag
     try:
-        response = requests.get(url, headers=headers)
+        # response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, stream=True)
         if response and response.status_code == 200:
-            try:
-                etag = response.headers.get("Etag")
-                if etag is not None and etag != '':
-                    m3u_dict_hk_ts[id] = etag
-            except:
-                pass
-            return response.content
+            data = b''
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                if chunk:
+                    data += chunk
+            return data
         else:
             return None
     except:
@@ -7668,8 +7662,6 @@ def get_m3u8_raw_content(url, id):
                 line = arr[i]
                 if line.startswith(
                         (b'#EXTM3U', b'#EXT-X', b'#EXTINF')):
-                    if line.startswith(b'#EXTINF'):
-                        find = True
                     new_m3u8_data.append(line)
                 else:
                     try:
@@ -7677,18 +7669,6 @@ def get_m3u8_raw_content(url, id):
                     except:
                         return None
                     # new_m3u8_data.append(f'{url}{line.decode()}'.encode())
-                    new_m3u8_data.append(fakeurl.encode() + b'hkdtmb,' + id.encode() + b',' + line)
-                    if find:
-                        break
-            last_400_data = arr[-600:]
-            for line in last_400_data:
-                if line.startswith(b'#EXTINF'):
-                    new_m3u8_data.append(line)
-                else:
-                    try:
-                        num = int(line.split(b'.')[0]) / 1000
-                    except:
-                        return None
                     new_m3u8_data.append(fakeurl.encode() + b'hkdtmb,' + id.encode() + b',' + line)
             return b'\n'.join(new_m3u8_data)
         else:
@@ -7701,8 +7681,6 @@ migu_lock = threading.Lock()
 skylinewebcams_lock = threading.Lock()
 cq_lock = threading.Lock()
 efs_lock = threading.Lock()
-hk_locl = threading.Lock()
-ts_lock = threading.Lock()
 
 
 # 推流普通ts文件

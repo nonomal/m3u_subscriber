@@ -2001,35 +2001,6 @@ def distribute_data(data, file, num_threads):
         t.join()
 
 
-def distribute_data_proxies(data, file, num_threads):
-    if len(data) == 0:
-        return
-    if os.path.exists(file):
-        os.remove(file)
-    length = len(data)
-    # 计算每个线程处理的数据大小
-    chunk_size = (length + num_threads - 1) // num_threads
-    # 将数据切分为若干个块，每个块包含 chunk_size 个代理
-    chunks = [data[i:i + chunk_size] for i in range(0, length, chunk_size)]
-    # 创建一个任务队列，并向队列中添加任务
-    task_queue = queue.Queue()
-    for chunk in chunks:
-        task_queue.put(chunk)
-    # 创建线程池
-    threads = []
-    for i in range(num_threads):
-        t = threading.Thread(target=worker2, args=(task_queue, file))
-        t.start()
-        threads.append(t)
-    # 等待任务队列中的所有任务完成
-    task_queue.join()
-    # 向任务队列中添加 num_threads 个 None 值，以通知线程退出
-    for i in range(num_threads):
-        task_queue.put(None)
-    # 等待所有线程退出
-    for t in threads:
-        t.join()
-
 
 # 抽象类，定义抽象方法process_data_abstract
 class MyAbstractClass(abc.ABC):
@@ -2141,13 +2112,6 @@ def updateBlackListSpData(domain):
         blacklistSpData[domain_name_str] = ''
 
 
-def updateBlackListSpDataExtra(domain):
-    domain_name_str = stupidThinkForChina(domain)
-    if domain_name_str != '':
-        global blacklistSpData
-        blacklistSpData[domain_name_str] = ''
-
-
 # 字符串内容处理-域名转openclash-fallbackfilter-domain
 # openclash-fallback-filter-domain 填写需要代理的域名
 # 可以使用通配符*,但是尽可能少用，可能出问题
@@ -2159,7 +2123,6 @@ def process_data_domain_openclash_fallbackfilter(data, index, step, my_dict):
             continue
         # dns分流需要的外国域名一级数据
         updateBlackListSpData(line)
-        updateBlackListSpDataExtra(line)
         # 判断是不是+.域名
         lineEncoder = line.encode()
         if re.match(wildcard_regex2, line):
@@ -2283,13 +2246,6 @@ def updateWhiteListSpData(domain):
         whitelistSpData[domain_name_str] = ''
 
 
-# 大陆白名单可以放宽条件把一级域名的情况也放行，但是要剔除一级域名使用顶级域名的情况
-def updateWhiteListSpDataForChina(domain):
-    domain_name_str = stupidThinkForChina(domain)
-    if domain_name_str != '':
-        global whitelistSpData
-        whitelistSpData[domain_name_str] = ''
-
 
 # 字符串内容处理-域名转dnsmasq白名单
 # openclash dnsmasq不支持+，支持*.和.
@@ -2304,7 +2260,6 @@ def process_data_domain_dnsmasq(data, index, step, my_dict):
             continue
         # dns分流使用的域名白名单
         updateWhiteListSpData(line)
-        updateWhiteListSpDataForChina(line)
         # 普通域名
         if re.match(domain_regex, line):
             lineEncoder = line.encode()
@@ -2407,7 +2362,7 @@ def m3uToTxt(lines):
             if searchurl in url_dict.keys():
                 continue
             # 第一行的无名直播
-            if i == 0 and index == 0:
+            if i == 0:
                 continue
             preline = decode_bytes(lines[i - 1]).strip()
             # 没有名字
@@ -3098,9 +3053,6 @@ def download_files_for_encryp_proxy(urls, redis_dict):
             url = future_to_url[future]
             try:
                 result = future.result()
-            except Exception as exc:
-                print('%r generated an exception: %s' % (url, exc))
-            else:
                 index = 0
                 middleStr = ""
                 if i > 0 and i % 25 == 0:
@@ -3114,6 +3066,8 @@ def download_files_for_encryp_proxy(urls, redis_dict):
                 write_content_to_file(result.encode("utf-8"), f"{secret_path}{tmp_file}", 10)
                 proxy_dict[f"http://{ip}:22771/secret/" + tmp_file] = f"{secret_path}{tmp_file}"
                 i = i + 1
+            except Exception as exc:
+                print('%r generated an exception: %s' % (url, exc))
     return proxy_dict
 
 
@@ -3639,6 +3593,7 @@ def changeFileName2(cachekey, newFileName):
 
 # 直播源订阅密码刷新
 def update_m3u_subscribe_pass_by_hand(cachekey, password):
+    tagname = ''
     if cachekey == 'm3u':
         tagname = '直播源订阅'
     elif cachekey == 'proxy':
@@ -3846,35 +3801,6 @@ def init_IP():
 ignore_domain = ['com.', 'cn.', 'org.', 'net.', 'edu.', 'gov.', 'mil.', 'int.', 'biz.', 'info.', 'name.', 'pro.',
                  'asia.', 'us.', 'uk.', 'jp.']
 
-
-# 大陆域名白名单放宽至一级域名
-def stupidThinkForChina(domain_name):
-    try:
-        sub_domains = ['.'.join(domain_name.split('.')[i:]) for i in range(len(domain_name.split('.')) - 1)]
-    except Exception as e:
-        return ''
-    # 一级域名,不是顶级域名那种
-    domain_first = sub_domains[-1]
-    domain_second = None
-    try:
-        # 二级域名
-        domain_second = sub_domains[-2]
-    except Exception as e:
-        pass
-    try:
-        # 尽可能争取存储到二级域名，但是要避免垃圾域名和测试域名
-        if domain_second:
-            for key in ignore_domain:
-                # 一级域名有顶级域名，找二级域名,没有还是用一级域名
-                if domain_first.startswith(key):
-                    return domain_second
-            # 怀疑是垃圾二级域名，只记录一级域名
-            if len(domain_second.split('.')[0]) >= 20:
-                return domain_first
-            return domain_second
-        return domain_first
-    except Exception as e:
-        return domain_first
 
 
 # 提取二级、一级级域名
@@ -4096,14 +4022,6 @@ def checkAndUpdateM3uRank(group, rank):
         redis_add_map(REDIS_KEY_M3U_WHITELIST_RANK, updateDict)
         m3u_whitlist_rank[group] = rank
     getRankWhiteList()
-
-
-def getMaxRank():
-    global m3u_whitlist_rank
-    num = 0
-    for value in m3u_whitlist_rank.values():
-        num = max(num, int(value))
-    return str(num + 1)
 
 
 def chaoronghe6():
@@ -4879,7 +4797,7 @@ async def grab_normal_qiumihui(session, m3u_dict, mintimeout, maxTimeout, source
         print(f"qiumihui An error occurred while processing {rid}. Error: {e}")
 
 
-def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name, session, mintimeout, maxTimeout):
+def update_longzhu(dict_url, m3u_dict, rid, source_type, pic, name):
     global redisKeyNormal
     update_dict = {}
     if dict_url:
@@ -5118,63 +5036,39 @@ async def grab_normal_857(session, m3u_dict, mintimeout, maxTimeout, source_type
     m3u8_url = f'https://json.yyres.co/all_live_rooms.json?v={timestr}'
     update_dict = {}
     try:
-        async with session.get(m3u8_url, timeout=mintimeout) as response:
-            data = await response.read()
-            try:
-                data = data.decode('utf-8')
-                # 截取JSON字符串，去掉外部的无意义字符串和括号
-                json_data = data[data.find("(") + 1:data.rfind(")")]
-                # 解析JSON数据并转换为Python对象
-                python_data = json.loads(json_data)
-                # 访问JSON对象的属性
-                pages = python_data["data"]
-                for page, pageListDict in pages.items():
-                    try:
-                        for pageDict in pageListDict:
-                            try:
-                                title = pageDict['title']
-                                logo = pageDict['cover']
-                                rid = pageDict['roomNum']
-                                m3u_dict[f'{source_type},{rid}'] = ''
-                                update_dict[f'{source_type},{rid}'] = f'{title},{logo}'
-                            except:
-                                pass
-                    except:
-                        pass
-                if len(update_dict) > 0:
-                    redisKeyNormal.update(update_dict)
-            except Exception as e:
-                pass
-    except asyncio.TimeoutError:
-        async with session.get(m3u8_url, timeout=maxTimeout) as response:
-            data = await response.read()
-            try:
-                data = data.decode('utf-8')
-                # 截取JSON字符串，去掉外部的无意义字符串和括号
-                json_data = data[data.find("(") + 1:data.rfind(")")]
-                # 解析JSON数据并转换为Python对象
-                python_data = json.loads(json_data)
-                # 访问JSON对象的属性
-                pages = python_data["data"]
-                for page, pageListDict in pages.items():
-                    try:
-                        for pageDict in pageListDict:
-                            try:
-                                title = pageDict['title']
-                                logo = pageDict['cover']
-                                rid = pageDict['roomNum']
-                                m3u_dict[f'{source_type},{rid}'] = ''
-                                update_dict[f'{source_type},{rid}'] = f'{title},{logo}'
-                            except:
-                                pass
-                    except:
-                        pass
-                if len(update_dict) > 0:
-                    redisKeyNormal.update(update_dict)
-            except Exception as e:
-                pass
+        try:
+            async with session.get(m3u8_url, timeout=mintimeout) as response:
+                data = await response.read()
+        except asyncio.TimeoutError:
+            async with session.get(m3u8_url, timeout=maxTimeout) as response:
+                data = await response.read()
+        try:
+            data = data.decode('utf-8')
+            # 截取JSON字符串，去掉外部的无意义字符串和括号
+            json_data = data[data.find("(") + 1:data.rfind(")")]
+            # 解析JSON数据并转换为Python对象
+            python_data = json.loads(json_data)
+            # 访问JSON对象的属性
+            pages = python_data["data"]
+            for page, pageListDict in pages.items():
+                try:
+                    for pageDict in pageListDict:
+                        try:
+                            title = pageDict['title']
+                            logo = pageDict['cover']
+                            rid = pageDict['roomNum']
+                            m3u_dict[f'{source_type},{rid}'] = ''
+                            update_dict[f'{source_type},{rid}'] = f'{title},{logo}'
+                        except:
+                            pass
+                except:
+                    pass
+            if len(update_dict) > 0:
+                redisKeyNormal.update(update_dict)
+        except Exception as e:
+            pass
     except Exception as e:
-        print(f"857live An error occurred while processing {rid}. Error: {e}")
+        print(f"857live An error occurred while processing . Error: {e}")
 
 
 async def grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, source_type):
@@ -5199,7 +5093,7 @@ async def grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, source_
                         source = live_dict['source'][0]
                     except:
                         source = live_dict['source']
-                    update_longzhu(source, m3u_dict, rid, source_type, pic, name, session, mintimeout, maxTimeout)
+                    update_longzhu(source, m3u_dict, rid, source_type, pic, name)
             except Exception as e:
                 pass
     except asyncio.TimeoutError:
@@ -5221,7 +5115,7 @@ async def grab_normal_longzhu(session, m3u_dict, mintimeout, maxTimeout, source_
                         source = live_dict['source'][0]
                     except:
                         source = live_dict['source']
-                    update_longzhu(source, m3u_dict, rid, source_type, pic, name, session, mintimeout, maxTimeout)
+                    update_longzhu(source, m3u_dict, rid, source_type, pic, name)
             except Exception as e:
                 pass
     except Exception as e:
@@ -7653,7 +7547,6 @@ def get_m3u8_raw_content(url, id):
                 pass
             new_m3u8_data = []
             ip = init_IP()
-            url = f"https://hklive.tv/dtmb/{id}/"
             fakeurl = f"http://127.0.0.1:5000/normal/"
             fakeurl = f"http://{ip}:{port_live}/normal/"
             arr = content.splitlines()
@@ -7700,19 +7593,10 @@ def video_m3u8_normal_ts(path):
 
 # id,etag
 m3u_dict_hk = {}
-m3u_dict_hk_ts = {}
 
 def get_etag(id):
     try:
         etag = m3u_dict_hk.get(id)
-        if etag is None or etag == '':
-            return None
-        return etag
-    except:
-        return None
-def get_etag_ts(id):
-    try:
-        etag = m3u_dict_hk_ts.get(id)
         if etag is None or etag == '':
             return None
         return etag
